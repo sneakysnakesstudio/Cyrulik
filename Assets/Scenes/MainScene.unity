@@ -680,7 +680,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 322073262}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.017441774, y: 0.03489418, z: -0.00060908013, w: 0.99923867}
+  m_LocalRotation: {x: 0.008727717, y: 0.008726203, z: -0.00007616425, w: 0.9999238}
   m_LocalPosition: {x: -2.803999, y: -0.048388124, z: -0.42019653}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -709,7 +709,7 @@ MonoBehaviour:
       Enabled: 1
       Input:
         InputAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-        Gain: 4
+        Gain: 3
         CancelDeltaTime: 0
       InputValue: 0
       Driver:
@@ -720,7 +720,7 @@ MonoBehaviour:
       Enabled: 1
       Input:
         InputAction: {fileID: -5630151704836100654, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-        Gain: -4
+        Gain: -3
         CancelDeltaTime: 0
       InputValue: 0
       Driver:
@@ -743,7 +743,7 @@ MonoBehaviour:
   ReferenceFrame: 0
   RecenterTarget: 2
   PanAxis:
-    Value: 4
+    Value: 1
     Center: 0
     Range: {x: -180, y: 180}
     Wrap: 1
@@ -753,7 +753,7 @@ MonoBehaviour:
       Time: 2
     Restrictions: 0
   TiltAxis:
-    Value: 2
+    Value: 1
     Center: 0
     Range: {x: -70, y: 70}
     Wrap: 0
@@ -815,6 +815,7 @@ GameObject:
   m_Component:
   - component: {fileID: 361643059}
   - component: {fileID: 361643058}
+  - component: {fileID: 361643060}
   m_Layer: 0
   m_Name: === Player ===
   m_TagString: Untagged
@@ -863,6 +864,22 @@ Transform:
   - {fileID: 322073263}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &361643060
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361643057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 798ab5187b4d41a4fafd5ed72f32e7f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  walkSpeed: 5
+  runSpeed: 8
+  cameraTransform: {fileID: 322073263}
+  moveAction: {fileID: -1680190386980627800, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!1 &413237870
 GameObject:
   m_ObjectHideFlags: 0
@@ -1060,7 +1077,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 748415296}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.017441774, y: 0.03489418, z: -0.00060908013, w: 0.99923867}
+  m_LocalRotation: {x: 0.008727135, y: 0.008726203, z: -0.000076159704, w: 0.9999238}
   m_LocalPosition: {x: -2.803999, y: -0.048388124, z: -0.42019653}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
