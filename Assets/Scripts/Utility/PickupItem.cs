@@ -3,12 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class PickupItem : MonoBehaviour, IInteractable
 {
-    private PlayerHands _playerHands;
-
-    private void Awake()
-    {
-        _playerHands = FindFirstObjectByType<PlayerHands>();
-    }
+    [SerializeField] private PlayerHands _playerHands;
 
     public void Interact()
     {

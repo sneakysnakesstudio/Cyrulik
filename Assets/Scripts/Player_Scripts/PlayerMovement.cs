@@ -1,9 +1,12 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
+    public event Action<bool> OnInteractableStateChanged;
+
     [Header("Speed")]
     [SerializeField] private float walkSpeed = 5f;
     [SerializeField] private float sprintSpeed = 8f;
@@ -24,10 +27,13 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float groundedVelocity = -2f;
 
     private CharacterController _characterController;
+
     private Vector2 _moveInput;
     private float _verticalVelocity;
 
     private IInteractable _currentInteractable;
+
+    private bool _wasLookingAtInteractable;
 
     private void Awake()
     {
@@ -41,9 +47,7 @@ public class PlayerMovement : MonoBehaviour
         HandleInteractionRaycast();
     }
 
-    private void StoreMovementInput(
-        InputAction.CallbackContext context
-    )
+    private void StoreMovementInput(InputAction.CallbackContext context)
     {
         _moveInput = context.ReadValue<Vector2>();
     }
@@ -85,7 +89,9 @@ public class PlayerMovement : MonoBehaviour
             ? sprintSpeed
             : walkSpeed;
 
-        Vector3 finalMove = moveDirection * currentSpeed;
+        Vector3 finalMove =
+            moveDirection * currentSpeed;
+
         finalMove.y = _verticalVelocity;
 
         _characterController.Move(
@@ -117,12 +123,25 @@ public class PlayerMovement : MonoBehaviour
                     .GetComponentInParent<IInteractable>();
         }
 
+        bool isLookingAtInteractable =
+            _currentInteractable != null;
+
+        if (isLookingAtInteractable != _wasLookingAtInteractable)
+        {
+            _wasLookingAtInteractable =
+                isLookingAtInteractable;
+
+            OnInteractableStateChanged?.Invoke(
+                isLookingAtInteractable
+            );
+        }
+
         if (showInteractionRaycast)
         {
             Debug.DrawRay(
                 ray.origin,
                 ray.direction * interactionDistance,
-                _currentInteractable != null
+                isLookingAtInteractable
                     ? Color.green
                     : Color.red
             );
@@ -153,10 +172,20 @@ public class PlayerMovement : MonoBehaviour
     {
         moveAction.action.performed -= StoreMovementInput;
         moveAction.action.canceled -= StoreMovementInput;
-        interactionAction.action.started -= HandleInteractionInput;
+
+        interactionAction.action.started -=
+            HandleInteractionInput;
 
         moveAction.action.Disable();
         speedAction.action.Disable();
         interactionAction.action.Disable();
+
+        _currentInteractable = null;
+
+        if (_wasLookingAtInteractable)
+        {
+            _wasLookingAtInteractable = false;
+            OnInteractableStateChanged?.Invoke(false);
+        }
     }
 }
