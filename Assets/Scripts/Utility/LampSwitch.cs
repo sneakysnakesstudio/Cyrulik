@@ -12,6 +12,9 @@ public class LampSwitch : MonoBehaviour, IInteractable
     [Header("State")]
     [SerializeField] private bool startOn = false;
 
+    [Header("Audio")]
+    [SerializeField] private string interactionSound = "small_lamp";
+
     [Header("Normal Animation")]
     [SerializeField] private float turnOnDuration = 0.1f;
     [SerializeField] private float turnOffDuration = 0.1f;
@@ -55,7 +58,6 @@ public class LampSwitch : MonoBehaviour, IInteractable
             return;
         }
 
-        // Zapamiętujemy intensywność każdej lampy.
         _defaultIntensities =
             new float[targetLights.Length];
 
@@ -86,6 +88,8 @@ public class LampSwitch : MonoBehaviour, IInteractable
 
     public void Interact()
     {
+        PlayInteractionSound();
+
         if (_isOn)
         {
             TurnOff();
@@ -94,6 +98,14 @@ public class LampSwitch : MonoBehaviour, IInteractable
         {
             TurnOn();
         }
+    }
+
+    private void PlayInteractionSound()
+    {
+        if (string.IsNullOrWhiteSpace(interactionSound))
+            return;
+
+        AudioManager.Instance?.Play(interactionSound);
     }
 
     public void TurnOn()
@@ -212,7 +224,6 @@ public class LampSwitch : MonoBehaviour, IInteractable
             );
         }
 
-        // Po migotaniu lampa zapala się normalnie.
         _flickerSequence.Append(
             DOVirtual.Float(
                 0f,
@@ -222,11 +233,10 @@ public class LampSwitch : MonoBehaviour, IInteractable
             )
         );
 
-        _flickerSequence
-            .SetLink(
-                gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
+        _flickerSequence.SetLink(
+            gameObject,
+            LinkBehaviour.KillOnDestroy
+        );
     }
 
     private void SetLightMultiplier(float multiplier)
