@@ -5,7 +5,8 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
-    public event Action<bool> OnInteractableStateChanged;
+    public event Action OnInteractionPerformed;
+    public event Action<IInteractable> OnInteractableChanged;
 
     [Header("Speed")]
     [SerializeField] private float walkSpeed = 5f;
@@ -32,8 +33,7 @@ public class PlayerMovement : MonoBehaviour
     private float _verticalVelocity;
 
     private IInteractable _currentInteractable;
-
-    private bool _wasLookingAtInteractable;
+    private IInteractable _previousInteractable;
 
     private void Awake()
     {
@@ -85,9 +85,10 @@ public class PlayerMovement : MonoBehaviour
 
         bool isSprinting = speedAction.action.IsPressed();
 
-        float currentSpeed = isSprinting
-            ? sprintSpeed
-            : walkSpeed;
+        float currentSpeed =
+            isSprinting
+                ? sprintSpeed
+                : walkSpeed;
 
         Vector3 finalMove =
             moveDirection * currentSpeed;
@@ -123,16 +124,13 @@ public class PlayerMovement : MonoBehaviour
                     .GetComponentInParent<IInteractable>();
         }
 
-        bool isLookingAtInteractable =
-            _currentInteractable != null;
-
-        if (isLookingAtInteractable != _wasLookingAtInteractable)
+        if (_currentInteractable != _previousInteractable)
         {
-            _wasLookingAtInteractable =
-                isLookingAtInteractable;
+            _previousInteractable =
+                _currentInteractable;
 
-            OnInteractableStateChanged?.Invoke(
-                isLookingAtInteractable
+            OnInteractableChanged?.Invoke(
+                _currentInteractable
             );
         }
 
@@ -141,18 +139,21 @@ public class PlayerMovement : MonoBehaviour
             Debug.DrawRay(
                 ray.origin,
                 ray.direction * interactionDistance,
-                isLookingAtInteractable
+                _currentInteractable != null
                     ? Color.green
                     : Color.red
             );
         }
     }
 
-    private void HandleInteractionInput(
-        InputAction.CallbackContext context
-    )
+    private void HandleInteractionInput(InputAction.CallbackContext context)
     {
-        _currentInteractable?.Interact();
+        if (_currentInteractable == null)
+            return;
+
+        _currentInteractable.Interact();
+
+        OnInteractionPerformed?.Invoke();
     }
 
     private void OnEnable()
@@ -161,8 +162,11 @@ public class PlayerMovement : MonoBehaviour
         speedAction.action.Enable();
         interactionAction.action.Enable();
 
-        moveAction.action.performed += StoreMovementInput;
-        moveAction.action.canceled += StoreMovementInput;
+        moveAction.action.performed +=
+            StoreMovementInput;
+
+        moveAction.action.canceled +=
+            StoreMovementInput;
 
         interactionAction.action.started +=
             HandleInteractionInput;
@@ -170,8 +174,11 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnDisable()
     {
-        moveAction.action.performed -= StoreMovementInput;
-        moveAction.action.canceled -= StoreMovementInput;
+        moveAction.action.performed -=
+            StoreMovementInput;
+
+        moveAction.action.canceled -=
+            StoreMovementInput;
 
         interactionAction.action.started -=
             HandleInteractionInput;
@@ -181,11 +188,8 @@ public class PlayerMovement : MonoBehaviour
         interactionAction.action.Disable();
 
         _currentInteractable = null;
+        _previousInteractable = null;
 
-        if (_wasLookingAtInteractable)
-        {
-            _wasLookingAtInteractable = false;
-            OnInteractableStateChanged?.Invoke(false);
-        }
+        OnInteractableChanged?.Invoke(null);
     }
 }

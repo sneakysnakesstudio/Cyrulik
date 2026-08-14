@@ -5,6 +5,8 @@ public class PickupItem : MonoBehaviour, IInteractable
 {
     [SerializeField] private PlayerHands _playerHands;
 
+    public string InteractionName { get; }
+
     public void Interact()
     {
         if (_playerHands == null)
