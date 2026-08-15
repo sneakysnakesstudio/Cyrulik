@@ -8,14 +8,12 @@ public class PlayerMovement : MonoBehaviour
     public event Action OnInteractionPerformed;
     public event Action<IInteractable> OnInteractableChanged;
 
-    [Header("Speed")]
+    [Header("Movement")]
     [SerializeField] private float walkSpeed = 5f;
-    [SerializeField] private float sprintSpeed = 8f;
 
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private InputActionReference moveAction;
-    [SerializeField] private InputActionReference speedAction;
     [SerializeField] private InputActionReference interactionAction;
 
     [Header("Interaction")]
@@ -27,6 +25,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float gravity = -12f;
     [SerializeField] private float groundedVelocity = -2f;
 
+    [Header("Footsteps")]
+    [SerializeField] private string footstepAudioGroup = "player_steps";
+    [SerializeField] private float footstepInterval = 0.5f;
+    [SerializeField] private float firstStepDelay = 0.15f;
+    [SerializeField] private float minimumMovementSpeed = 0.1f;
+
     private CharacterController _characterController;
 
     private Vector2 _moveInput;
@@ -34,6 +38,9 @@ public class PlayerMovement : MonoBehaviour
 
     private IInteractable _currentInteractable;
     private IInteractable _previousInteractable;
+
+    private float _footstepTimer;
+    private bool _wasMoving;
 
     private void Awake()
     {
@@ -44,6 +51,7 @@ public class PlayerMovement : MonoBehaviour
     {
         HandleGravity();
         HandleMovement();
+        HandleFootsteps();
         HandleInteractionRaycast();
     }
 
@@ -83,21 +91,53 @@ public class PlayerMovement : MonoBehaviour
         moveDirection =
             Vector3.ClampMagnitude(moveDirection, 1f);
 
-        bool isSprinting = speedAction.action.IsPressed();
-
-        float currentSpeed =
-            isSprinting
-                ? sprintSpeed
-                : walkSpeed;
-
         Vector3 finalMove =
-            moveDirection * currentSpeed;
+            moveDirection * walkSpeed;
 
         finalMove.y = _verticalVelocity;
 
         _characterController.Move(
             finalMove * Time.deltaTime
         );
+    }
+
+    private void HandleFootsteps()
+    {
+        Vector3 horizontalVelocity =
+            _characterController.velocity;
+
+        horizontalVelocity.y = 0f;
+
+        bool isMoving =
+            _characterController.isGrounded &&
+            horizontalVelocity.magnitude > minimumMovementSpeed;
+
+        if (!isMoving)
+        {
+            _footstepTimer = 0f;
+            _wasMoving = false;
+            return;
+        }
+
+        if (!_wasMoving)
+        {
+            _wasMoving = true;
+            _footstepTimer = firstStepDelay;
+        }
+
+        _footstepTimer -= Time.deltaTime;
+
+        if (_footstepTimer > 0f)
+            return;
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(
+                footstepAudioGroup
+            );
+        }
+
+        _footstepTimer = footstepInterval;
     }
 
     private void HandleInteractionRaycast()
@@ -146,7 +186,9 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void HandleInteractionInput(InputAction.CallbackContext context)
+    private void HandleInteractionInput(
+        InputAction.CallbackContext context
+    )
     {
         if (_currentInteractable == null)
             return;
@@ -159,7 +201,6 @@ public class PlayerMovement : MonoBehaviour
     private void OnEnable()
     {
         moveAction.action.Enable();
-        speedAction.action.Enable();
         interactionAction.action.Enable();
 
         moveAction.action.performed +=
@@ -184,8 +225,12 @@ public class PlayerMovement : MonoBehaviour
             HandleInteractionInput;
 
         moveAction.action.Disable();
-        speedAction.action.Disable();
         interactionAction.action.Disable();
+
+        _moveInput = Vector2.zero;
+
+        _footstepTimer = 0f;
+        _wasMoving = false;
 
         _currentInteractable = null;
         _previousInteractable = null;

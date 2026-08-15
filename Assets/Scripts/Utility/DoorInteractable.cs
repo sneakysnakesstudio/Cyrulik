@@ -29,6 +29,13 @@ public class DoorInteractable : MonoBehaviour, IInteractable
     [SerializeField] private Ease openEase = Ease.OutQuad;
     [SerializeField] private Ease closeEase = Ease.InOutQuad;
 
+    [Header("Audio")]
+    [SerializeField] private string openSound = "fridge_open_sound";
+    [SerializeField] private string closeSound = "fridge_close_sound";
+
+    [SerializeField, Range(0f, 1f)]
+    private float closeSoundTime = 0.8f;
+
     public string InteractionName => interactionName;
     public bool IsOpen => _isOpen;
 
@@ -113,9 +120,9 @@ public class DoorInteractable : MonoBehaviour, IInteractable
         _isAnimating = true;
         _isOpen = true;
 
-        // Opcjonalny event.
-        // Jeśli nic go nie nasłuchuje, po prostu nic się nie dzieje.
         OnDoorStateChanged?.Invoke(true);
+
+        PlaySound(openSound);
 
         _doorTween?.Kill();
 
@@ -144,12 +151,23 @@ public class DoorInteractable : MonoBehaviour, IInteractable
 
         _doorTween?.Kill();
 
-        _doorTween = doorPivot
-            .DOLocalRotate(
-                _closedRotation,
-                openDuration
-            )
-            .SetEase(closeEase)
+        Sequence sequence = DOTween.Sequence();
+
+        sequence.Append(
+            doorPivot
+                .DOLocalRotate(
+                    _closedRotation,
+                    openDuration
+                )
+                .SetEase(closeEase)
+        );
+
+        sequence.InsertCallback(
+            openDuration * closeSoundTime,
+            () => PlaySound(closeSound)
+        );
+
+        sequence
             .SetLink(
                 doorPivot.gameObject,
                 LinkBehaviour.KillOnDestroy
@@ -158,6 +176,19 @@ public class DoorInteractable : MonoBehaviour, IInteractable
             {
                 _isAnimating = false;
             });
+
+        _doorTween = sequence;
+    }
+
+    private void PlaySound(string soundName)
+    {
+        if (string.IsNullOrWhiteSpace(soundName))
+            return;
+
+        if (AudioManager.Instance == null)
+            return;
+
+        AudioManager.Instance.Play(soundName);
     }
 
     private void OnDisable()
