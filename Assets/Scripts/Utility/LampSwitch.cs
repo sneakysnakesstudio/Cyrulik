@@ -1,8 +1,12 @@
+using System;
 using DG.Tweening;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class LampSwitch : MonoBehaviour, IInteractable
 {
+    public event Action<bool> OnLightStateChanged;
+    
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Light Switch";
 
@@ -98,6 +102,7 @@ public class LampSwitch : MonoBehaviour, IInteractable
         {
             TurnOn();
         }
+        OnLightStateChanged?.Invoke(_isOn);
     }
 
     private void PlayInteractionSound()
