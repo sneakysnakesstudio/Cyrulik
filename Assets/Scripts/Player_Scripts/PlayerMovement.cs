@@ -5,31 +5,27 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
-    public event Action OnInteractionPerformed;
     public event Action<IInteractable> OnInteractableChanged;
+    public event Action OnInteractionPerformed;
+    public event Action OnInteractionBlocked;
 
-    [Header("Movement")]
+    [Header("Speed")]
     [SerializeField] private float walkSpeed = 5f;
+    [SerializeField] private float sprintSpeed = 6f;
 
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private InputActionReference moveAction;
-    [SerializeField] private InputActionReference interactionAction;
+    [SerializeField] private InputActionReference speedAction;
+    [SerializeField] private InputActionReference interactAction;
 
     [Header("Interaction")]
-    [SerializeField] private LayerMask interactionLayerMask;
     [SerializeField] private float interactionDistance = 3f;
-    [SerializeField] private bool showInteractionRaycast = true;
+    [SerializeField] private LayerMask interactionLayerMask = ~0;
 
     [Header("Gravity")]
     [SerializeField] private float gravity = -12f;
     [SerializeField] private float groundedVelocity = -2f;
-
-    [Header("Footsteps")]
-    [SerializeField] private string footstepAudioGroup = "player_steps";
-    [SerializeField] private float footstepInterval = 0.5f;
-    [SerializeField] private float firstStepDelay = 0.15f;
-    [SerializeField] private float minimumMovementSpeed = 0.1f;
 
     private CharacterController _characterController;
 
@@ -37,171 +33,18 @@ public class PlayerMovement : MonoBehaviour
     private float _verticalVelocity;
 
     private IInteractable _currentInteractable;
-    private IInteractable _previousInteractable;
-
-    private float _footstepTimer;
-    private bool _wasMoving;
 
     private void Awake()
     {
-        _characterController = GetComponent<CharacterController>();
-    }
-
-    private void Update()
-    {
-        HandleGravity();
-        HandleMovement();
-        HandleFootsteps();
-        HandleInteractionRaycast();
-    }
-
-    private void StoreMovementInput(InputAction.CallbackContext context)
-    {
-        _moveInput = context.ReadValue<Vector2>();
-    }
-
-    private void HandleGravity()
-    {
-        if (_characterController.isGrounded &&
-            _verticalVelocity < 0f)
-        {
-            _verticalVelocity = groundedVelocity;
-        }
-        else
-        {
-            _verticalVelocity += gravity * Time.deltaTime;
-        }
-    }
-
-    private void HandleMovement()
-    {
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
-
-        cameraForward.y = 0f;
-        cameraRight.y = 0f;
-
-        cameraForward.Normalize();
-        cameraRight.Normalize();
-
-        Vector3 moveDirection =
-            cameraRight * _moveInput.x +
-            cameraForward * _moveInput.y;
-
-        moveDirection =
-            Vector3.ClampMagnitude(moveDirection, 1f);
-
-        Vector3 finalMove =
-            moveDirection * walkSpeed;
-
-        finalMove.y = _verticalVelocity;
-
-        _characterController.Move(
-            finalMove * Time.deltaTime
-        );
-    }
-
-    private void HandleFootsteps()
-    {
-        Vector3 horizontalVelocity =
-            _characterController.velocity;
-
-        horizontalVelocity.y = 0f;
-
-        bool isMoving =
-            _characterController.isGrounded &&
-            horizontalVelocity.magnitude > minimumMovementSpeed;
-
-        if (!isMoving)
-        {
-            _footstepTimer = 0f;
-            _wasMoving = false;
-            return;
-        }
-
-        if (!_wasMoving)
-        {
-            _wasMoving = true;
-            _footstepTimer = firstStepDelay;
-        }
-
-        _footstepTimer -= Time.deltaTime;
-
-        if (_footstepTimer > 0f)
-            return;
-
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.Play(
-                footstepAudioGroup
-            );
-        }
-
-        _footstepTimer = footstepInterval;
-    }
-
-    private void HandleInteractionRaycast()
-    {
-        _currentInteractable = null;
-
-        Ray ray = new Ray(
-            cameraTransform.position,
-            cameraTransform.forward
-        );
-
-        bool hitSomething = Physics.Raycast(
-            ray,
-            out RaycastHit hit,
-            interactionDistance,
-            interactionLayerMask,
-            QueryTriggerInteraction.Collide
-        );
-
-        if (hitSomething)
-        {
-            _currentInteractable =
-                hit.collider
-                    .GetComponentInParent<IInteractable>();
-        }
-
-        if (_currentInteractable != _previousInteractable)
-        {
-            _previousInteractable =
-                _currentInteractable;
-
-            OnInteractableChanged?.Invoke(
-                _currentInteractable
-            );
-        }
-
-        if (showInteractionRaycast)
-        {
-            Debug.DrawRay(
-                ray.origin,
-                ray.direction * interactionDistance,
-                _currentInteractable != null
-                    ? Color.green
-                    : Color.red
-            );
-        }
-    }
-
-    private void HandleInteractionInput(
-        InputAction.CallbackContext context
-    )
-    {
-        if (_currentInteractable == null)
-            return;
-
-        _currentInteractable.Interact();
-
-        OnInteractionPerformed?.Invoke();
+        _characterController =
+            GetComponent<CharacterController>();
     }
 
     private void OnEnable()
     {
         moveAction.action.Enable();
-        interactionAction.action.Enable();
+        speedAction.action.Enable();
+        interactAction.action.Enable();
 
         moveAction.action.performed +=
             StoreMovementInput;
@@ -209,8 +52,9 @@ public class PlayerMovement : MonoBehaviour
         moveAction.action.canceled +=
             StoreMovementInput;
 
-        interactionAction.action.started +=
-            HandleInteractionInput;
+        // STARTED = reakcja natychmiast po wciśnięciu E.
+        interactAction.action.started +=
+            HandleInteraction;
     }
 
     private void OnDisable()
@@ -221,20 +65,149 @@ public class PlayerMovement : MonoBehaviour
         moveAction.action.canceled -=
             StoreMovementInput;
 
-        interactionAction.action.started -=
-            HandleInteractionInput;
+        interactAction.action.started -=
+            HandleInteraction;
 
         moveAction.action.Disable();
-        interactionAction.action.Disable();
+        speedAction.action.Disable();
+        interactAction.action.Disable();
+    }
 
-        _moveInput = Vector2.zero;
+    private void Update()
+    {
+        HandleGravity();
+        HandleMovement();
+        CheckForInteractable();
+    }
 
-        _footstepTimer = 0f;
-        _wasMoving = false;
+    private void StoreMovementInput(
+        InputAction.CallbackContext context
+    )
+    {
+        _moveInput =
+            context.ReadValue<Vector2>();
+    }
 
-        _currentInteractable = null;
-        _previousInteractable = null;
+    private void HandleGravity()
+    {
+        if (_characterController.isGrounded)
+        {
+            if (_verticalVelocity < 0f)
+            {
+                _verticalVelocity =
+                    groundedVelocity;
+            }
+        }
+        else
+        {
+            _verticalVelocity +=
+                gravity * Time.deltaTime;
+        }
+    }
 
-        OnInteractableChanged?.Invoke(null);
+    private void HandleMovement()
+    {
+        if (cameraTransform == null)
+            return;
+
+        Vector3 forward =
+            cameraTransform.forward;
+
+        Vector3 right =
+            cameraTransform.right;
+
+        forward.y = 0f;
+        right.y = 0f;
+
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 moveDirection =
+            forward * _moveInput.y +
+            right * _moveInput.x;
+
+        if (moveDirection.sqrMagnitude > 1f)
+        {
+            moveDirection.Normalize();
+        }
+
+        bool isSprinting =
+            speedAction.action.IsPressed();
+
+        float currentSpeed =
+            isSprinting
+                ? sprintSpeed
+                : walkSpeed;
+
+        Vector3 velocity =
+            moveDirection * currentSpeed;
+
+        velocity.y =
+            _verticalVelocity;
+
+        _characterController.Move(
+            velocity * Time.deltaTime
+        );
+    }
+
+    private void CheckForInteractable()
+    {
+        if (cameraTransform == null)
+            return;
+
+        Ray ray = new Ray(
+            cameraTransform.position,
+            cameraTransform.forward
+        );
+
+        IInteractable foundInteractable = null;
+
+        if (Physics.Raycast(
+                ray,
+                out RaycastHit hit,
+                interactionDistance,
+                interactionLayerMask,
+                QueryTriggerInteraction.Ignore
+            ))
+        {
+            foundInteractable =
+                hit.collider
+                    .GetComponentInParent<IInteractable>();
+        }
+
+        if (foundInteractable == _currentInteractable)
+            return;
+
+        _currentInteractable =
+            foundInteractable;
+
+        OnInteractableChanged?.Invoke(
+            _currentInteractable
+        );
+    }
+
+    private void HandleInteraction(
+        InputAction.CallbackContext context
+    )
+    {
+        if (_currentInteractable == null)
+            return;
+
+        // NOWE:
+        // obiekt może istnieć jako interactable,
+        // ale chwilowo blokować wykonanie akcji.
+        if (_currentInteractable
+            is IConditionalInteractable conditional)
+        {
+            if (!conditional.CanInteract)
+            {
+                OnInteractionBlocked?.Invoke();
+                return;
+            }
+        }
+
+        _currentInteractable.Interact();
+
+        OnInteractionPerformed?.Invoke();
     }
 }

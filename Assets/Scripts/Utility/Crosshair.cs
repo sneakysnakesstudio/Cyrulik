@@ -13,6 +13,7 @@ public class Crosshair : MonoBehaviour
     [Header("Colors")]
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color interactableColor = Color.yellow;
+    [SerializeField] private Color blockedColor = Color.red;
 
     [Header("Interactable Pulse")]
     [SerializeField] private float pulseScale = 1.15f;
@@ -23,12 +24,19 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private float blinkSmallScale = 0.9f;
     [SerializeField] private float blinkDuration = 0.07f;
 
+    [Header("Blocked Interaction")]
+    [SerializeField] private float blockedShakeDuration = 0.25f;
+    [SerializeField] private float blockedShakeStrength = 8f;
+    [SerializeField] private int blockedShakeVibrato = 12;
+    [SerializeField] private float blockedColorReturnDuration = 0.15f;
+
     [Header("Fade")]
     [SerializeField] private float colorFadeDuration = 0.15f;
     [SerializeField] private float textFadeInDuration = 0.2f;
     [SerializeField] private float textFadeOutDuration = 0.15f;
 
     private Vector3 _defaultScale;
+    private Vector2 _defaultAnchoredPosition;
 
     private bool _hasInteractable;
 
@@ -37,6 +45,9 @@ public class Crosshair : MonoBehaviour
     private Tween _colorTween;
     private Tween _textTween;
     private Tween _interactionBlinkTween;
+    private Tween _blockedTween;
+
+    private RectTransform _crosshairRect;
 
     private void Awake()
     {
@@ -63,8 +74,13 @@ public class Crosshair : MonoBehaviour
             return;
         }
 
+        _crosshairRect = crosshairImage.rectTransform;
+
         _defaultScale =
             crosshairImage.transform.localScale;
+
+        _defaultAnchoredPosition =
+            _crosshairRect.anchoredPosition;
 
         crosshairImage.color = normalColor;
 
@@ -82,6 +98,9 @@ public class Crosshair : MonoBehaviour
 
         playerMovement.OnInteractionPerformed +=
             HandleInteractionPerformed;
+
+        playerMovement.OnInteractionBlocked +=
+            HandleInteractionBlocked;
     }
 
     private void OnDisable()
@@ -93,6 +112,9 @@ public class Crosshair : MonoBehaviour
 
             playerMovement.OnInteractionPerformed -=
                 HandleInteractionPerformed;
+
+            playerMovement.OnInteractionBlocked -=
+                HandleInteractionBlocked;
         }
 
         KillTweens();
@@ -128,11 +150,14 @@ public class Crosshair : MonoBehaviour
         _textTween?.Kill();
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
+        _blockedTween?.Kill();
+
+        _crosshairRect.anchoredPosition =
+            _defaultAnchoredPosition;
 
         interactionNameText.text =
             interactable.InteractionName;
 
-        // Kolor kropki
         _colorTween = crosshairImage
             .DOColor(
                 interactableColor,
@@ -143,7 +168,6 @@ public class Crosshair : MonoBehaviour
                 LinkBehaviour.KillOnDestroy
             );
 
-        // Fade In tekstu
         interactionNameText.alpha = 0f;
 
         _textTween = interactionNameText
@@ -165,13 +189,17 @@ public class Crosshair : MonoBehaviour
         _pulseTween?.Kill();
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
+        _blockedTween?.Kill();
         _colorTween?.Kill();
         _textTween?.Kill();
 
         _pulseTween = null;
         _interactionBlinkTween = null;
+        _blockedTween = null;
 
-        // Powrót koloru
+        _crosshairRect.anchoredPosition =
+            _defaultAnchoredPosition;
+
         _colorTween = crosshairImage
             .DOColor(
                 normalColor,
@@ -182,7 +210,6 @@ public class Crosshair : MonoBehaviour
                 LinkBehaviour.KillOnDestroy
             );
 
-        // Powrót kropki do normalnego rozmiaru
         _scaleTween = crosshairImage.transform
             .DOScale(
                 _defaultScale,
@@ -194,7 +221,6 @@ public class Crosshair : MonoBehaviour
                 LinkBehaviour.KillOnDestroy
             );
 
-        // Fade Out tekstu
         _textTween = interactionNameText
             .DOFade(
                 0f,
@@ -246,18 +272,16 @@ public class Crosshair : MonoBehaviour
         if (!_hasInteractable)
             return;
 
-        // Zatrzymujemy zwykłe pulsowanie,
-        // bo teraz robimy mocniejszy feedback kliknięcia.
         _pulseTween?.Kill();
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
+        _blockedTween?.Kill();
 
         _pulseTween = null;
 
         Sequence blinkSequence =
             DOTween.Sequence();
 
-        // POP
         blinkSequence.Append(
             crosshairImage.transform
                 .DOScale(
@@ -267,7 +291,6 @@ public class Crosshair : MonoBehaviour
                 .SetEase(Ease.OutQuad)
         );
 
-        // Lekko do środka
         blinkSequence.Append(
             crosshairImage.transform
                 .DOScale(
@@ -277,7 +300,6 @@ public class Crosshair : MonoBehaviour
                 .SetEase(Ease.InOutQuad)
         );
 
-        // Powrót
         blinkSequence.Append(
             crosshairImage.transform
                 .DOScale(
@@ -306,6 +328,85 @@ public class Crosshair : MonoBehaviour
             blinkSequence;
     }
 
+    private void HandleInteractionBlocked()
+    {
+        if (!_hasInteractable)
+            return;
+
+        _pulseTween?.Kill();
+        _scaleTween?.Kill();
+        _interactionBlinkTween?.Kill();
+        _blockedTween?.Kill();
+        _colorTween?.Kill();
+
+        _pulseTween = null;
+
+        crosshairImage.transform.localScale =
+            _defaultScale;
+
+        _crosshairRect.anchoredPosition =
+            _defaultAnchoredPosition;
+
+        Sequence blockedSequence =
+            DOTween.Sequence();
+
+        // Szybko robi się czerwony.
+        blockedSequence.Append(
+            crosshairImage
+                .DOColor(
+                    blockedColor,
+                    0.05f
+                )
+        );
+
+        // Jednocześnie shake.
+        blockedSequence.Join(
+            _crosshairRect
+                .DOShakeAnchorPos(
+                    blockedShakeDuration,
+                    new Vector2(
+                        blockedShakeStrength,
+                        0f
+                    ),
+                    blockedShakeVibrato,
+                    0f,
+                    false,
+                    true
+                )
+        );
+
+        // Wraca do żółtego.
+        blockedSequence.Append(
+            crosshairImage
+                .DOColor(
+                    interactableColor,
+                    blockedColorReturnDuration
+                )
+                .SetEase(Ease.OutQuad)
+        );
+
+        blockedSequence.OnComplete(() =>
+        {
+            _blockedTween = null;
+
+            _crosshairRect.anchoredPosition =
+                _defaultAnchoredPosition;
+
+            if (_hasInteractable)
+            {
+                StartPulse();
+            }
+        });
+
+        blockedSequence.SetLink(
+            crosshairImage.gameObject,
+            LinkBehaviour.KillOnDestroy
+        );
+
+        _blockedTween =
+            blockedSequence;
+    }
+
     private void KillTweens()
     {
         _pulseTween?.Kill();
@@ -313,11 +414,13 @@ public class Crosshair : MonoBehaviour
         _colorTween?.Kill();
         _textTween?.Kill();
         _interactionBlinkTween?.Kill();
+        _blockedTween?.Kill();
 
         _pulseTween = null;
         _scaleTween = null;
         _colorTween = null;
         _textTween = null;
         _interactionBlinkTween = null;
+        _blockedTween = null;
     }
 }
