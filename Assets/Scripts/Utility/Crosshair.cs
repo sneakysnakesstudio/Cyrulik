@@ -11,9 +11,20 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private TextMeshProUGUI interactionNameText;
 
     [Header("Colors")]
-    [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color interactableColor = Color.yellow;
-    [SerializeField] private Color blockedColor = Color.red;
+    [SerializeField] private Color normalColor =
+        new Color(0.784f, 0.784f, 0.784f, 1f); // #C8C8C8
+
+    [SerializeField] private Color interactableColor =
+        new Color(0.396f, 0.780f, 0.851f, 1f); // #65C7D9
+
+    [SerializeField] private Color requirementMissingColor =
+        new Color(0.839f, 0.659f, 0.310f, 1f); // #D6A84F
+
+    [SerializeField] private Color successColor =
+        new Color(0.451f, 0.769f, 0.467f, 1f); // #73C477
+
+    [SerializeField] private Color blockedColor =
+        new Color(0.851f, 0.361f, 0.361f, 1f); // #D95C5C
 
     [Header("Interactable Pulse")]
     [SerializeField] private float pulseScale = 1.15f;
@@ -23,6 +34,11 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private float blinkScale = 1.5f;
     [SerializeField] private float blinkSmallScale = 0.9f;
     [SerializeField] private float blinkDuration = 0.07f;
+
+    [Header("Success Interaction")]
+    [SerializeField] private float successColorDuration = 0.07f;
+    [SerializeField] private float successColorHoldDuration = 0.08f;
+    [SerializeField] private float successColorReturnDuration = 0.15f;
 
     [Header("Blocked Interaction")]
     [SerializeField] private float blockedShakeDuration = 0.25f;
@@ -39,6 +55,8 @@ public class Crosshair : MonoBehaviour
     private Vector2 _defaultAnchoredPosition;
 
     private bool _hasInteractable;
+
+    private IInteractable _currentInteractable;
 
     private Tween _pulseTween;
     private Tween _scaleTween;
@@ -129,6 +147,8 @@ public class Crosshair : MonoBehaviour
         IInteractable interactable
     )
     {
+        _currentInteractable = interactable;
+
         _hasInteractable =
             interactable != null;
 
@@ -158,9 +178,12 @@ public class Crosshair : MonoBehaviour
         interactionNameText.text =
             interactable.InteractionName;
 
+        Color targetColor =
+            GetCurrentInteractionColor();
+
         _colorTween = crosshairImage
             .DOColor(
-                interactableColor,
+                targetColor,
                 colorFadeDuration
             )
             .SetLink(
@@ -186,6 +209,8 @@ public class Crosshair : MonoBehaviour
 
     private void HideInteractable()
     {
+        _currentInteractable = null;
+
         _pulseTween?.Kill();
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
@@ -276,13 +301,25 @@ public class Crosshair : MonoBehaviour
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
         _blockedTween?.Kill();
+        _colorTween?.Kill();
 
         _pulseTween = null;
 
         Sequence blinkSequence =
             DOTween.Sequence();
 
+        // Zielony = akcja wykonana poprawnie.
         blinkSequence.Append(
+            crosshairImage
+                .DOColor(
+                    successColor,
+                    successColorDuration
+                )
+                .SetEase(Ease.OutQuad)
+        );
+
+        // Powiększenie kropki.
+        blinkSequence.Join(
             crosshairImage.transform
                 .DOScale(
                     _defaultScale * blinkScale,
@@ -305,6 +342,20 @@ public class Crosshair : MonoBehaviour
                 .DOScale(
                     _defaultScale,
                     blinkDuration
+                )
+                .SetEase(Ease.OutQuad)
+        );
+
+        blinkSequence.AppendInterval(
+            successColorHoldDuration
+        );
+
+        // Po sukcesie wraca do aktualnego koloru interakcji.
+        blinkSequence.Append(
+            crosshairImage
+                .DOColor(
+                    GetCurrentInteractionColor(),
+                    successColorReturnDuration
                 )
                 .SetEase(Ease.OutQuad)
         );
@@ -350,7 +401,8 @@ public class Crosshair : MonoBehaviour
         Sequence blockedSequence =
             DOTween.Sequence();
 
-        // Szybko robi się czerwony.
+        // Czerwony = gracz spróbował wykonać akcję,
+        // ale akcja się nie udała.
         blockedSequence.Append(
             crosshairImage
                 .DOColor(
@@ -375,11 +427,12 @@ public class Crosshair : MonoBehaviour
                 )
         );
 
-        // Wraca do żółtego.
+        // Po błędzie wraca do koloru wynikającego
+        // z aktualnego stanu obiektu.
         blockedSequence.Append(
             crosshairImage
                 .DOColor(
-                    interactableColor,
+                    GetCurrentInteractionColor(),
                     blockedColorReturnDuration
                 )
                 .SetEase(Ease.OutQuad)
@@ -405,6 +458,16 @@ public class Crosshair : MonoBehaviour
 
         _blockedTween =
             blockedSequence;
+    }
+
+    private Color GetCurrentInteractionColor()
+    {
+        if (_currentInteractable == null)
+        {
+            return normalColor;
+        }
+
+        return interactableColor;
     }
 
     private void KillTweens()
