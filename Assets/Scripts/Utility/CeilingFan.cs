@@ -16,40 +16,33 @@ public class CeilingFan : MonoBehaviour
     [Header("Rotation")]
     [SerializeField] private RotationAxis rotationAxis = RotationAxis.Y;
 
-    [Tooltip("Normalna prędkość wentylatora kiedy światło jest wyłączone.")]
-    [SerializeField] private float normalSpeed = 80f;
-
     [Tooltip("Prędkość wentylatora po włączeniu światła.")]
-    [SerializeField] private float boostedSpeed = 220f;
+    [SerializeField] private float fanSpeed = 220f;
 
-    [Tooltip("Jak szybko wentylator przyspiesza.")]
+    [Tooltip("Jak szybko wentylator się rozpędza.")]
     [SerializeField] private float acceleration = 60f;
 
-    [Tooltip("Jak szybko wentylator zwalnia.")]
+    [Tooltip("Jak szybko wentylator zwalnia po wyłączeniu.")]
     [SerializeField] private float deceleration = 40f;
 
     [Header("Audio")]
     [SerializeField] private AudioSource fanAudioSource;
     [SerializeField] private AudioClip fanLoopClip;
 
-    [Tooltip("Pitch przy normalnej prędkości.")]
-    [SerializeField] private float normalPitch = 0.85f;
+    [Tooltip("Pitch wentylatora podczas pracy.")]
+    [SerializeField] private float runningPitch = 1f;
 
-    [Tooltip("Pitch przy szybkiej prędkości.")]
-    [SerializeField] private float boostedPitch = 1.15f;
-
-    [Tooltip("Jak szybko zmienia się pitch dźwięku.")]
+    [Tooltip("Jak szybko pitch dochodzi do docelowej wartości.")]
     [SerializeField] private float pitchChangeSpeed = 1f;
 
     private float _currentSpeed;
     private float _targetSpeed;
-    private float _targetPitch;
 
     private void Awake()
     {
-        _currentSpeed = normalSpeed;
-        _targetSpeed = normalSpeed;
-        _targetPitch = normalPitch;
+        // Na początku wentylator stoi.
+        _currentSpeed = 0f;
+        _targetSpeed = 0f;
 
         SetupAudio();
     }
@@ -70,11 +63,6 @@ public class CeilingFan : MonoBehaviour
         }
     }
 
-    private void Start()
-    {
-        StartFanAudio();
-    }
-
     private void Update()
     {
         UpdateSpeed();
@@ -86,39 +74,39 @@ public class CeilingFan : MonoBehaviour
     {
         if (isLightOn)
         {
-            _targetSpeed = boostedSpeed;
-            _targetPitch = boostedPitch;
+            // Światło ON -> wentylator zaczyna się rozpędzać.
+            _targetSpeed = fanSpeed;
+
+            StartFanAudio();
         }
         else
         {
-            _targetSpeed = normalSpeed;
-            _targetPitch = normalPitch;
+            // Światło OFF -> wentylator zwalnia do zera.
+            _targetSpeed = 0f;
+
+            StopFanAudio();
         }
     }
 
     private void UpdateSpeed()
     {
-        float speedChangeRate;
-
-        if (_currentSpeed < _targetSpeed)
-        {
-            speedChangeRate = acceleration;
-        }
-        else
-        {
-            speedChangeRate = deceleration;
-        }
+        float changeRate = _currentSpeed < _targetSpeed
+            ? acceleration
+            : deceleration;
 
         _currentSpeed = Mathf.MoveTowards(
             _currentSpeed,
             _targetSpeed,
-            speedChangeRate * Time.deltaTime
+            changeRate * Time.deltaTime
         );
     }
 
     private void RotateFan()
     {
         if (fanPivot == null)
+            return;
+
+        if (_currentSpeed <= 0f)
             return;
 
         Vector3 axis = rotationAxis switch
@@ -144,7 +132,10 @@ public class CeilingFan : MonoBehaviour
         fanAudioSource.loop = true;
         fanAudioSource.playOnAwake = false;
         fanAudioSource.clip = fanLoopClip;
-        fanAudioSource.pitch = normalPitch;
+        fanAudioSource.pitch = runningPitch;
+
+        // Na wszelki wypadek zatrzymujemy audio na starcie.
+        fanAudioSource.Stop();
     }
 
     private void StartFanAudio()
@@ -154,18 +145,27 @@ public class CeilingFan : MonoBehaviour
 
         if (!fanAudioSource.isPlaying)
         {
+            fanAudioSource.pitch = runningPitch;
             fanAudioSource.Play();
         }
     }
 
-    private void UpdateAudio()
+    private void StopFanAudio()
     {
         if (fanAudioSource == null)
             return;
 
+        fanAudioSource.Stop();
+    }
+
+    private void UpdateAudio()
+    {
+        if (fanAudioSource == null || !fanAudioSource.isPlaying)
+            return;
+
         fanAudioSource.pitch = Mathf.MoveTowards(
             fanAudioSource.pitch,
-            _targetPitch,
+            runningPitch,
             pitchChangeSpeed * Time.deltaTime
         );
     }

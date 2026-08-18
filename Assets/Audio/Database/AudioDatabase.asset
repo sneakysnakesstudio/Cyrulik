@@ -80,3 +80,15 @@ MonoBehaviour:
     randomizeVolume: 0
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: LightSwitch_sound
+    clips:
+    - {fileID: 8300000, guid: b6aec371d8fee99468fef92b0b49490e, type: 3}
+    - {fileID: 8300000, guid: aae74724912a12e4f9628a06050906b6, type: 3}
+    volume: 0.076
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1

@@ -10,6 +10,10 @@ public class LampSwitch : MonoBehaviour, IInteractable
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Light Switch";
 
+    [Header("Task Tracking")]
+    [Tooltip("Opcjonalne ID zadania do PreparationStateManager (np. lights_salon). Jeśli puste, nie rejestruje zadania.")]
+    [SerializeField] private string taskId;
+
     [Header("Lights")]
     [SerializeField] private Light[] targetLights;
 
@@ -90,6 +94,11 @@ public class LampSwitch : MonoBehaviour, IInteractable
         }
     }
 
+    private void Start()
+    {
+        NotifyTaskState();
+    }
+
     public void Interact()
     {
         PlayInteractionSound();
@@ -103,6 +112,15 @@ public class LampSwitch : MonoBehaviour, IInteractable
             TurnOn();
         }
         OnLightStateChanged?.Invoke(_isOn);
+        NotifyTaskState();
+    }
+
+    private void NotifyTaskState()
+    {
+        if (!string.IsNullOrWhiteSpace(taskId) && PreparationStateManager.Instance != null)
+        {
+            PreparationStateManager.Instance.SetTaskState(taskId, _isOn);
+        }
     }
 
     private void PlayInteractionSound()
