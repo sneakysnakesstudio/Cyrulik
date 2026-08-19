@@ -25,6 +25,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [Header("References")]
     [SerializeField] private Transform doorPivot;
 
+    [EnumButtons]
     [Header("Rotation")]
     [SerializeField] private RotationAxis rotationAxis =
         RotationAxis.Y;
@@ -38,6 +39,12 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     [SerializeField] private Ease closeEase =
         Ease.InOutQuad;
+
+    [Header("Audio")]
+    [SerializeField] private string openSoundName = "";
+    [SerializeField] private float openSoundDelay = 0f;
+    [SerializeField] private string closeSoundName = "";
+    [SerializeField] private float closeSoundDelay = 0f;
 
     public string InteractionName =>
         interactionName;
@@ -120,6 +127,22 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
         IsOpen = true;
 
+        if (!string.IsNullOrEmpty(openSoundName) && AudioManager.Instance != null)
+        {
+            if (openSoundDelay > 0f)
+            {
+                DOVirtual.DelayedCall(openSoundDelay, () =>
+                {
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.Play(openSoundName);
+                }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            else
+            {
+                AudioManager.Instance.Play(openSoundName);
+            }
+        }
+
         _rotationTween =
             doorPivot
                 .DOLocalRotate(
@@ -140,6 +163,22 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         _rotationTween?.Kill();
 
         IsOpen = false;
+
+        if (!string.IsNullOrEmpty(closeSoundName) && AudioManager.Instance != null)
+        {
+            if (closeSoundDelay > 0f)
+            {
+                DOVirtual.DelayedCall(closeSoundDelay, () =>
+                {
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.Play(closeSoundName);
+                }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            else
+            {
+                AudioManager.Instance.Play(closeSoundName);
+            }
+        }
 
         _rotationTween =
             doorPivot

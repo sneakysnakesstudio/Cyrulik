@@ -60,7 +60,7 @@ MonoBehaviour:
     clips:
     - {fileID: 8300000, guid: a2ea3c44d6ef3b5469f739b1051dce7e, type: 3}
     - {fileID: 8300000, guid: 3aad0376a8dc42e409ad392390cb919b, type: 3}
-    volume: 0.194
+    volume: 0.484
     preventImmediateRepeat: 1
     randomizePitch: 0
     minPitch: 0.95
@@ -72,7 +72,7 @@ MonoBehaviour:
     clips:
     - {fileID: 8300000, guid: b6aec371d8fee99468fef92b0b49490e, type: 3}
     - {fileID: 8300000, guid: aae74724912a12e4f9628a06050906b6, type: 3}
-    volume: 0.076
+    volume: 0.382
     preventImmediateRepeat: 1
     randomizePitch: 0
     minPitch: 0.95

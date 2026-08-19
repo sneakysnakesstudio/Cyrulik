@@ -16,9 +16,14 @@ public class GameTimeController : MonoBehaviour
     [Header("Time Settings")]
     [Tooltip("1 = jedna sekunda realna to jedna sekunda w grze.")]
     [SerializeField] private float timeScale = 1f;
+    [SerializeField] private bool isPaused = false;
 
     [Header("UI")]
     [SerializeField] private TMP_Text timeText;
+    
+    [Tooltip("Tekst przed czasem. Zrób tu np. 'Autumn 1986r, Polish village\nTime: '")]
+    [TextArea]
+    [SerializeField] private string prefixText = "";
 
     public event Action OnOpeningTimeReached;
 
@@ -47,6 +52,8 @@ public class GameTimeController : MonoBehaviour
 
     private void Update()
     {
+        if (isPaused) return;
+
         _currentTime += Time.deltaTime * timeScale;
 
         // Pełna doba
@@ -77,8 +84,11 @@ public class GameTimeController : MonoBehaviour
         if (timeText == null)
             return;
 
-        timeText.text = $"{Hour:00}:{Minute:00}:{Second:00}";
+        timeText.text = $"{prefixText}{Hour:00}:{Minute:00}:{Second:00}";
     }
+
+    public void Pause() => isPaused = true;
+    public void Resume() => isPaused = false;
 
     public void SetTime(int hour, int minute, int second = 0)
     {

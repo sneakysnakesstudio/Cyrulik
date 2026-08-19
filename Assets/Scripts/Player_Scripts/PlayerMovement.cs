@@ -34,6 +34,15 @@ public class PlayerMovement : MonoBehaviour
 
     private IInteractable _currentInteractable;
 
+    /// <summary>Czy gracz aktualnie się porusza (uwzględnia kolizje — sprawdza velocity CC).</summary>
+    public bool IsMoving =>
+        _characterController != null &&
+        _characterController.isGrounded &&
+        new Vector2(
+            _characterController.velocity.x,
+            _characterController.velocity.z
+        ).sqrMagnitude > 0.01f;
+
     private void Awake()
     {
         _characterController =
