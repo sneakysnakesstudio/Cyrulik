@@ -21,10 +21,10 @@ public class MouseTrap : MonoBehaviour, IConditionalInteractable
     [Tooltip("(Opcjonalnie) Gotowy model sera na pułapce, który włączymy, niszcząc trzymany w ręce.")]
     [SerializeField] private GameObject cheeseVisualOnTrap;
 
-    [Header("Teksty interakcji")]
-    [SerializeField] private string promptNeedItem = "Pułapka na myszy (wymaga sera z lodówki)";
-    [SerializeField] private string promptPlaceItem = "Połóż ser na pułapce";
-    [SerializeField] private string promptArmed = "Uzbrojona pułapka na myszy";
+    [Header("Interaction Prompts")]
+    [SerializeField] private string promptNeedItem = "Mouse trap (Requires cheese from fridge)";
+    [SerializeField] private string promptPlaceItem = "Place cheese on trap";
+    [SerializeField] private string promptArmed = "Armed mouse trap";
 
     [Header("Audio")]
     [SerializeField] private string soundArmTrap = "mousetrap_arm";

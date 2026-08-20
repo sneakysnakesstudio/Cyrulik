@@ -200,21 +200,25 @@ public class PlayerMovement : MonoBehaviour
     )
     {
         if (_currentInteractable == null)
-            return;
-
-        // NOWE:
-        // obiekt może istnieć jako interactable,
-        // ale chwilowo blokować wykonanie akcji.
-        if (_currentInteractable
-            is IConditionalInteractable conditional)
         {
+            Debug.Log("[PlayerMovement] HandleInteraction: _currentInteractable is NULL");
+            return;
+        }
+
+        Debug.Log($"[PlayerMovement] HandleInteraction on: {_currentInteractable.GetType().Name} ({_currentInteractable.InteractionName})");
+
+        if (_currentInteractable is IConditionalInteractable conditional)
+        {
+            Debug.Log($"[PlayerMovement] IConditionalInteractable.CanInteract: {conditional.CanInteract}");
             if (!conditional.CanInteract)
             {
+                Debug.LogWarning($"[PlayerMovement] Interaction BLOCKED on {_currentInteractable.GetType().Name}!");
                 OnInteractionBlocked?.Invoke();
                 return;
             }
         }
 
+        Debug.Log($"[PlayerMovement] Executing Interact() on {_currentInteractable.GetType().Name}...");
         _currentInteractable.Interact();
 
         OnInteractionPerformed?.Invoke();

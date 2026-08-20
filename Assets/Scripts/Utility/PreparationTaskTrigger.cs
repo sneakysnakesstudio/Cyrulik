@@ -3,7 +3,7 @@ using UnityEngine;
 public class PreparationTaskTrigger : MonoBehaviour, IInteractable
 {
     [Header("Interaction")]
-    [SerializeField] private string interactionName = "Użyj";
+    [SerializeField] private string interactionName = "Use";
 
     [Header("Task")]
     [Tooltip("Identyfikator zadania w PreparationStateManager (np. stove_lit, water_heated).")]

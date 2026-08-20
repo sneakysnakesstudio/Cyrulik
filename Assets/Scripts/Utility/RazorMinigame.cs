@@ -9,21 +9,48 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Minigra ostrzenia brzytwy napędzana bezpiecznym silnikiem DOTween.
-/// 
-/// Gwarantuje płynny ruch w zadanym czasie (np. 2.5 sekundy na przejazd),
-/// bez możliwości zbugowania prędkości czy klatek.
+/// Wymaga przyniesienia żyletki z pudełka przed uruchomieniem.
 /// </summary>
-public class RazorMinigame : MonoBehaviour, IInteractable
+public class RazorMinigame : MonoBehaviour, IConditionalInteractable
 {
     public static event Action<float> OnMinigameCompleted;
 
     // ──────────────────────────────────────────────────────────
-    // INTERAKCJA I INPUT
+    // INTERAKCJA I WYMÓG ŻYLETKI
     // ──────────────────────────────────────────────────────────
 
-    [Header("Interaction")]
-    [SerializeField] private string interactionName = "Ostrzałka";
-    public string InteractionName => interactionName;
+    [Header("Wymóg żyletki")]
+    [Tooltip("Czy minigra wymaga przyniesienia żyletki w rękach gracza?")]
+    [SerializeField] private bool requireBladeItem = true;
+
+    [Tooltip("Wymagany ItemId z PickupItem (domyślnie 'razor_blade').")]
+    [SerializeField] private string requiredBladeItemId = "razor_blade";
+
+    [Header("Interaction Prompts")]
+    [SerializeField] private string promptNeedBlade = "Sharpening station (Requires razor blade)";
+    [SerializeField] private string promptCanSharpen = "Sharpen razor";
+    [SerializeField] private string promptAlreadyDone = "Razor has been sharpened";
+
+    public bool CanInteract
+    {
+        get
+        {
+            if (_state != State.Inactive) return false;
+            if (_isCompleted) return false;
+            if (!requireBladeItem) return true;
+            return IsPlayerHoldingBlade();
+        }
+    }
+
+    public string InteractionName
+    {
+        get
+        {
+            if (_isCompleted) return promptAlreadyDone;
+            if (requireBladeItem && !IsPlayerHoldingBlade()) return promptNeedBlade;
+            return promptCanSharpen;
+        }
+    }
 
     [Header("Input")]
     [Tooltip("Akcja wejścia (np. Space).")]
@@ -178,6 +205,7 @@ public class RazorMinigame : MonoBehaviour, IInteractable
     private State _state = State.Inactive;
     private int _attemptsDone = 0;
     private float _sharpness = 0f;
+    private bool _isCompleted = false;
 
     private Vector2 _bottomPos;
     private Vector2 _topPos;
@@ -220,8 +248,81 @@ public class RazorMinigame : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (_state != State.Inactive) return;
+        Debug.Log($"[RazorMinigame] Interact() called! State={_state}, isCompleted={_isCompleted}, requireBladeItem={requireBladeItem}");
+        if (!CanInteract)
+        {
+            Debug.LogWarning($"[RazorMinigame] Interact() BLOCKED because CanInteract is FALSE! (HoldingBlade={IsPlayerHoldingBlade()})");
+            return;
+        }
+
+        // Jeśli wymagana jest żyletka, zabieramy ją z rąk gracza na start
+        if (requireBladeItem && IsPlayerHoldingBlade())
+        {
+            if (playerHands == null)
+                playerHands = FindAnyObjectByType<PlayerHands>();
+
+            if (playerHands != null)
+            {
+                Debug.Log("[RazorMinigame] Destroying held blade from player hands before starting minigame.");
+                playerHands.DestroyHeldItem();
+            }
+        }
+
         StartMinigame();
+    }
+
+    private bool IsPlayerHoldingBlade()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands == null)
+        {
+            Debug.LogWarning("[RazorMinigame] playerHands reference is NULL in scene!");
+            return false;
+        }
+
+        if (!playerHands.HasItem)
+        {
+            return false;
+        }
+
+        GameObject held = playerHands.HeldItem;
+        if (held == null)
+        {
+            Debug.LogWarning("[RazorMinigame] playerHands.HasItem is true but HeldItem is NULL!");
+            return false;
+        }
+
+        PickupItem pickup = held.GetComponentInChildren<PickupItem>();
+        if (pickup == null)
+            pickup = held.GetComponentInParent<PickupItem>();
+
+        string heldId = pickup != null ? pickup.ItemId : "NO_PICKUP_ITEM";
+        Debug.Log($"[RazorMinigame] Checking blade in hands: GameObject='{held.name}', PickupItem={(pickup != null ? "Found" : "None")}, ItemId='{heldId}', Required='{requiredBladeItemId}'");
+
+        if (pickup != null && !string.IsNullOrEmpty(pickup.ItemId))
+        {
+            string id = pickup.ItemId.Trim().ToLowerInvariant();
+            string req = string.IsNullOrEmpty(requiredBladeItemId) ? "razor_blade" : requiredBladeItemId.Trim().ToLowerInvariant();
+
+            if (id == req || id == "blade" || id == "razor_blade" || id == "zyletka" || id == "ostrze" || id.Contains("blade") || id.Contains("zyletk"))
+            {
+                Debug.Log($"[RazorMinigame] Blade accepted by ItemId: '{id}'");
+                return true;
+            }
+        }
+
+        // Dodatkowe sprawdzenie po nazwie obiektu na wypadek braku wpisanego ItemId
+        string objName = held.name.ToLowerInvariant();
+        if (objName.Contains("blade") || objName.Contains("zyletk") || objName.Contains("ostrze") || objName.Contains("razor"))
+        {
+            Debug.Log($"[RazorMinigame] Blade accepted by GameObject name: '{held.name}'");
+            return true;
+        }
+
+        Debug.LogWarning($"[RazorMinigame] Item '{held.name}' (id: '{heldId}') was REJECTED as razor blade!");
+        return false;
     }
 
     private void StartMinigame()
@@ -567,6 +668,7 @@ public class RazorMinigame : MonoBehaviour, IInteractable
         PreparationStateManager.Instance?.SetTaskState("razor_sharpened", isSharp);
         OnMinigameCompleted?.Invoke(_sharpness);
 
+        _isCompleted = true;
         _state = State.Inactive;
         LockPlayer(false);
     }
