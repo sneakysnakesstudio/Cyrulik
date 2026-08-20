@@ -103,10 +103,38 @@ public class PlayerHands : MonoBehaviour
         }
     }
 
-    private void ClearHand()
+    public void ClearHand()
     {
         _heldItem = null;
         _heldRigidbody = null;
         _heldColliders = null;
+    }
+
+    /// <summary>
+    /// Pobiera i zwalnia trzymany obiekt z rąk (np. do umieszczenia w slocie/pułapce).
+    /// </summary>
+    public GameObject ReleaseHeldItem()
+    {
+        if (!HasItem)
+            return null;
+
+        GameObject item = _heldItem;
+        item.transform.SetParent(null);
+        SetCollidersEnabled(true);
+        ClearHand();
+        return item;
+    }
+
+    /// <summary>
+    /// Usuwa/niszczy trzymany w ręce przedmiot.
+    /// </summary>
+    public void DestroyHeldItem()
+    {
+        if (!HasItem)
+            return;
+
+        GameObject item = _heldItem;
+        ClearHand();
+        Destroy(item);
     }
 }
