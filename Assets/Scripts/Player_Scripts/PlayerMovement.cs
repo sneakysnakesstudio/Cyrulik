@@ -27,10 +27,19 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float gravity = -12f;
     [SerializeField] private float groundedVelocity = -2f;
 
+    [Header("Footsteps Audio")]
+    [SerializeField] private bool enableFootsteps = true;
+    [SerializeField] private string footstepAudioGroup = "player_steps";
+    [Tooltip("Dystans w metrach między krokami podczas marszu.")]
+    [SerializeField] private float stepDistanceWalk = 1.8f;
+    [Tooltip("Dystans w metrach między krokami podczas sprintu.")]
+    [SerializeField] private float stepDistanceSprint = 1.4f;
+
     private CharacterController _characterController;
 
     private Vector2 _moveInput;
     private float _verticalVelocity;
+    private float _stepDistanceCounter;
 
     private IInteractable _currentInteractable;
 
@@ -157,6 +166,33 @@ public class PlayerMovement : MonoBehaviour
         _characterController.Move(
             velocity * Time.deltaTime
         );
+
+        Vector3 horizontalVelocity = new Vector3(_characterController.velocity.x, 0f, _characterController.velocity.z);
+        HandleFootsteps(horizontalVelocity, isSprinting);
+    }
+
+    private void HandleFootsteps(Vector3 horizontalVelocity, bool isSprinting)
+    {
+        if (!enableFootsteps || !_characterController.isGrounded)
+            return;
+
+        float speed = horizontalVelocity.magnitude;
+        if (speed < 0.15f)
+        {
+            return;
+        }
+
+        float stepInterval = isSprinting ? stepDistanceSprint : stepDistanceWalk;
+        _stepDistanceCounter += speed * Time.deltaTime;
+
+        if (_stepDistanceCounter >= stepInterval)
+        {
+            _stepDistanceCounter = 0f;
+            if (!string.IsNullOrEmpty(footstepAudioGroup) && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.Play(footstepAudioGroup);
+            }
+        }
     }
 
     private void CheckForInteractable()

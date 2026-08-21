@@ -184,6 +184,8 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
     // ──────────────────────────────────────────────────────────
 
     [Header("Audio")]
+    [Tooltip("Dźwięk przesunięcia brzytwy po pasie w górę (domyślnie 'ostrzenie_wolne').")]
+    [SerializeField] private string soundPassUp = "ostrzenie_wolne";
     [SerializeField] private string soundGood = "sharpen_good";
     [SerializeField] private string soundPerfect = "sharpen_perfect";
     [SerializeField] private string soundMiss = "sharpen_miss";
@@ -337,6 +339,8 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         _sharpness = 0f;
         _state = State.WaitingForStart;
 
+        ResetZoneHighlights();
+
         // Ustaw brzytwę na pozycji startowej
         if (razorIndicator != null)
         {
@@ -396,10 +400,11 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
     {
         if (_state == State.WaitingForStart)
         {
-            // Pierwsze wciśnięcie: ukryj komunikat i wystartuj 1. próbę
+            // Wciśnięcie spacji przed ruchem: ukryj komunikat i wystartuj ruch w górę
             if (pressToStartUI != null)
                 pressToStartUI.SetActive(false);
 
+            ShowFeedback(string.Empty);
             StartPassUpwards();
             return;
         }
@@ -424,6 +429,15 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
     private void StartPassUpwards()
     {
         _state = State.MovingUp;
+
+        // Resetujemy podświetlenie stref do stanu początkowego na nowy ruch
+        ResetZoneHighlights();
+
+        // Odtwarzamy dźwięk przesunięcia brzytwy po pasie w górę
+        if (!string.IsNullOrEmpty(soundPassUp))
+        {
+            AudioManager.Instance?.Play(soundPassUp);
+        }
 
         float duration = Mathf.Max(minTravelTime, initialTravelTime - (_attemptsDone * timeReductionPerAttempt));
 
@@ -479,7 +493,10 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         }
         else
         {
-            StartPassUpwards();
+            // Zamiast automatycznego startu: przechodzimy w tryb oczekiwania na spację gracza
+            _state = State.WaitingForStart;
+            if (pressToStartUI != null)
+                pressToStartUI.SetActive(true);
         }
     }
 
@@ -648,6 +665,50 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         else if (zoneGood != null && zoneGoodGlow == null)
         {
             zoneGood.DOPunchScale(new Vector3(0.15f, 0.15f, 0f), zoneGlowDuration, vibrato: 6).SetLink(zoneGood.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+    }
+
+    /// <summary>
+    /// Natychmiastowo wygasza podświetlenia stref i resetuje ich skalę do wartości domyślnych (np. przy nowym ruchu).
+    /// </summary>
+    private void ResetZoneHighlights()
+    {
+        if (zoneGoodGlow != null)
+        {
+            zoneGoodGlow.DOKill();
+            zoneGoodGlow.alpha = 0f;
+            zoneGoodGlow.transform.localScale = Vector3.one;
+        }
+
+        if (zonePerfectGlow != null)
+        {
+            zonePerfectGlow.DOKill();
+            zonePerfectGlow.alpha = 0f;
+            zonePerfectGlow.transform.localScale = Vector3.one;
+        }
+
+        if (zoneGoodImage != null)
+        {
+            zoneGoodImage.DOKill();
+            zoneGoodImage.color = Color.white;
+            zoneGoodImage.rectTransform.localScale = Vector3.one;
+        }
+        else if (zoneGood != null)
+        {
+            zoneGood.DOKill();
+            zoneGood.localScale = Vector3.one;
+        }
+
+        if (zonePerfectImage != null)
+        {
+            zonePerfectImage.DOKill();
+            zonePerfectImage.color = Color.white;
+            zonePerfectImage.rectTransform.localScale = Vector3.one;
+        }
+        else if (zonePerfect != null)
+        {
+            zonePerfect.DOKill();
+            zonePerfect.localScale = Vector3.one;
         }
     }
 
@@ -820,8 +881,7 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
             minigameCanvasGroup.blocksRaycasts = false;
         }
 
-        if (zoneGoodGlow != null) zoneGoodGlow.alpha = 0f;
-        if (zonePerfectGlow != null) zonePerfectGlow.alpha = 0f;
+        ResetZoneHighlights();
     }
 
     private enum HitResult { Miss, Good, Perfect }

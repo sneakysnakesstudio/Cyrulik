@@ -103,8 +103,8 @@ public class AudioManager : MonoBehaviour
         to.panStereo =
             from.panStereo;
 
-        to.spatialBlend =
-            from.spatialBlend;
+        // Dźwięki systemowe/SFX odtwarzamy w 2D (spatialBlend = 0), aby nie zanikały w przestrzeni 3D
+        to.spatialBlend = 0f;
 
         to.reverbZoneMix =
             from.reverbZoneMix;

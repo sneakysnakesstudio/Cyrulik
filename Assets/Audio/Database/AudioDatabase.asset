@@ -23,7 +23,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 67b16d95cf467dd469c9a27ac4ec2b1a, type: 3}
     - {fileID: 8300000, guid: fc22480479e449349b7db024c768da6f, type: 3}
     - {fileID: 8300000, guid: ff68341861b16434496035326eade3be, type: 3}
-    volume: 0.029
+    volume: 0.124
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.94
@@ -82,9 +82,37 @@ MonoBehaviour:
     maxVolumeMultiplier: 1.1
   - groupName: LightSwitch_sound
     clips:
-    - {fileID: 8300000, guid: b6aec371d8fee99468fef92b0b49490e, type: 3}
-    - {fileID: 8300000, guid: aae74724912a12e4f9628a06050906b6, type: 3}
-    volume: 0.076
+    - {fileID: 8300000, guid: 0b2f20f8210fdb1488047e7477e32cc4, type: 3}
+    - {fileID: 8300000, guid: 8db369421d8f06f4aa7e8ab14b8c0280, type: 3}
+    volume: 0.242
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.44
+    maxPitch: 0.6
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.72
+    maxVolumeMultiplier: 0.9
+  - groupName: sharpen_good
+    clips: []
+    volume: 0.75
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: ostrzenie_wolne
+    clips:
+    - {fileID: 8300000, guid: cbc1b0bfae87f244084c0c978a8ccf43, type: 3}
+    - {fileID: 8300000, guid: fec2249cba995614c9d494ba13765c72, type: 3}
+    - {fileID: 8300000, guid: a62497658037895498e93104354a50d5, type: 3}
+    - {fileID: 8300000, guid: 2cf3ea24931ec8849bdd6c6f6aa475cf, type: 3}
+    - {fileID: 8300000, guid: c3d6cbc7012f1744cbf95f0527654add, type: 3}
+    - {fileID: 8300000, guid: aeeb2cb194a8a3b4784c8b83553602a9, type: 3}
+    - {fileID: 8300000, guid: 8a6b80b12e456554ba99eebcfdea1a61, type: 3}
+    - {fileID: 8300000, guid: 1ddf4e94edefac8428d85880b92ff7d3, type: 3}
+    volume: 0.85
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95
