@@ -1,12 +1,19 @@
 using System;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 {
     public event Action<bool> OnDoorStateChanged;
 
-    public enum RotationAxis
+    public enum MotionMode
+    {
+        Rotate,
+        Slide
+    }
+
+    public enum MovementAxis
     {
         X,
         Y,
@@ -17,28 +24,35 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private string interactionName = "Door";
 
     [Header("Availability")]
-    [Tooltip(
-        "Zaznacz tylko na drzwiach, które mają być zablokowane na początku."
-    )]
+    [Tooltip("Zaznacz tylko na drzwiach/szufladach, które mają być zablokowane na początku.")]
     [SerializeField] private bool lockedAtStart = false;
 
     [Header("References")]
     [SerializeField] private Transform doorPivot;
 
     [EnumButtons]
-    [Header("Rotation")]
-    [SerializeField] private RotationAxis rotationAxis =
-        RotationAxis.Y;
+    [Header("Motion Mode")]
+    [Tooltip("Rotate: obrót kątowy (np. drzwi). Slide: przesunięcie pozycji (np. szuflady).")]
+    [SerializeField] private MotionMode motionMode = MotionMode.Rotate;
 
+    [EnumButtons]
+    [Header("Axis")]
+    [FormerlySerializedAs("rotationAxis")]
+    [SerializeField] private MovementAxis axis = MovementAxis.Y;
+
+    [Header("Rotation Settings (Gdy Rotate)")]
+    [Tooltip("Kąt otwarcia w stopniach.")]
     [SerializeField] private float openAngle = 90f;
+
+    [Header("Slide Settings (Gdy Slide / Szuflada)")]
+    [Tooltip("Dystans wysunięcia w jednostkach lokalnych (np. -0.35 na osi X w lewo).")]
+    [SerializeField] private float slideDistance = -0.35f;
+
+    [Header("Timing & Animation")]
     [SerializeField] private float openDuration = 0.6f;
 
-    [Header("Animation")]
-    [SerializeField] private Ease openEase =
-        Ease.OutQuad;
-
-    [SerializeField] private Ease closeEase =
-        Ease.InOutQuad;
+    [SerializeField] private Ease openEase = Ease.OutQuad;
+    [SerializeField] private Ease closeEase = Ease.InOutQuad;
 
     [Header("Audio")]
     [SerializeField] private string openSoundName = "";
@@ -46,20 +60,21 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private string closeSoundName = "";
     [SerializeField] private float closeSoundDelay = 0f;
 
-    public string InteractionName =>
-        interactionName;
+    public string InteractionName => interactionName;
 
     public bool IsOpen { get; private set; }
 
-    public bool CanInteract =>
-        _isUnlocked;
+    public bool CanInteract => _isUnlocked;
 
     private bool _isUnlocked;
 
     private Vector3 _closedRotation;
     private Vector3 _openRotation;
 
-    private Tween _rotationTween;
+    private Vector3 _closedPosition;
+    private Vector3 _openPosition;
+
+    private Tween _motionTween;
 
     private void Awake()
     {
@@ -68,33 +83,31 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             doorPivot = transform;
         }
 
-        // Wszystkie zwykłe drzwi:
-        // lockedAtStart = false
-        // więc od razu są odblokowane.
-        _isUnlocked =
-            !lockedAtStart;
+        _isUnlocked = !lockedAtStart;
 
-        _closedRotation =
-            doorPivot.localEulerAngles;
+        // Zapamiętujemy pozycję i rotację zamkniętą
+        _closedRotation = doorPivot.localEulerAngles;
+        _openRotation = _closedRotation;
 
-        _openRotation =
-            _closedRotation;
+        _closedPosition = doorPivot.localPosition;
+        _openPosition = _closedPosition;
 
-        switch (rotationAxis)
+        // Obliczamy wartości otwarte w zależności od osi
+        switch (axis)
         {
-            case RotationAxis.X:
-                _openRotation.x +=
-                    openAngle;
+            case MovementAxis.X:
+                _openRotation.x += openAngle;
+                _openPosition.x += slideDistance;
                 break;
 
-            case RotationAxis.Y:
-                _openRotation.y +=
-                    openAngle;
+            case MovementAxis.Y:
+                _openRotation.y += openAngle;
+                _openPosition.y += slideDistance;
                 break;
 
-            case RotationAxis.Z:
-                _openRotation.z +=
-                    openAngle;
+            case MovementAxis.Z:
+                _openRotation.z += openAngle;
+                _openPosition.z += slideDistance;
                 break;
         }
     }
@@ -123,7 +136,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     private void OpenDoor()
     {
-        _rotationTween?.Kill();
+        _motionTween?.Kill();
 
         IsOpen = true;
 
@@ -143,24 +156,27 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        _rotationTween =
-            doorPivot
-                .DOLocalRotate(
-                    _openRotation,
-                    openDuration
-                )
+        if (motionMode == MotionMode.Rotate)
+        {
+            _motionTween = doorPivot
+                .DOLocalRotate(_openRotation, openDuration)
                 .SetEase(openEase)
-                .SetLink(
-                    doorPivot.gameObject,
-                    LinkBehaviour.KillOnDestroy
-                );
+                .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+        else
+        {
+            _motionTween = doorPivot
+                .DOLocalMove(_openPosition, openDuration)
+                .SetEase(openEase)
+                .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
+        }
 
         OnDoorStateChanged?.Invoke(true);
     }
 
     private void CloseDoor()
     {
-        _rotationTween?.Kill();
+        _motionTween?.Kill();
 
         IsOpen = false;
 
@@ -180,29 +196,32 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        _rotationTween =
-            doorPivot
-                .DOLocalRotate(
-                    _closedRotation,
-                    openDuration
-                )
+        if (motionMode == MotionMode.Rotate)
+        {
+            _motionTween = doorPivot
+                .DOLocalRotate(_closedRotation, openDuration)
                 .SetEase(closeEase)
-                .SetLink(
-                    doorPivot.gameObject,
-                    LinkBehaviour.KillOnDestroy
-                );
+                .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+        else
+        {
+            _motionTween = doorPivot
+                .DOLocalMove(_closedPosition, openDuration)
+                .SetEase(closeEase)
+                .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
+        }
 
         OnDoorStateChanged?.Invoke(false);
     }
 
     private void OnDisable()
     {
-        _rotationTween?.Kill();
-        _rotationTween = null;
+        _motionTween?.Kill();
+        _motionTween = null;
     }
 
     private void OnDestroy()
     {
-        _rotationTween?.Kill();
+        _motionTween?.Kill();
     }
 }

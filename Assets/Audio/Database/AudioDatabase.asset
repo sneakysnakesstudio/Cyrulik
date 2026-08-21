@@ -87,8 +87,8 @@ MonoBehaviour:
     volume: 0.242
     preventImmediateRepeat: 1
     randomizePitch: 1
-    minPitch: 0.44
-    maxPitch: 0.6
+    minPitch: 0.8
+    maxPitch: 1
     randomizeVolume: 1
     minVolumeMultiplier: 0.72
     maxVolumeMultiplier: 0.9
@@ -113,6 +113,50 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 8a6b80b12e456554ba99eebcfdea1a61, type: 3}
     - {fileID: 8300000, guid: 1ddf4e94edefac8428d85880b92ff7d3, type: 3}
     volume: 0.85
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: drawer_open
+    clips:
+    - {fileID: 8300000, guid: c4edb969c2308a54894d084a89540fff, type: 3}
+    volume: 0.85
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: drawer_close
+    clips:
+    - {fileID: 8300000, guid: 939674cd666600c46b48ad55edf75e24, type: 3}
+    volume: 0.404
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: door_open
+    clips:
+    - {fileID: 8300000, guid: c48a341cf537bb1499219bfa7ce5563a, type: 3}
+    volume: 0.183
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: door_close
+    clips:
+    - {fileID: 8300000, guid: c00ae44a83aec9f43ab28c80a48d1088, type: 3}
+    volume: 0.183
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95

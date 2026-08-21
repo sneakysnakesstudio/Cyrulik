@@ -76,7 +76,10 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
     [SerializeField] private TMP_Text attemptsText;
     [SerializeField] private TMP_Text feedbackText;
 
-    [Tooltip("Obiekt z tekstem 'Naciśnij Spację, aby zacząć'.")]
+    [Tooltip("Panel / Canvas z poradnikiem / instrukcją (Guide), który wyświetla się na starcie przed naciśnięciem spacji.")]
+    [SerializeField] private GameObject guideOverlayUI;
+
+    [Tooltip("Obiekt z tekstem 'Press SPACE to start'.")]
     [SerializeField] private GameObject pressToStartUI;
 
     // ──────────────────────────────────────────────────────────
@@ -354,6 +357,9 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         UpdateSharpnessMarker(animate: false);
         ShowFeedback(string.Empty);
 
+        if (guideOverlayUI != null)
+            guideOverlayUI.SetActive(true);
+
         if (pressToStartUI != null)
             pressToStartUI.SetActive(true);
 
@@ -400,7 +406,10 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
     {
         if (_state == State.WaitingForStart)
         {
-            // Wciśnięcie spacji przed ruchem: ukryj komunikat i wystartuj ruch w górę
+            // Wciśnięcie spacji na starcie: ukryj poradnik i wystartuj ruch w górę
+            if (guideOverlayUI != null)
+                guideOverlayUI.SetActive(false);
+
             if (pressToStartUI != null)
                 pressToStartUI.SetActive(false);
 
@@ -493,10 +502,8 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         }
         else
         {
-            // Zamiast automatycznego startu: przechodzimy w tryb oczekiwania na spację gracza
-            _state = State.WaitingForStart;
-            if (pressToStartUI != null)
-                pressToStartUI.SetActive(true);
+            // Brzytwa jedzie automatycznie w górę po krótkiej pauzie na dole
+            StartPassUpwards();
         }
     }
 
@@ -880,6 +887,9 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
             minigameCanvasGroup.interactable = false;
             minigameCanvasGroup.blocksRaycasts = false;
         }
+
+        if (guideOverlayUI != null)
+            guideOverlayUI.SetActive(false);
 
         ResetZoneHighlights();
     }
