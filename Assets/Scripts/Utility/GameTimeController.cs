@@ -25,6 +25,8 @@ public class GameTimeController : MonoBehaviour
     [TextArea]
     [SerializeField] private string prefixText = "";
 
+    public static GameTimeController Instance { get; private set; }
+
     public event Action OnOpeningTimeReached;
 
     public int Hour => Mathf.FloorToInt(_currentTime / 3600f) % 24;
@@ -35,6 +37,25 @@ public class GameTimeController : MonoBehaviour
 
     private float _currentTime;
     private float _openingTime;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
 
     private void Start()
     {
@@ -50,6 +71,8 @@ public class GameTimeController : MonoBehaviour
         UpdateTimeUI();
     }
 
+    private int _lastDisplayedSecond = -1;
+
     private void Update()
     {
         if (isPaused) return;
@@ -61,7 +84,14 @@ public class GameTimeController : MonoBehaviour
             _currentTime -= 86400f;
 
         CheckOpeningTime();
-        UpdateTimeUI();
+
+        // Aktualizuj UI tylko gdy zmieniła się sekunda — eliminuje GC alokacje stringów co klatkę
+        int currentSecond = Second;
+        if (currentSecond != _lastDisplayedSecond)
+        {
+            _lastDisplayedSecond = currentSecond;
+            UpdateTimeUI();
+        }
     }
 
     private void CheckOpeningTime()

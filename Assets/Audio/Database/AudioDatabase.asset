@@ -164,3 +164,36 @@ MonoBehaviour:
     randomizeVolume: 1
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: wadrobe_open_sound
+    clips:
+    - {fileID: 8300000, guid: 9601b0d23671945479d23e3f312e7473, type: 3}
+    volume: 0.183
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: wadrobe_close_sound
+    clips:
+    - {fileID: 8300000, guid: 89f595c85fdf8a643992f5bf558763f4, type: 3}
+    volume: 0.183
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: door_handle_sound
+    clips:
+    - {fileID: 8300000, guid: 2adea0520e9236349a998694fa5e64c8, type: 3}
+    volume: 0.183
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1

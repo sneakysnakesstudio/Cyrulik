@@ -379,7 +379,7 @@ public class Crosshair : MonoBehaviour
             blinkSequence;
     }
 
-    private void HandleInteractionBlocked()
+    private void HandleInteractionBlocked(string blockedMessage)
     {
         if (!_hasInteractable)
             return;

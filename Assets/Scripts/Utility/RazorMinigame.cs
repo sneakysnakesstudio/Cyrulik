@@ -782,6 +782,14 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
 
     private void LockPlayer(bool locked)
     {
+        if (InputModeManager.Instance != null)
+        {
+            if (locked)
+                InputModeManager.Instance.SwitchToMinigame(unlockCursor: false);
+            else
+                InputModeManager.Instance.SwitchToPlayer();
+        }
+
         if (playerMovement != null) playerMovement.enabled = !locked;
         if (playerHands != null) playerHands.enabled = !locked;
         if (cinemachineBrain != null) cinemachineBrain.enabled = !locked;

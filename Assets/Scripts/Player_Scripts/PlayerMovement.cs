@@ -7,7 +7,7 @@ public class PlayerMovement : MonoBehaviour
 {
     public event Action<IInteractable> OnInteractableChanged;
     public event Action OnInteractionPerformed;
-    public event Action OnInteractionBlocked;
+    public event Action<string> OnInteractionBlocked;
 
     [Header("Speed")]
     [SerializeField] private float walkSpeed = 5f;
@@ -43,14 +43,16 @@ public class PlayerMovement : MonoBehaviour
 
     private IInteractable _currentInteractable;
 
+    // Cache dla CheckForInteractable — unikamy GetComponentInParent() każdą klatkę
+    private Collider _lastHitCollider;
+    private IInteractable _lastHitInteractable;
+
     /// <summary>Czy gracz aktualnie się porusza (uwzględnia kolizje — sprawdza velocity CC).</summary>
     public bool IsMoving =>
         _characterController != null &&
         _characterController.isGrounded &&
-        new Vector2(
-            _characterController.velocity.x,
-            _characterController.velocity.z
-        ).sqrMagnitude > 0.01f;
+        _characterController.velocity.x * _characterController.velocity.x +
+        _characterController.velocity.z * _characterController.velocity.z > 0.01f;
 
     private void Awake()
     {
@@ -215,9 +217,18 @@ public class PlayerMovement : MonoBehaviour
                 QueryTriggerInteraction.Ignore
             ))
         {
-            foundInteractable =
-                hit.collider
-                    .GetComponentInParent<IInteractable>();
+            // Keszujemy GetComponentInParent — wywołujemy tylko gdy hit collider się zmienił
+            if (hit.collider != _lastHitCollider)
+            {
+                _lastHitCollider = hit.collider;
+                _lastHitInteractable = hit.collider.GetComponentInParent<IInteractable>();
+            }
+            foundInteractable = _lastHitInteractable;
+        }
+        else
+        {
+            _lastHitCollider = null;
+            _lastHitInteractable = null;
         }
 
         if (foundInteractable == _currentInteractable)
@@ -236,25 +247,17 @@ public class PlayerMovement : MonoBehaviour
     )
     {
         if (_currentInteractable == null)
-        {
-            Debug.Log("[PlayerMovement] HandleInteraction: _currentInteractable is NULL");
             return;
-        }
-
-        Debug.Log($"[PlayerMovement] HandleInteraction on: {_currentInteractable.GetType().Name} ({_currentInteractable.InteractionName})");
 
         if (_currentInteractable is IConditionalInteractable conditional)
         {
-            Debug.Log($"[PlayerMovement] IConditionalInteractable.CanInteract: {conditional.CanInteract}");
             if (!conditional.CanInteract)
             {
-                Debug.LogWarning($"[PlayerMovement] Interaction BLOCKED on {_currentInteractable.GetType().Name}!");
-                OnInteractionBlocked?.Invoke();
+                OnInteractionBlocked?.Invoke(conditional.BlockedMessage);
                 return;
             }
         }
 
-        Debug.Log($"[PlayerMovement] Executing Interact() on {_currentInteractable.GetType().Name}...");
         _currentInteractable.Interact();
 
         OnInteractionPerformed?.Invoke();

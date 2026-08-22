@@ -30,6 +30,10 @@ public class PlanarMirror : MonoBehaviour
     private bool _requestSupported;
     private bool _wrongSideWarningShown;
 
+    // Cache: GetComponent w LateUpdate to duży koszt – robimy to raz w Awake
+    private MeshFilter _mirrorMeshFilter;
+    private Bounds _mirrorMeshBounds;
+
     private void Awake()
     {
         if (sourceCamera == null)
@@ -86,6 +90,21 @@ public class PlanarMirror : MonoBehaviour
                 "ma Render Type = Base.",
                 this
             );
+        }
+
+        // Keszujemy MeshFilter i bounds — zamiast GetComponent w każdej klatce LateUpdate
+        _mirrorMeshFilter = mirrorSurface.GetComponent<MeshFilter>();
+        if (_mirrorMeshFilter != null && _mirrorMeshFilter.sharedMesh != null)
+        {
+            _mirrorMeshBounds = _mirrorMeshFilter.sharedMesh.bounds;
+        }
+        else
+        {
+            Debug.LogError(
+                "[PlanarMirror] MirrorSurface musi być Quadem z MeshFilter.",
+                mirrorSurface
+            );
+            enabled = false;
         }
     }
 
@@ -310,23 +329,11 @@ public class PlanarMirror : MonoBehaviour
         topLeft = default;
         center = default;
 
-        MeshFilter meshFilter =
-            mirrorSurface.GetComponent<MeshFilter>();
-
-        if (meshFilter == null ||
-            meshFilter.sharedMesh == null)
-        {
-            Debug.LogError(
-                "[PlanarMirror] MirrorSurface musi być Quadem " +
-                "z MeshFilter.",
-                mirrorSurface
-            );
-
+        // Używamy zkeszowanego MeshFilter i bounds z Awake — zero GetComponent per klatkę
+        if (_mirrorMeshFilter == null)
             return false;
-        }
 
-        Bounds bounds =
-            meshFilter.sharedMesh.bounds;
+        Bounds bounds = _mirrorMeshBounds;
 
         float z =
             bounds.center.z;
