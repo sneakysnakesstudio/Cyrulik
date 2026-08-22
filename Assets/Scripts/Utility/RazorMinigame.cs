@@ -902,5 +902,64 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         ResetZoneHighlights();
     }
 
+    // ──────────────────────────────────────────────────────────
+    // DEV / DEBUG METODY
+    // ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Wymusza natychmiastowe uruchomienie minigry (omija wymóg trzymania żyletki).
+    /// </summary>
+    public void ForceStartMinigame()
+    {
+        if (_state != State.Inactive)
+        {
+            KillAllTweens();
+            _state = State.Inactive;
+        }
+
+        _isCompleted = false;
+        StartMinigame();
+    }
+
+    /// <summary>
+    /// Wymusza natychmiastowe zaliczenie minigry z podaną ostrością (np. 100%).
+    /// </summary>
+    public void ForceCompleteMinigame(float sharpnessPercent = 100f)
+    {
+        KillAllTweens();
+        _sharpness = sharpnessPercent;
+        _isCompleted = true;
+        _state = State.Inactive;
+        HideUI();
+        LockPlayer(false);
+        PreparationStateManager.Instance?.SetTaskState("razor_sharpened", true);
+        OnMinigameCompleted?.Invoke(_sharpness);
+    }
+
+    /// <summary>
+    /// Resetuje stan minigry, umożliwiając ponowne ostrzenie.
+    /// </summary>
+    public void ResetMinigameState()
+    {
+        KillAllTweens();
+        _sharpness = 0f;
+        _attemptsDone = 0;
+        _isCompleted = false;
+        _state = State.Inactive;
+        HideUI();
+        LockPlayer(false);
+        PreparationStateManager.Instance?.SetTaskState("razor_sharpened", false);
+    }
+
+    public bool RequireBladeItem
+    {
+        get => requireBladeItem;
+        set => requireBladeItem = value;
+    }
+
+    public float CurrentSharpness => _sharpness;
+    public bool IsCompleted => _isCompleted;
+    public string CurrentStateName => _state.ToString();
+
     private enum HitResult { Miss, Good, Perfect }
 }

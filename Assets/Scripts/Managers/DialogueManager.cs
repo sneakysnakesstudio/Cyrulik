@@ -20,7 +20,10 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private ClientDialogueUI clientDialogueUI;
 
     public bool IsAnyDialogueActive =>
-        (clientDialogueUI != null && clientDialogueUI.IsDialogueActive);
+        (clientDialogueUI != null && clientDialogueUI.IsDialogueActive) ||
+        (innerThoughtsUI != null && innerThoughtsUI.IsDialogueActive) ||
+        (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive) ||
+        (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive);
 
     private void Awake()
     {

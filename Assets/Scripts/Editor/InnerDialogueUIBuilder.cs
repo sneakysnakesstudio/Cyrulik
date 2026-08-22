@@ -95,7 +95,7 @@ public static class InnerDialogueUIBuilder
         bgRect.sizeDelta = Vector2.zero;
 
         Image bgImage = bgGo.GetComponent<Image>();
-        bgImage.color = new Color(0.10f, 0.12f, 0.14f, 0.92f); // Stonowane tło myśli
+        bgImage.color = new Color(0.10f, 0.12f, 0.14f, 0.92f);
 
         // Obrys / ramka chmurki
         GameObject outlineGo = new GameObject("Bubble_Border", typeof(RectTransform), typeof(Image));
@@ -107,12 +107,12 @@ public static class InnerDialogueUIBuilder
         Image outlineImage = outlineGo.GetComponent<Image>();
         outlineImage.color = new Color(0.45f, 0.55f, 0.65f, 0.35f);
 
-        // Kropelki myśli (dekoracyjne kółeczka pod chmurką - symbol myśli)
+        // Kropelki myśli
         CreateThoughtDot(thoughtRoot.transform, new Vector2(-40, -14), 16);
         CreateThoughtDot(thoughtRoot.transform, new Vector2(-60, -28), 10);
         CreateThoughtDot(thoughtRoot.transform, new Vector2(-75, -38), 6);
 
-        // Pole tekstowe (kursywa)
+        // Pole tekstowe
         GameObject textGo = new GameObject("Thought_Text", typeof(RectTransform), typeof(TextMeshProUGUI));
         textGo.transform.SetParent(thoughtRoot.transform, false);
         RectTransform textRect = textGo.GetComponent<RectTransform>();
@@ -127,7 +127,7 @@ public static class InnerDialogueUIBuilder
         tmp.fontStyle = FontStyles.Italic;
         tmp.color = new Color(0.88f, 0.92f, 0.95f, 1f);
         tmp.alignment = TextAlignmentOptions.MidlineLeft;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
 
         // Prompt [E] + ▼
         (CanvasGroup promptGroup, RectTransform arrowRect, TextMeshProUGUI keyTmp, TextMeshProUGUI arrowTmp) =
@@ -188,7 +188,7 @@ public static class InnerDialogueUIBuilder
         bgRect.sizeDelta = Vector2.zero;
 
         Image bgImage = bgGo.GetComponent<Image>();
-        bgImage.color = new Color(0.06f, 0.06f, 0.06f, 0.94f); // Głęboki ciemny prostokąt
+        bgImage.color = new Color(0.06f, 0.06f, 0.06f, 0.94f);
 
         // Obrys ramki
         GameObject borderGo = new GameObject("Box_Border", typeof(RectTransform), typeof(Image));
@@ -198,7 +198,7 @@ public static class InnerDialogueUIBuilder
         borderRect.anchorMax = Vector2.one;
         borderRect.sizeDelta = Vector2.zero;
         Image borderImage = borderGo.GetComponent<Image>();
-        borderImage.color = new Color(0.6f, 0.5f, 0.35f, 0.45f); // Ciepły akcent vintage ramki
+        borderImage.color = new Color(0.6f, 0.5f, 0.35f, 0.45f);
 
         // Tabliczka Imienia Mówcy (Speaker Badge) w lewym górnym rogu
         GameObject speakerBadge = new GameObject("Speaker_Badge", typeof(RectTransform), typeof(Image));
@@ -211,7 +211,7 @@ public static class InnerDialogueUIBuilder
         badgeRect.sizeDelta = new Vector2(160, 34);
 
         Image badgeImg = speakerBadge.GetComponent<Image>();
-        badgeImg.color = new Color(0.20f, 0.16f, 0.12f, 0.95f); // Tabliczka w stylu drewna/skóry
+        badgeImg.color = new Color(0.20f, 0.16f, 0.12f, 0.95f);
 
         // Tekst Imienia
         GameObject speakerTextGo = new GameObject("Speaker_Name", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -225,7 +225,7 @@ public static class InnerDialogueUIBuilder
         speakerTmp.text = "Klient";
         speakerTmp.fontSize = 20;
         speakerTmp.fontStyle = FontStyles.Bold;
-        speakerTmp.color = new Color(0.95f, 0.82f, 0.55f, 1f); // Złocisty kolor imienia
+        speakerTmp.color = new Color(0.95f, 0.82f, 0.55f, 1f);
         speakerTmp.alignment = TextAlignmentOptions.Center;
 
         // Pole tekstowe wypowiedzi klienta
@@ -242,7 +242,7 @@ public static class InnerDialogueUIBuilder
         tmp.fontSize = 24;
         tmp.color = new Color(0.94f, 0.94f, 0.94f, 1f);
         tmp.alignment = TextAlignmentOptions.TopLeft;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
 
         // Prompt [E] + ▼
         (CanvasGroup promptGroup, RectTransform arrowRect, TextMeshProUGUI keyTmp, TextMeshProUGUI arrowTmp) =

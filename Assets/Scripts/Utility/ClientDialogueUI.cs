@@ -74,16 +74,36 @@ public class ClientDialogueUI : MonoBehaviour
     [SerializeField] private float fadeInDuration = 0.2f;
     [SerializeField] private float fadeOutDuration = 0.3f;
 
+    public enum TypewriterAudioMode
+    {
+        ContinuousLoop,     // Klip zapętlony (np. nagrane 'DU DU DU DU DU'), gra w trakcie pisania tekstu i natychmiast wyłącza się po skończeniu
+        PerCharacter        // Pojedynczy klik przy każdej literce
+    }
+
     [Header("Audio")]
-    [SerializeField] private string defaultCharSoundGroup = "";
+    [Tooltip("ContinuousLoop: Klip zapętlony (np. nagrane 'DU DU DU DU DU'), gra w trakcie pisania tekstu i wyłącza się natychmiast po skończeniu.\nPerCharacter: Pojedynczy dźwięk przy każdej literce.")]
+    [SerializeField] private TypewriterAudioMode audioMode = TypewriterAudioMode.ContinuousLoop;
+
+    [Tooltip("Dźwięk maszyny / gadania (AudioClip). W trybie ContinuousLoop leci w pętli dopóki litery się pojawiają i wyłącza się na końcu.")]
     [SerializeField] private AudioClip charAudioClip;
+
+    [Tooltip("Nazwa dźwięku/grupy w AudioManager (używana jeśli charAudioClip jest pusty).")]
+    [SerializeField] private string defaultCharSoundGroup = "";
+
+    [Tooltip("Dedykowany AudioSource (jeśli pusty, stworzy automatycznie w Awake).")]
     [SerializeField] private AudioSource audioSource;
+
     [Range(0f, 1f)]
     [SerializeField] private float soundVolume = 0.5f;
+
     [Range(0.5f, 2f)]
     [SerializeField] private float minPitch = 0.95f;
+
     [Range(0.5f, 2f)]
     [SerializeField] private float maxPitch = 1.05f;
+
+    [Header("Advance Audio (Dźwięk Przejścia Dalej)")]
+    [Tooltip("Dźwięk odtwarzany przy wciśnięciu [E] i przejściu do kolejnej kwestii / zamknięciu dialogu.")]
     [SerializeField] private string advanceSoundGroup = "";
 
     public bool IsDialogueActive => _isDialogueActive;
@@ -178,6 +198,11 @@ public class ClientDialogueUI : MonoBehaviour
         if (_isTyping && allowSkipTypewriter)
         {
             _skipRequested = true;
+            StopTypewriterAudio();
+            if (dialogueText != null)
+            {
+                dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
+            }
         }
         else if (!_isTyping)
         {
@@ -270,23 +295,29 @@ public class ClientDialogueUI : MonoBehaviour
 
             // Maszynopisanie
             int soundCounter = 0;
+            StartTypewriterAudio();
+
             for (int i = 1; i <= totalChars; i++)
             {
                 if (_skipRequested)
                 {
                     dialogueText.maxVisibleCharacters = totalChars;
+                    StopTypewriterAudio();
                     break;
                 }
 
                 dialogueText.maxVisibleCharacters = i;
                 char c = dialogueText.textInfo.characterInfo[i - 1].character;
 
-                if (!char.IsWhiteSpace(c))
+                if (audioMode == TypewriterAudioMode.PerCharacter)
                 {
-                    soundCounter++;
-                    if (soundCounter % 1 == 0)
+                    if (!char.IsWhiteSpace(c))
                     {
-                        PlayCharSound();
+                        soundCounter++;
+                        if (soundCounter % 1 == 0)
+                        {
+                            PlayCharSound();
+                        }
                     }
                 }
 
@@ -296,6 +327,7 @@ public class ClientDialogueUI : MonoBehaviour
                 if (delay > 0f) yield return new WaitForSeconds(delay);
             }
 
+            StopTypewriterAudio();
             _isTyping = false;
             dialogueText.maxVisibleCharacters = totalChars;
 
@@ -380,6 +412,44 @@ public class ClientDialogueUI : MonoBehaviour
             arrowTransform.anchoredPosition = _arrowOriginalAnchoredPos;
     }
 
+    private void StartTypewriterAudio()
+    {
+        if (audioMode == TypewriterAudioMode.ContinuousLoop)
+        {
+            if (charAudioClip != null)
+            {
+                if (audioSource == null)
+                {
+                    audioSource = gameObject.AddComponent<AudioSource>();
+                    audioSource.playOnAwake = false;
+                    audioSource.spatialBlend = 0f;
+                }
+
+                audioSource.clip = charAudioClip;
+                audioSource.loop = true;
+                audioSource.volume = soundVolume;
+                audioSource.pitch = UnityEngine.Random.Range(minPitch, maxPitch);
+                audioSource.Play();
+            }
+            else
+            {
+                string sound = !string.IsNullOrEmpty(_currentVoiceGroup) ? _currentVoiceGroup : defaultCharSoundGroup;
+                if (!string.IsNullOrEmpty(sound) && AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.Play(sound);
+                }
+            }
+        }
+    }
+
+    private void StopTypewriterAudio()
+    {
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+    }
+
     private void PlayCharSound()
     {
         if (charAudioClip != null && audioSource != null)
@@ -423,6 +493,7 @@ public class ClientDialogueUI : MonoBehaviour
 
     private void HideAllInstant()
     {
+        StopTypewriterAudio();
         HideContinuePrompt();
 
         if (dialogueCanvasGroup != null)
@@ -447,6 +518,8 @@ public class ClientDialogueUI : MonoBehaviour
 
     private void StopAllAnimations()
     {
+        StopTypewriterAudio();
+
         if (_dialogueCoroutine != null)
         {
             StopCoroutine(_dialogueCoroutine);
@@ -455,6 +528,7 @@ public class ClientDialogueUI : MonoBehaviour
 
         _fadeTween?.Kill();
         _fadeTween = null;
+        _isTyping = false;
         HideContinuePrompt();
     }
 }

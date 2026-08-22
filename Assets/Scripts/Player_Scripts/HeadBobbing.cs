@@ -42,9 +42,17 @@ public class HeadBobbing : MonoBehaviour
         _defaultLocalPosition = transform.localPosition;
     }
 
-    private void Update()
+    private void LateUpdate()
     {
-        bool isMoving = playerMovement != null && playerMovement.IsMoving;
+        // Wyłącz kiwanie głową jeśli trwa dialog, myśli, minigra lub schemat UI
+        if (IsDialogueOrUIActive())
+        {
+            _bobTimer = 0f;
+            ReturnToDefault();
+            return;
+        }
+
+        bool isMoving = playerMovement != null && playerMovement.enabled && playerMovement.IsMoving;
 
         if (isMoving)
         {
@@ -54,6 +62,23 @@ public class HeadBobbing : MonoBehaviour
         {
             ReturnToDefault();
         }
+    }
+
+    private bool IsDialogueOrUIActive()
+    {
+        if (InputModeManager.Instance != null && InputModeManager.Instance.CurrentScheme != InputModeManager.ControlScheme.Player)
+            return true;
+
+        if (DialogueManager.Instance != null && DialogueManager.Instance.IsAnyDialogueActive)
+            return true;
+
+        if (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive)
+            return true;
+
+        if (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive)
+            return true;
+
+        return false;
     }
 
     private void ApplyBob()

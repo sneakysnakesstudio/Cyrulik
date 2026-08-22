@@ -188,7 +188,18 @@ MonoBehaviour:
     maxVolumeMultiplier: 1.1
   - groupName: door_handle_sound
     clips:
-    - {fileID: 8300000, guid: 2adea0520e9236349a998694fa5e64c8, type: 3}
+    - {fileID: 8300000, guid: 2f6ff93290db7d4488c35aba49ded602, type: 3}
+    volume: 0.183
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: dialogue_advance_sound
+    clips:
+    - {fileID: 8300000, guid: 7601ee8fb1314304b8a3ea19bcc3794f, type: 3}
     volume: 0.183
     preventImmediateRepeat: 1
     randomizePitch: 1

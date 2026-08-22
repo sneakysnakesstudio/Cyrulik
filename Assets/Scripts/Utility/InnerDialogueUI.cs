@@ -87,12 +87,21 @@ public class InnerDialogueUI : MonoBehaviour
     [Tooltip("Czy tekst ma być kursywą (myśli wewnętrzne gracza).")]
     [SerializeField] private bool useItalic = true;
 
-    [Header("Typewriter Audio")]
-    [Tooltip("Nazwa dźwięku/grupy w AudioManager do odtworzenia przy każdej literce.")]
-    [SerializeField] private string charSoundGroup = "";
+    public enum TypewriterAudioMode
+    {
+        ContinuousLoop,     // Klip zapętlony (np. nagrane 'DU DU DU DU DU'), gra w trakcie pisania tekstu i natychmiast wyłącza się po skończeniu
+        PerCharacter        // Pojedynczy klik przy każdej literce
+    }
 
-    [Tooltip("Opcjonalny bezpośredni AudioClip do dźwięku klawisza/maszyny.")]
+    [Header("Typewriter Audio")]
+    [Tooltip("ContinuousLoop: Klip zapętlony (np. nagrane 'DU DU DU DU DU'), gra w trakcie pisania tekstu i wyłącza się natychmiast po skończeniu.\nPerCharacter: Pojedynczy dźwięk przy każdej literce.")]
+    [SerializeField] private TypewriterAudioMode audioMode = TypewriterAudioMode.ContinuousLoop;
+
+    [Tooltip("Dźwięk maszyny / gadania (AudioClip). W trybie ContinuousLoop leci w pętli dopóki litery się pojawiają i wyłącza się na końcu.")]
     [SerializeField] private AudioClip charAudioClip;
+
+    [Tooltip("Nazwa dźwięku/grupy w AudioManager (używana jeśli charAudioClip jest pusty).")]
+    [SerializeField] private string charSoundGroup = "";
 
     [Tooltip("Dedykowany AudioSource (jeśli pusty, stworzy automatycznie w Awake).")]
     [SerializeField] private AudioSource audioSource;
@@ -101,22 +110,23 @@ public class InnerDialogueUI : MonoBehaviour
     [SerializeField] private float charSoundVolume = 0.5f;
 
     [Range(0.5f, 2f)]
-    [SerializeField] private float minPitch = 0.92f;
+    [SerializeField] private float minPitch = 0.95f;
 
     [Range(0.5f, 2f)]
-    [SerializeField] private float maxPitch = 1.08f;
+    [SerializeField] private float maxPitch = 1.05f;
 
-    [Tooltip("Odtwarzaj dźwięk co N liter (1 = każda litera).")]
+    [Tooltip("Odtwarzaj dźwięk co N liter (tylko dla trybu PerCharacter).")]
     [SerializeField] private int soundFrequency = 1;
 
-    [Tooltip("Czy pomijać spacje przy odtwarzaniu dźwięku.")]
+    [Tooltip("Czy pomijać spacje przy odtwarzaniu dźwięku (tylko PerCharacter).")]
     [SerializeField] private bool playSoundOnlyOnNonWhitespace = true;
 
-    [Header("Advance Audio")]
-    [Tooltip("Dźwięk odtwarzany przy wciśnięciu E i zamknięciu dialogu.")]
+    [Header("Advance Audio (Dźwięk Przejścia Dalej)")]
+    [Tooltip("Dźwięk odtwarzany w momencie wciśnięcia [E] i zamknięcia/zatwierdzenia dialogu.")]
     [SerializeField] private string advanceSoundGroup = "";
 
     public static InnerDialogueUI Instance { get; private set; }
+    public bool IsDialogueActive => _isDialogueActive;
 
     private Coroutine _typewriterCoroutine;
     private Tween _fadeTween;
@@ -279,6 +289,11 @@ public class InnerDialogueUI : MonoBehaviour
         if (_isTyping && allowSkipTypewriter)
         {
             _skipRequested = true;
+            StopTypewriterAudio();
+            if (dialogueText != null)
+            {
+                dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
+            }
         }
         else if (!_isTyping)
         {
@@ -361,6 +376,9 @@ public class InnerDialogueUI : MonoBehaviour
         // 5. Maszynowe pojawianie się liter (Typewriter Effect)
         int soundCounter = 0;
 
+        // Start ciągłego dźwięku maszynopisu / gadania (np. "DU DU DU DU DU")
+        StartTypewriterAudio();
+
         // Upewnij się że WaitForSeconds dla guard jest zkeszowany
         if (_waitContinueGuard == null)
             _waitContinueGuard = new WaitForSeconds(0.15f);
@@ -370,6 +388,7 @@ public class InnerDialogueUI : MonoBehaviour
             if (_skipRequested)
             {
                 dialogueText.maxVisibleCharacters = totalVisibleChars;
+                StopTypewriterAudio();
                 break;
             }
 
@@ -379,13 +398,16 @@ public class InnerDialogueUI : MonoBehaviour
             char currentChar = dialogueText.textInfo.characterInfo[i - 1].character;
             bool isWhitespace = char.IsWhiteSpace(currentChar);
 
-            // Dźwięk przy literce
-            if (!isWhitespace || !playSoundOnlyOnNonWhitespace)
+            // Dźwięk przy literce (tylko w trybie pojedynczych kliknięć PerCharacter)
+            if (audioMode == TypewriterAudioMode.PerCharacter)
             {
-                soundCounter++;
-                if (soundCounter % soundFrequency == 0)
+                if (!isWhitespace || !playSoundOnlyOnNonWhitespace)
                 {
-                    PlayTypewriterSound();
+                    soundCounter++;
+                    if (soundCounter % soundFrequency == 0)
+                    {
+                        PlayTypewriterSound();
+                    }
                 }
             }
 
@@ -408,6 +430,8 @@ public class InnerDialogueUI : MonoBehaviour
             }
         }
 
+        // Zawsze zatrzymaj audio po ukończeniu pisania tekstu lub pominięciu!
+        StopTypewriterAudio();
         _isTyping = false;
         dialogueText.maxVisibleCharacters = totalVisibleChars;
 
@@ -512,6 +536,40 @@ public class InnerDialogueUI : MonoBehaviour
         }
     }
 
+    private void StartTypewriterAudio()
+    {
+        if (audioMode == TypewriterAudioMode.ContinuousLoop)
+        {
+            if (charAudioClip != null)
+            {
+                if (audioSource == null)
+                {
+                    audioSource = gameObject.AddComponent<AudioSource>();
+                    audioSource.playOnAwake = false;
+                    audioSource.spatialBlend = 0f;
+                }
+
+                audioSource.clip = charAudioClip;
+                audioSource.loop = true;
+                audioSource.volume = charSoundVolume;
+                audioSource.pitch = 1f;
+                audioSource.Play();
+            }
+            else if (!string.IsNullOrEmpty(charSoundGroup) && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.Play(charSoundGroup);
+            }
+        }
+    }
+
+    private void StopTypewriterAudio()
+    {
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+    }
+
     private void PlayTypewriterSound()
     {
         if (charAudioClip != null && audioSource != null)
@@ -592,6 +650,7 @@ public class InnerDialogueUI : MonoBehaviour
 
     private void HideAllInstant()
     {
+        StopTypewriterAudio();
         HideContinuePrompt();
 
         if (dialogueCanvasGroup != null)
@@ -620,6 +679,8 @@ public class InnerDialogueUI : MonoBehaviour
 
     private void StopAllAnimations()
     {
+        StopTypewriterAudio();
+
         if (_typewriterCoroutine != null)
         {
             StopCoroutine(_typewriterCoroutine);
@@ -628,6 +689,7 @@ public class InnerDialogueUI : MonoBehaviour
 
         _fadeTween?.Kill();
         _fadeTween = null;
+        _isTyping = false;
 
         HideContinuePrompt();
     }

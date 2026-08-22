@@ -186,7 +186,7 @@ public class InputModeManager : MonoBehaviour
                 break;
         }
 
-        Debug.Log($"[InputModeManager] Control scheme changed to: {newScheme} (Cursor unlocked: {unlockCursor})");
+//        Debug.Log($"[InputModeManager] Control scheme changed to: {newScheme} (Cursor unlocked: {unlockCursor})");
         OnControlSchemeChanged?.Invoke(newScheme);
     }
 }

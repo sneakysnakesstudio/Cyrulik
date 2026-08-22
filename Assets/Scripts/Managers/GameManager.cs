@@ -5,7 +5,9 @@ public class GameManager : MonoBehaviour
     public enum FpsLimit
     {
         FPS60 = 60,
-        FPS120 = 120
+        FPS120 = 120,
+        FPS144 = 144,
+        Unlimited = -1
     }
 
     public enum PlayerSpawnPosition

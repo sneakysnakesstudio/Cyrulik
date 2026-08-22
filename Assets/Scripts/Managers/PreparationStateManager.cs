@@ -40,6 +40,8 @@ public class PreparationStateManager : MonoBehaviour
 
     public event Action<string, bool> OnTaskStateChanged;
 
+    public IReadOnlyList<PreparationTask> Tasks => tasks;
+
     private readonly Dictionary<string, PreparationTask> _taskLookup = 
         new Dictionary<string, PreparationTask>(StringComparer.OrdinalIgnoreCase);
 
