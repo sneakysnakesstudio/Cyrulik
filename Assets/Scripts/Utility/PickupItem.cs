@@ -1,10 +1,9 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody))]
 public class PickupItem : MonoBehaviour, IInteractable
 {
     [Header("Item Info")]
-    [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade').")]
+    [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade', 'dead_mouse').")]
     [SerializeField] private string itemId = "cheese";
 
     [Header("Interaction")]
@@ -20,6 +19,19 @@ public class PickupItem : MonoBehaviour, IInteractable
     [Tooltip("Lokalna skala w ręku.")]
     [SerializeField] private Vector3 inHandScale = Vector3.one;
 
+    [Header("Audio Overrides (Opcjonalnie)")]
+    [Tooltip("Dedykowana nazwa dźwięku podniesienia w AudioManager (jeśli puste, użyje uniwersalnego z PlayerHands).")]
+    [SerializeField] private string customPickupSound = "";
+
+    [Tooltip("Dedykowany AudioClip podniesienia jako fallback.")]
+    [SerializeField] private AudioClip customPickupClip;
+
+    [Tooltip("Dedykowana nazwa dźwięku upuszczenia w AudioManager (jeśli puste, użyje uniwersalnego z PlayerHands).")]
+    [SerializeField] private string customDropSound = "";
+
+    [Tooltip("Dedykowany AudioClip upuszczenia jako fallback.")]
+    [SerializeField] private AudioClip customDropClip;
+
     [Header("References")]
     [SerializeField] private PlayerHands _playerHands;
 
@@ -29,6 +41,11 @@ public class PickupItem : MonoBehaviour, IInteractable
     public Vector3 InHandPosition => inHandPosition;
     public Vector3 InHandRotation => inHandRotation;
     public Vector3 InHandScale => inHandScale == Vector3.zero ? Vector3.one : inHandScale;
+
+    public string CustomPickupSound => customPickupSound;
+    public AudioClip CustomPickupClip => customPickupClip;
+    public string CustomDropSound => customDropSound;
+    public AudioClip CustomDropClip => customDropClip;
 
     private void Awake()
     {

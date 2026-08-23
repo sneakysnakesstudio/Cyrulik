@@ -208,3 +208,14 @@ MonoBehaviour:
     randomizeVolume: 1
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: dressup_sound
+    clips:
+    - {fileID: 8300000, guid: c15d8abd288cdb44a96f55ddeaeee9ba, type: 3}
+    volume: 0.146
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1

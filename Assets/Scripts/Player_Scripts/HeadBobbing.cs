@@ -10,6 +10,7 @@ using UnityEngine;
 ///     └─ CameraHolder  [ten skrypt HeadBobbing]
 ///           └─ CinemachineCamera / Camera
 /// </summary>
+[DefaultExecutionOrder(1000)]
 public class HeadBobbing : MonoBehaviour
 {
     [Header("References")]

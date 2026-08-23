@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// Zarządza podnoszeniem, trzymaniem i upuszczaniem przedmiotów przez gracza.
 /// Obsługuje zarówno bezpośrednie podczepianie pod gniazdo (HoldPoint / Item),
-/// jak i dedykowane modele wizualne w rękach pierwszoosobowych.
+/// dedykowane modele wizualne w rękach pierwszoosobowych, jak i uniwersalne dźwięki podnoszenia / upuszczania.
 /// </summary>
 public class PlayerHands : MonoBehaviour
 {
@@ -34,6 +34,21 @@ public class PlayerHands : MonoBehaviour
 
     [Header("Ustawienia upuszczania")]
     [SerializeField] private float dropForce = 0.5f;
+
+    [Header("Audio Podnoszenia i Upuszczania")]
+    [Tooltip("Domyślna nazwa grupy dźwięku podnoszenia w AudioManager (np. 'item_pickup' lub 'cloth_pickup').")]
+    [SerializeField] private string defaultPickupSound = "item_pickup";
+
+    [Tooltip("Opcjonalny klip audio podnoszenia jako fallback (jeśli brak w AudioManager).")]
+    [SerializeField] private AudioClip customPickupClip;
+
+    [Tooltip("Domyślna nazwa grupy dźwięku upuszczania w AudioManager (np. 'item_drop' lub 'cloth_pickup').")]
+    [SerializeField] private string defaultDropSound = "item_drop";
+
+    [Tooltip("Opcjonalny klip audio upuszczenia jako fallback (jeśli brak w AudioManager).")]
+    [SerializeField] private AudioClip customDropClip;
+
+    [SerializeField] private AudioSource audioSource;
 
     private GameObject _heldItem;
     private Rigidbody _heldRigidbody;
@@ -90,7 +105,7 @@ public class PlayerHands : MonoBehaviour
     }
 
     /// <summary>
-    /// Podnosi i umieszcza obiekt w rękach gracza.
+    /// Podnosi i umieszcza obiekt w rękach gracza oraz odtwarza dźwięk podniesienia.
     /// </summary>
     public bool TryHold(GameObject item)
     {
@@ -142,7 +157,7 @@ public class PlayerHands : MonoBehaviour
 
         SetCollidersEnabled(false);
 
-        // Pobieramy ItemId
+        // Pobieramy ItemId i komponent PickupItem
         string currentItemId = null;
         PickupItem pickup = item.GetComponentInChildren<PickupItem>();
         if (pickup != null)
@@ -157,11 +172,9 @@ public class PlayerHands : MonoBehaviour
         if (matchedVisual != null)
         {
             Debug.Log($"[PlayerHands] Activating in-hand visual model: '{matchedVisual.name}'");
-            // Włączamy model w ręku
             matchedVisual.SetActive(true);
             _activeVisual = matchedVisual;
 
-            // Ukrywamy renderery rzeczywistego obiektu ze świata i parsujemy go pod socket
             item.transform.SetParent(GetSocket());
             item.transform.localPosition = Vector3.zero;
             item.transform.localRotation = Quaternion.identity;
@@ -189,11 +202,14 @@ public class PlayerHands : MonoBehaviour
             SetRenderersEnabled(item, true);
         }
 
+        // Dźwięk podniesienia przedmiotu
+        PlayPickupSound(pickup);
+
         return true;
     }
 
     /// <summary>
-    /// Wyrzuca aktualnie trzymany przedmiot do świata.
+    /// Wyrzuca aktualnie trzymany przedmiot do świata i odtwarza dźwięk upuszczenia.
     /// </summary>
     public void DropHeldItem()
     {
@@ -201,6 +217,7 @@ public class PlayerHands : MonoBehaviour
             return;
 
         GameObject droppedItem = _heldItem;
+        PickupItem pickup = droppedItem.GetComponentInChildren<PickupItem>();
 
         // Przywracamy renderery obiektu świata, jeśli były ukryte
         SetRenderersEnabled(droppedItem, true);
@@ -214,7 +231,82 @@ public class PlayerHands : MonoBehaviour
             _heldRigidbody.AddForce(transform.forward * dropForce, ForceMode.Impulse);
         }
 
+        // Dźwięk upuszczenia przedmiotu
+        PlayDropSound(pickup);
+
         ClearHand();
+    }
+
+    private void PlayPickupSound(PickupItem pickup)
+    {
+        // 1. Sprawdź, czy przedmiot ma dedykowany dźwięk w PickupItem
+        if (pickup != null && pickup.CustomPickupClip != null)
+        {
+            PlayClip(pickup.CustomPickupClip);
+            return;
+        }
+
+        if (pickup != null && !string.IsNullOrEmpty(pickup.CustomPickupSound) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(pickup.CustomPickupSound);
+            return;
+        }
+
+        // 2. Uniwersalny dźwięk z AudioManager
+        if (!string.IsNullOrEmpty(defaultPickupSound) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(defaultPickupSound);
+            return;
+        }
+
+        // 3. Fallback bezpośredni klip
+        if (customPickupClip != null)
+        {
+            PlayClip(customPickupClip);
+        }
+    }
+
+    private void PlayDropSound(PickupItem pickup)
+    {
+        // 1. Sprawdź, czy przedmiot ma dedykowany dźwięk w PickupItem
+        if (pickup != null && pickup.CustomDropClip != null)
+        {
+            PlayClip(pickup.CustomDropClip);
+            return;
+        }
+
+        if (pickup != null && !string.IsNullOrEmpty(pickup.CustomDropSound) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(pickup.CustomDropSound);
+            return;
+        }
+
+        // 2. Uniwersalny dźwięk z AudioManager
+        if (!string.IsNullOrEmpty(defaultDropSound) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(defaultDropSound);
+            return;
+        }
+
+        // 3. Fallback bezpośredni klip
+        if (customDropClip != null)
+        {
+            PlayClip(customDropClip);
+        }
+    }
+
+    private void PlayClip(AudioClip clip)
+    {
+        if (clip == null) return;
+
+        if (audioSource != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
+        else
+        {
+            AudioSource.PlayClipAtPoint(clip, transform.position);
+        }
     }
 
     private void OnDropPerformed(InputAction.CallbackContext context)
@@ -266,7 +358,6 @@ public class PlayerHands : MonoBehaviour
         Transform socket = GetSocket();
         if (socket != null)
         {
-            // Sprawdź dzieci socketu
             for (int i = 0; i < socket.childCount; i++)
             {
                 Transform child = socket.GetChild(i);

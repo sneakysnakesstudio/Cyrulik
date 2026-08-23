@@ -47,12 +47,12 @@ public class PlayerMovement : MonoBehaviour
     private Collider _lastHitCollider;
     private IInteractable _lastHitInteractable;
 
-    /// <summary>Czy gracz aktualnie się porusza (uwzględnia kolizje — sprawdza velocity CC).</summary>
+    /// <summary>Czy gracz aktualnie się porusza (uwzględnia input oraz velocity CC).</summary>
     public bool IsMoving =>
         _characterController != null &&
-        _characterController.isGrounded &&
-        _characterController.velocity.x * _characterController.velocity.x +
-        _characterController.velocity.z * _characterController.velocity.z > 0.01f;
+        (_moveInput.sqrMagnitude > 0.01f ||
+         (_characterController.velocity.x * _characterController.velocity.x +
+          _characterController.velocity.z * _characterController.velocity.z > 0.01f));
 
     private void Awake()
     {

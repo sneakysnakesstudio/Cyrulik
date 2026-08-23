@@ -23,12 +23,21 @@ public class PlanarMirror : MonoBehaviour
     [Tooltip("Przesuwa near plane lekko przed taflę.")]
     [SerializeField] private float clipOffset = 0.01f;
 
+    [Header("Optimization")]
+    [Tooltip("Maksymalna odległość renderowania lustra w metrach.")]
+    [SerializeField] private float maxRenderDistance = 6f;
+
+    [Tooltip("Docelowy klatkaż odświeżania lustra (30 FPS oszczędza 50-70% GPU). 0 = bez limitu.")]
+    [SerializeField] private int mirrorTargetFPS = 30;
+
+    [Tooltip("Nie renderuj lustra, gdy gracz patrzy w inną stronę.")]
+    [SerializeField] private bool enableFrustumCulling = true;
+
     private RenderTexture _renderTexture;
-
     private UniversalRenderPipeline.SingleCameraRequest _renderRequest;
-
     private bool _requestSupported;
     private bool _wrongSideWarningShown;
+    private float _timeSinceLastMirrorRender;
 
     // Cache: GetComponent w LateUpdate to duży koszt – robimy to raz w Awake
     private MeshFilter _mirrorMeshFilter;
@@ -64,10 +73,14 @@ public class PlanarMirror : MonoBehaviour
         // Kamera lustra NIE renderuje się normalnie.
         mirrorCamera.enabled = false;
         mirrorCamera.targetTexture = null;
-
-        // Przy niestandardowym frustum occlusion culling
-        // może dawać dziwne rezultaty.
         mirrorCamera.useOcclusionCulling = false;
+
+        // Wyłączamy cienie wewnątrz kamery lustra — gigantyczny wzrost FPS!
+        var additionalCamData = mirrorCamera.GetComponent<UniversalAdditionalCameraData>();
+        if (additionalCamData != null)
+        {
+            additionalCamData.renderShadows = false;
+        }
 
         CreateRenderTexture();
 
@@ -113,6 +126,33 @@ public class PlanarMirror : MonoBehaviour
         if (!_requestSupported)
         {
             return;
+        }
+
+        // 1. Frustum Culling: jeśli tafla lustra nie jest widoczna na ekranie gracza -> NIE renderuj!
+        if (enableFrustumCulling && mirrorRenderer != null && !mirrorRenderer.isVisible)
+        {
+            return;
+        }
+
+        // 2. Distance Culling: jeśli gracz odszedł dalej niż maxRenderDistance -> NIE renderuj!
+        if (sourceCamera != null && mirrorSurface != null)
+        {
+            float distSq = (sourceCamera.transform.position - mirrorSurface.position).sqrMagnitude;
+            if (distSq > (maxRenderDistance * maxRenderDistance))
+            {
+                return;
+            }
+        }
+
+        // 3. FPS Throttling: renderuj lustro w mirrorTargetFPS (np. 30 FPS zamiast 144 FPS)
+        if (mirrorTargetFPS > 0)
+        {
+            _timeSinceLastMirrorRender += Time.unscaledDeltaTime;
+            if (_timeSinceLastMirrorRender < (1f / mirrorTargetFPS))
+            {
+                return;
+            }
+            _timeSinceLastMirrorRender = 0f;
         }
 
         RenderMirror();
