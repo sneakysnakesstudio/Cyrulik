@@ -263,3 +263,14 @@ MonoBehaviour:
     randomizeVolume: 0
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: UI_CLICK
+    clips:
+    - {fileID: 8300000, guid: 90969dda5505513458eebff977e8b06e, type: 3}
+    volume: 0.247
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 0
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
