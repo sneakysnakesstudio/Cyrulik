@@ -3,7 +3,7 @@ using UnityEngine;
 public class PickupItem : MonoBehaviour, IInteractable
 {
     [Header("Item Info")]
-    [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade', 'dead_mouse').")]
+    [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade', 'dead_mouse', 'pot').")]
     [SerializeField] private string itemId = "cheese";
 
     [Header("Interaction")]
@@ -18,6 +18,10 @@ public class PickupItem : MonoBehaviour, IInteractable
 
     [Tooltip("Lokalna skala w ręku.")]
     [SerializeField] private Vector3 inHandScale = Vector3.one;
+
+    [Header("Physics Settings")]
+    [Tooltip("Jeśli zaznaczone, przedmiot na starcie ma Rigidbody zamrożone (isKinematic = true), dzięki czemu stabilnie leży w lodówce/na półkach i nie wypada z powodu fizyki.")]
+    [SerializeField] private bool freezeInPlaceAtStart = true;
 
     [Header("Audio Overrides (Opcjonalnie)")]
     [Tooltip("Dedykowana nazwa dźwięku podniesienia w AudioManager (jeśli puste, użyje uniwersalnego z PlayerHands).")]
@@ -52,6 +56,15 @@ public class PickupItem : MonoBehaviour, IInteractable
         if (_playerHands == null)
         {
             _playerHands = FindAnyObjectByType<PlayerHands>();
+        }
+
+        // Zabezpieczenie przed wypadaniem przedmiotów z lodówki / półek na starcie gry
+        if (freezeInPlaceAtStart)
+        {
+            if (TryGetComponent<Rigidbody>(out var rb))
+            {
+                rb.isKinematic = true;
+            }
         }
     }
 

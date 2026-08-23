@@ -23,7 +23,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 67b16d95cf467dd469c9a27ac4ec2b1a, type: 3}
     - {fileID: 8300000, guid: fc22480479e449349b7db024c768da6f, type: 3}
     - {fileID: 8300000, guid: ff68341861b16434496035326eade3be, type: 3}
-    volume: 0.124
+    volume: 0.37
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.94
@@ -217,5 +217,49 @@ MonoBehaviour:
     minPitch: 0.95
     maxPitch: 1.05
     randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: item_pickup
+    clips:
+    - {fileID: 8300000, guid: 4657aa19d55cce14eae0a4f91c7925c7, type: 3}
+    volume: 0.146
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: item_drop
+    clips:
+    - {fileID: 8300000, guid: 43ea3a8603c4bef4f9203fa2bc9e9bb6, type: 3}
+    volume: 0.146
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: task_complete
+    clips:
+    - {fileID: 8300000, guid: 97ac9a9952b2df948b65c17b3727ad78, type: 3}
+    volume: 0.146
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: door_rattle_sound
+    clips:
+    - {fileID: 8300000, guid: 90969dda5505513458eebff977e8b06e, type: 3}
+    volume: 0.247
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 0
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1

@@ -45,6 +45,11 @@ public class PlanarMirror : MonoBehaviour
 
     private void Awake()
     {
+        // Upewniamy się, że obiekty lustra i kamery NIE są statyczne (aby mogły się poruszać w buildzie)
+        if (mirrorCamera != null) mirrorCamera.gameObject.isStatic = false;
+        if (mirrorSurface != null) mirrorSurface.gameObject.isStatic = false;
+        gameObject.isStatic = false;
+
         if (sourceCamera == null)
         {
             sourceCamera = Camera.main;
@@ -52,96 +57,79 @@ public class PlanarMirror : MonoBehaviour
 
         if (mirrorRenderer == null && mirrorSurface != null)
         {
-            mirrorRenderer =
-                mirrorSurface.GetComponent<MeshRenderer>();
+            mirrorRenderer = mirrorSurface.GetComponent<MeshRenderer>();
         }
 
-        if (sourceCamera == null ||
-            mirrorCamera == null ||
-            mirrorSurface == null ||
-            mirrorRenderer == null)
+        // Keszujemy MeshFilter i bounds
+        if (mirrorSurface != null)
         {
-            Debug.LogError(
-                "[PlanarMirror] Brakuje reference w Inspectorze.",
-                this
-            );
-
-            enabled = false;
-            return;
+            _mirrorMeshFilter = mirrorSurface.GetComponent<MeshFilter>();
+            if (_mirrorMeshFilter != null && _mirrorMeshFilter.sharedMesh != null)
+            {
+                _mirrorMeshBounds = _mirrorMeshFilter.sharedMesh.bounds;
+            }
         }
 
-        // Kamera lustra NIE renderuje się normalnie.
-        mirrorCamera.enabled = false;
-        mirrorCamera.targetTexture = null;
-        mirrorCamera.useOcclusionCulling = false;
-
-        // Wyłączamy cienie wewnątrz kamery lustra — gigantyczny wzrost FPS!
-        var additionalCamData = mirrorCamera.GetComponent<UniversalAdditionalCameraData>();
-        if (additionalCamData != null)
+        if (mirrorCamera != null)
         {
-            additionalCamData.renderShadows = false;
+            mirrorCamera.enabled = false;
+            mirrorCamera.targetTexture = null;
+            mirrorCamera.useOcclusionCulling = false;
+
+            var additionalCamData = mirrorCamera.GetComponent<UniversalAdditionalCameraData>();
+            if (additionalCamData != null)
+            {
+                additionalCamData.renderShadows = false;
+            }
         }
 
         CreateRenderTexture();
 
-        _renderRequest =
-            new UniversalRenderPipeline.SingleCameraRequest();
-
-        _renderRequest.destination = _renderTexture;
-
-        _requestSupported =
-            RenderPipeline.SupportsRenderRequest(
-                mirrorCamera,
-                _renderRequest
-            );
-
-        if (!_requestSupported)
+        if (mirrorCamera != null && _renderTexture != null)
         {
-            Debug.LogError(
-                "[PlanarMirror] URP nie obsługuje SingleCameraRequest " +
-                "dla MirrorCamera. Upewnij się, że MirrorCamera " +
-                "ma Render Type = Base.",
-                this
-            );
+            _renderRequest = new UniversalRenderPipeline.SingleCameraRequest
+            {
+                destination = _renderTexture
+            };
+
+            _requestSupported = RenderPipeline.SupportsRenderRequest(mirrorCamera, _renderRequest);
         }
+    }
 
-        // Keszujemy MeshFilter i bounds — zamiast GetComponent w każdej klatce LateUpdate
-        _mirrorMeshFilter = mirrorSurface.GetComponent<MeshFilter>();
-        if (_mirrorMeshFilter != null && _mirrorMeshFilter.sharedMesh != null)
+    private void Start()
+    {
+        if (sourceCamera == null)
         {
-            _mirrorMeshBounds = _mirrorMeshFilter.sharedMesh.bounds;
-        }
-        else
-        {
-            Debug.LogError(
-                "[PlanarMirror] MirrorSurface musi być Quadem z MeshFilter.",
-                mirrorSurface
-            );
-            enabled = false;
+            sourceCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
         }
     }
 
     private void LateUpdate()
     {
-        if (!_requestSupported)
+        if (sourceCamera == null)
         {
-            return;
+            sourceCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+            if (sourceCamera == null) return;
         }
 
-        // 1. Frustum Culling: jeśli tafla lustra nie jest widoczna na ekranie gracza -> NIE renderuj!
-        if (enableFrustumCulling && mirrorRenderer != null && !mirrorRenderer.isVisible)
-        {
+        if (mirrorCamera == null || mirrorSurface == null || mirrorRenderer == null)
             return;
-        }
 
-        // 2. Distance Culling: jeśli gracz odszedł dalej niż maxRenderDistance -> NIE renderuj!
-        if (sourceCamera != null && mirrorSurface != null)
+        // 1. Frustum Culling: sprawdzamy, czy tafla lustra mieści się w widoku kamery gracza
+        if (enableFrustumCulling)
         {
-            float distSq = (sourceCamera.transform.position - mirrorSurface.position).sqrMagnitude;
-            if (distSq > (maxRenderDistance * maxRenderDistance))
+            Plane[] planes = GeometryUtility.CalculateFrustumPlanes(sourceCamera);
+            if (!GeometryUtility.TestPlanesAABB(planes, mirrorRenderer.bounds))
             {
                 return;
             }
+        }
+
+        // 2. Distance Culling: jeśli gracz odszedł dalej niż maxRenderDistance -> NIE renderuj!
+        float distSq = (sourceCamera.transform.position - mirrorSurface.position).sqrMagnitude;
+        if (distSq > (maxRenderDistance * maxRenderDistance))
+        {
+            return;
         }
 
         // 3. FPS Throttling: renderuj lustro w mirrorTargetFPS (np. 30 FPS zamiast 144 FPS)

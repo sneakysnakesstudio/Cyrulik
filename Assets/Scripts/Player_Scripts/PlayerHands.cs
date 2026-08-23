@@ -224,10 +224,22 @@ public class PlayerHands : MonoBehaviour
         droppedItem.transform.SetParent(null);
         SetCollidersEnabled(true);
 
+        if (_heldRigidbody == null)
+        {
+            _heldRigidbody = droppedItem.GetComponent<Rigidbody>();
+            if (_heldRigidbody == null)
+            {
+                _heldRigidbody = droppedItem.AddComponent<Rigidbody>();
+                _heldRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            }
+        }
+
         if (_heldRigidbody != null)
         {
             _heldRigidbody.isKinematic = false;
             _heldRigidbody.useGravity = true;
+            _heldRigidbody.linearVelocity = Vector3.zero;
+            _heldRigidbody.angularVelocity = Vector3.zero;
             _heldRigidbody.AddForce(transform.forward * dropForce, ForceMode.Impulse);
         }
 

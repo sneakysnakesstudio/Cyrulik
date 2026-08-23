@@ -31,11 +31,11 @@ public class PreparationStateManager : MonoBehaviour
     [SerializeField]
     private List<PreparationTask> tasks = new List<PreparationTask>
     {
-        new PreparationTask("lights_salon", "Włączono oświetlenie w salonie"),
-        new PreparationTask("stove_lit", "Rozpalono ogień w piecu"),
-        new PreparationTask("razor_sharpened", "Naostrzono brzytwę"),
-        new PreparationTask("water_heated", "Zagotowano gorącą wodę"),
-        new PreparationTask("towel_prepared", "Przygotowano czysty ręcznik")
+        new PreparationTask("proper_atmosphere", "Set the right mood"),
+        new PreparationTask("stove_lit", "Lit the stove fire"),
+        new PreparationTask("towel_prepared", "Prepared a hot towel"),
+        new PreparationTask("razor_sharpened", "Sharpened the razor"),
+        new PreparationTask("mouse_disposed", "Disposed of the mouse")
     };
 
     public event Action<string, bool> OnTaskStateChanged;

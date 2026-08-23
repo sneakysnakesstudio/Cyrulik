@@ -52,6 +52,9 @@ public class ClientDialogueUI : MonoBehaviour
     [Tooltip("Główne pole tekstowe wypowiedzi klienta/mówcy.")]
     [SerializeField] private TextMeshProUGUI dialogueText;
 
+    [Tooltip("Wyrównanie tekstu dialogu klienta (domyślnie TopLeft / MidlineLeft).")]
+    [SerializeField] private TextAlignmentOptions textAlignment = TextAlignmentOptions.TopLeft;
+
     [Header("UI - Prompt [E] + Strzałka")]
     [SerializeField] private CanvasGroup continuePromptGroup;
     [SerializeField] private RectTransform arrowTransform;
@@ -121,6 +124,7 @@ public class ClientDialogueUI : MonoBehaviour
     private bool _skipRequested = false;
     private bool _continuePressed = false;
     private bool _isTimerPaused = false;
+    private float _dialogueStartTime = -100f;
     private string _currentVoiceGroup = "";
 
     private void Awake()
@@ -195,6 +199,10 @@ public class ClientDialogueUI : MonoBehaviour
 
     private void TriggerInputAdvance()
     {
+        // Ignoruj naciśnięcie klawisza, które dopiero co uruchomiło dialog/kwestię
+        if (Time.unscaledTime - _dialogueStartTime < 0.15f)
+            return;
+
         if (_isTyping && allowSkipTypewriter)
         {
             _skipRequested = true;
@@ -283,6 +291,7 @@ public class ClientDialogueUI : MonoBehaviour
             }
 
             // Przygotuj tekst
+            dialogueText.alignment = textAlignment;
             dialogueText.text = currentLine.text;
             dialogueText.ForceMeshUpdate();
             int totalChars = dialogueText.textInfo.characterCount;
@@ -292,6 +301,7 @@ public class ClientDialogueUI : MonoBehaviour
             _isTyping = true;
             _skipRequested = false;
             _continuePressed = false;
+            _dialogueStartTime = Time.unscaledTime;
 
             // Maszynopisanie
             int soundCounter = 0;

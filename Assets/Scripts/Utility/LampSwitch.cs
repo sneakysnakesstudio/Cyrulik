@@ -3,16 +3,15 @@ using DG.Tweening;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-public class LampSwitch : MonoBehaviour, IInteractable
+public class LampSwitch : MonoBehaviour, IConditionalInteractable
 {
     public event Action<bool> OnLightStateChanged;
     
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Light Switch";
 
-    [Header("Task Tracking")]
-    [Tooltip("Opcjonalne ID zadania do PreparationStateManager (np. lights_salon). Jeśli puste, nie rejestruje zadania.")]
-    [SerializeField] private string taskId;
+    [Tooltip("Czy gracz może wyłączyć światło po jego włączeniu? Jeśli false (odznaczone), po zapaleniu światła nie można go ponownie zgasić.")]
+    [SerializeField] private bool canTurnOff = true;
 
     [Header("Lights")]
     [SerializeField] private Light[] targetLights;
@@ -46,6 +45,17 @@ public class LampSwitch : MonoBehaviour, IInteractable
 
     public string InteractionName => interactionName;
     public bool IsOn => _isOn;
+
+    public bool CanInteract
+    {
+        get
+        {
+            if (_isOn && !canTurnOff)
+                return false;
+
+            return true;
+        }
+    }
 
     private bool _isOn;
 
@@ -94,13 +104,11 @@ public class LampSwitch : MonoBehaviour, IInteractable
         }
     }
 
-    private void Start()
-    {
-        NotifyTaskState();
-    }
-
     public void Interact()
     {
+        if (_isOn && !canTurnOff)
+            return;
+
         PlayInteractionSound();
 
         if (_isOn)
@@ -112,15 +120,6 @@ public class LampSwitch : MonoBehaviour, IInteractable
             TurnOn();
         }
         OnLightStateChanged?.Invoke(_isOn);
-        NotifyTaskState();
-    }
-
-    private void NotifyTaskState()
-    {
-        if (!string.IsNullOrWhiteSpace(taskId) && PreparationStateManager.Instance != null)
-        {
-            PreparationStateManager.Instance.SetTaskState(taskId, _isOn);
-        }
     }
 
     private void PlayInteractionSound()

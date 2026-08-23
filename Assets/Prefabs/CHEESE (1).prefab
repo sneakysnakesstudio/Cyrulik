@@ -28,13 +28,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1297206419199203899}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.00000008940697, y: 0.0000000041909516, z: -0.31166714, w: 0.9501914}
+  m_LocalRotation: {x: 0, y: 0, z: -0.31166333, w: 0.95019263}
   m_LocalPosition: {x: -0.10647394, y: -0.25403216, z: 0.6700001}
-  m_LocalScale: {x: 8.333335, y: 8.333335, z: 8.333335}
+  m_LocalScale: {x: 7.5, y: 8.333335, z: 8.333335}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: -90, y: 0, z: -37.435}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -36.319}
 --- !u!33 &3314514446219721365
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -107,8 +107,8 @@ MonoBehaviour:
   itemId: cheese
   interactionName: Cheese
   inHandPosition: {x: 0, y: 0, z: 0}
-  inHandRotation: {x: 0, y: 0, z: 0}
-  inHandScale: {x: 2, y: 2, z: 2}
+  inHandRotation: {x: 0, y: 5, z: 0}
+  inHandScale: {x: 5, y: 5, z: 5}
   customPickupSound: 
   customPickupClip: {fileID: 0}
   customDropSound: 

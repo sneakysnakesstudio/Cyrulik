@@ -78,7 +78,7 @@ public static class TaskFeedbackUIBuilder
         headerRect.offsetMax = new Vector2(-16f, -6f);
 
         var headerTmp = headerGo.GetComponent<TextMeshProUGUI>();
-        headerTmp.text = "✓ ZADANIE ZALICZONE";
+        headerTmp.text = "✓ TASK COMPLETED";
         headerTmp.fontSize = 15f;
         headerTmp.fontStyle = FontStyles.Bold;
         headerTmp.color = new Color(0.98f, 0.82f, 0.35f, 1f);
@@ -94,7 +94,7 @@ public static class TaskFeedbackUIBuilder
         nameRect.offsetMax = new Vector2(-16f, 0f);
 
         var nameTmp = nameGo.GetComponent<TextMeshProUGUI>();
-        nameTmp.text = "Rozpalono ogień w piecu";
+        nameTmp.text = "Set the right mood";
         nameTmp.fontSize = 20f;
         nameTmp.color = new Color(0.95f, 0.95f, 0.95f, 1f);
         nameTmp.alignment = TextAlignmentOptions.Center;

@@ -87,6 +87,9 @@ public class InnerDialogueUI : MonoBehaviour
     [Tooltip("Czy tekst ma być kursywą (myśli wewnętrzne gracza).")]
     [SerializeField] private bool useItalic = true;
 
+    [Tooltip("Wyrównanie tekstu wewnątrz okna (domyślnie MidlineLeft – wyśrodkowane pionowo, wyrównane do lewej).")]
+    [SerializeField] private TextAlignmentOptions textAlignment = TextAlignmentOptions.MidlineLeft;
+
     public enum TypewriterAudioMode
     {
         ContinuousLoop,     // Klip zapętlony (np. nagrane 'DU DU DU DU DU'), gra w trakcie pisania tekstu i natychmiast wyłącza się po skończeniu
@@ -139,6 +142,7 @@ public class InnerDialogueUI : MonoBehaviour
     private bool _isTyping = false;
     private bool _skipRequested = false;
     private bool _continuePressed = false;
+    private float _dialogueStartTime = -100f;
 
     // Cache WaitForSeconds — unikamy new() co klatkę w typewriterze (GC pressure)
     private WaitForSeconds _waitChar;
@@ -286,6 +290,10 @@ public class InnerDialogueUI : MonoBehaviour
 
     private void TriggerInputAdvance()
     {
+        // Ignorujemy naciśnięcie klawisza, które dopiero co uruchomiło dialog (okres ochronny 0.15s)
+        if (Time.unscaledTime - _dialogueStartTime < 0.15f)
+            return;
+
         if (_isTyping && allowSkipTypewriter)
         {
             _skipRequested = true;
@@ -326,6 +334,7 @@ public class InnerDialogueUI : MonoBehaviour
 
     private IEnumerator DialogueFlowRoutine(string message)
     {
+        _dialogueStartTime = Time.unscaledTime;
         _isDialogueActive = true;
         _isTyping = true;
         _skipRequested = false;
@@ -353,6 +362,7 @@ public class InnerDialogueUI : MonoBehaviour
         }
 
         // 3. Przygotuj tekst i formatowanie
+        dialogueText.alignment = textAlignment;
         dialogueText.color = textColor;
         dialogueText.text = useItalic ? $"<i>{message}</i>" : message;
         dialogueText.ForceMeshUpdate();
@@ -372,6 +382,10 @@ public class InnerDialogueUI : MonoBehaviour
 
             yield return _fadeTween.WaitForCompletion();
         }
+
+        // Resetujemy flagę skipa i odświeżamy czas po zakończeniu animacji pojawiania się okna
+        _skipRequested = false;
+        _dialogueStartTime = Time.unscaledTime;
 
         // 5. Maszynowe pojawianie się liter (Typewriter Effect)
         int soundCounter = 0;

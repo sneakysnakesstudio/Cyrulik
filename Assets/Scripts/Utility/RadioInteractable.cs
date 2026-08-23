@@ -44,16 +44,24 @@ public class RadioInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Color emissionOnColor = new Color(1f, 0.6f, 0.2f);
     [SerializeField] private Color emissionOffColor = Color.black;
 
-    [Header("Task & State")]
+    [Header("State")]
     [Tooltip("Stan początkowy radia po załadowaniu sceny.")]
     [SerializeField] private bool isOnAtStart = false;
 
-    [Tooltip("Opcjonalne ID zadania do PreparationStateManager.")]
-    [SerializeField] private string taskId = "radio_turned_on";
+    [Tooltip("Czy gracz może wyłączyć radio po jego włączeniu? Jeśli false (odznaczone), po włączeniu nie można go wyłączyć.")]
+    [SerializeField] private bool canTurnOff = true;
 
     public string InteractionName => _isOn ? promptTurnOff : promptTurnOn;
 
-    public bool CanInteract => true;
+    public bool CanInteract
+    {
+        get
+        {
+            if (_isOn && !canTurnOff)
+                return false;
+            return true;
+        }
+    }
 
     public bool IsOn => _isOn;
 
@@ -97,11 +105,13 @@ public class RadioInteractable : MonoBehaviour, IConditionalInteractable
 
     public void Interact()
     {
+        if (_isOn && !canTurnOff) return;
         ToggleRadio();
     }
 
     public void ToggleRadio()
     {
+        if (_isOn && !canTurnOff) return;
         SetRadioState(!_isOn);
     }
 
@@ -135,13 +145,6 @@ public class RadioInteractable : MonoBehaviour, IConditionalInteractable
         }
 
         UpdateVisuals();
-
-        // Powiadomienie menedżera zadań
-        if (!string.IsNullOrEmpty(taskId))
-        {
-            PreparationStateManager.Instance?.SetTaskState(taskId, _isOn);
-        }
-
         OnRadioStateChanged?.Invoke(_isOn);
     }
 

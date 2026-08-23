@@ -1,6 +1,7 @@
 using System;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.Serialization;
 using UnityEngine.Events;
 
@@ -67,10 +68,6 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [Tooltip("Opóźnienie rozpoczęcia ruchu drzwi po naciśnięciu klamki (np. 0.05s).")]
     [SerializeField] private float doorOpenDelayAfterHandle = 0.05f;
 
-    [Header("Handle Audio")]
-    [SerializeField] private string handleSoundName = "";
-    [SerializeField] private float handleSoundDelay = 0f;
-
     [EnumButtons]
     [Header("Motion Mode")]
     [Tooltip("Rotate: obrót kątowy (np. drzwi). Slide: przesunięcie pozycji (np. szuflady).")]
@@ -95,11 +92,35 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Ease openEase = Ease.OutQuad;
     [SerializeField] private Ease closeEase = Ease.InOutQuad;
 
-    [Header("Audio")]
-    [SerializeField] private string openSoundName = "";
+    [Header("Direct AudioClips (Przeciągnij bezpośrednio z Project)")]
+    [Tooltip("Dźwięk szarpania zamkniętych/zablokowanych drzwi (AudioClip).")]
+    [SerializeField] private AudioClip doorRattleClip;
+
+    [Tooltip("Dźwięk otwierania drzwi (AudioClip).")]
+    [SerializeField] private AudioClip openDoorClip;
+
+    [Tooltip("Dźwięk zamykania drzwi (AudioClip).")]
+    [SerializeField] private AudioClip closeDoorClip;
+
+    [Tooltip("Dźwięk naciśnięcia klamki (AudioClip).")]
+    [SerializeField] private AudioClip handlePressClip;
+
+    [Header("Audio Mixer & Volume")]
+    [Tooltip("Grupa wyjściowa miksera audio (np. SFX / Master) — pozwala sterować głośnością przez mikser gry.")]
+    [SerializeField] private AudioMixerGroup outputMixerGroup;
+
+    [Range(0f, 1f)]
+    [Tooltip("Poziom głośności dźwięków drzwi (0 = wyciszone, 1 = maksymalna głośność).")]
+    [SerializeField] private float soundVolume = 0.75f;
+
+    [Header("Audio (AudioManager Groups - Fallback)")]
+    [SerializeField] private string openSoundName = "door_open";
     [SerializeField] private float openSoundDelay = 0f;
-    [SerializeField] private string closeSoundName = "";
+    [SerializeField] private string closeSoundName = "door_close";
     [SerializeField] private float closeSoundDelay = 0f;
+    [SerializeField] private string handleSoundName = "door_handle_sound";
+    [SerializeField] private float handleSoundDelay = 0f;
+    [SerializeField] private string door_rattle_sound = "door_rattle_sound";
 
     public string InteractionName => interactionName;
 
@@ -120,6 +141,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     }
 
     private bool _isUnlocked;
+    private AudioSource _audioSource;
 
     private Vector3 _closedRotation;
     private Vector3 _openRotation;
@@ -141,6 +163,8 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         }
 
         _isUnlocked = !lockedAtStart;
+
+        SetupAudioSource();
 
         // Zapamiętujemy pozycję i rotację zamkniętą drzwi
         _closedRotation = doorPivot.localEulerAngles;
@@ -191,15 +215,39 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         }
     }
 
+    private void SetupAudioSource()
+    {
+        _audioSource = GetComponent<AudioSource>();
+        if (_audioSource == null)
+        {
+            _audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        _audioSource.playOnAwake = false;
+        _audioSource.spatialBlend = 1f; // Dźwięk przestrzenny 3D
+        _audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        _audioSource.minDistance = 1f;
+        _audioSource.maxDistance = 12f;
+
+        if (outputMixerGroup != null)
+        {
+            _audioSource.outputAudioMixerGroup = outputMixerGroup;
+        }
+        else if (AudioManager.Instance != null && AudioManager.Instance.GetComponent<AudioSource>() != null)
+        {
+            var defaultSource = AudioManager.Instance.GetComponent<AudioSource>();
+            if (defaultSource != null && defaultSource.outputAudioMixerGroup != null)
+            {
+                _audioSource.outputAudioMixerGroup = defaultSource.outputAudioMixerGroup;
+            }
+        }
+    }
+
     public void Interact()
     {
         if (!CanInteract)
         {
-            string msg = BlockedMessage;
-            if (InnerDialogueUI.Instance != null && !string.IsNullOrEmpty(msg))
-            {
-                InnerDialogueUI.Instance.ShowMessage(msg);
-            }
+            OnBlockedInteraction();
             return;
         }
 
@@ -227,24 +275,33 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     {
         get
         {
-            // Dialog wewnętrzny wyświetla się TYLKO dla drzwi z First Doors, gdy gracz jeszcze się nie ubrał
-            if (firstDoors && !IsRequiredTaskDone())
-            {
-                AnimateHandleBlocked();
-                OnDoorBlocked?.Invoke(blockedMessage);
-                return blockedMessage;
-            }
-
-            // Dla zwykłych zamkniętych szuflad/drzwi (Locked At Start):
-            // szarpnij klamką jeśli jest, ale NIE pokazuj dialogu myśli (zwróć null)
-            if (!_isUnlocked)
-            {
-                AnimateHandleBlocked();
-                return null;
-            }
-
-            return null;
+            OnBlockedInteraction();
+            return GetBlockedDialogueMessage();
         }
+    }
+
+    private void OnBlockedInteraction()
+    {
+        PlayLockedSound();
+        AnimateHandleBlocked();
+
+        string msg = GetBlockedDialogueMessage();
+        if (InnerDialogueUI.Instance != null && !string.IsNullOrEmpty(msg))
+        {
+            InnerDialogueUI.Instance.ShowMessage(msg);
+        }
+    }
+
+    private string GetBlockedDialogueMessage()
+    {
+        // Dialog wewnętrzny wyświetla się TYLKO dla drzwi z First Doors, gdy gracz jeszcze się nie ubrał
+        if (firstDoors && !IsRequiredTaskDone())
+        {
+            OnDoorBlocked?.Invoke(blockedMessage);
+            return blockedMessage;
+        }
+
+        return null;
     }
 
     private bool IsRequiredTaskDone()
@@ -281,21 +338,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     private void StartOpenMotion()
     {
-        if (!string.IsNullOrEmpty(openSoundName) && AudioManager.Instance != null)
-        {
-            if (openSoundDelay > 0f)
-            {
-                DOVirtual.DelayedCall(openSoundDelay, () =>
-                {
-                    if (AudioManager.Instance != null)
-                        AudioManager.Instance.Play(openSoundName);
-                }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
-            }
-            else
-            {
-                AudioManager.Instance.Play(openSoundName);
-            }
-        }
+        PlaySound(openDoorClip, openSoundName, openSoundDelay, "door_open");
 
         if (motionMode == MotionMode.Rotate)
         {
@@ -320,21 +363,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
         _handleTween?.Kill();
 
-        if (!string.IsNullOrEmpty(handleSoundName) && AudioManager.Instance != null)
-        {
-            if (handleSoundDelay > 0f)
-            {
-                DOVirtual.DelayedCall(handleSoundDelay, () =>
-                {
-                    if (AudioManager.Instance != null)
-                        AudioManager.Instance.Play(handleSoundName);
-                }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
-            }
-            else
-            {
-                AudioManager.Instance.Play(handleSoundName);
-            }
-        }
+        PlaySound(handlePressClip, handleSoundName, handleSoundDelay, "door_handle_sound");
 
         Sequence handleSeq = DOTween.Sequence();
         handleSeq.Append(
@@ -350,17 +379,92 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         _handleTween = handleSeq;
     }
 
+    private void PlayLockedSound()
+    {
+        // 1. Bezpośredni AudioClip przypisany w Inspectorze (najwyższy priorytet)
+        if (doorRattleClip != null)
+        {
+            PlayDirectClip(doorRattleClip);
+            return;
+        }
+
+        // 2. Pobranie z AudioManager
+        string soundGroup = !string.IsNullOrWhiteSpace(door_rattle_sound) ? door_rattle_sound.Trim() : "door_rattle_sound";
+        var audioManager = AudioManager.Instance != null ? AudioManager.Instance : FindAnyObjectByType<AudioManager>();
+        if (audioManager != null)
+        {
+            audioManager.Play(soundGroup);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(handleSoundName) && audioManager != null)
+        {
+            audioManager.Play(handleSoundName);
+        }
+    }
+
+    private void PlaySound(AudioClip directClip, string soundGroupName, float delay, string fallbackGroup)
+    {
+        if (directClip != null)
+        {
+            if (delay > 0f)
+            {
+                DOVirtual.DelayedCall(delay, () => PlayDirectClip(directClip))
+                    .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            else
+            {
+                PlayDirectClip(directClip);
+            }
+            return;
+        }
+
+        string group = !string.IsNullOrEmpty(soundGroupName) ? soundGroupName : fallbackGroup;
+        var audioMgr = AudioManager.Instance != null ? AudioManager.Instance : FindAnyObjectByType<AudioManager>();
+
+        if (audioMgr != null)
+        {
+            if (delay > 0f)
+            {
+                DOVirtual.DelayedCall(delay, () =>
+                {
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.Play(group);
+                }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            else
+            {
+                audioMgr.Play(group);
+            }
+        }
+    }
+
+    private void PlayDirectClip(AudioClip clip)
+    {
+        if (clip == null) return;
+
+        if (_audioSource != null)
+        {
+            if (outputMixerGroup != null && _audioSource.outputAudioMixerGroup != outputMixerGroup)
+            {
+                _audioSource.outputAudioMixerGroup = outputMixerGroup;
+            }
+
+            _audioSource.pitch = UnityEngine.Random.Range(0.95f, 1.05f);
+            _audioSource.PlayOneShot(clip, soundVolume);
+        }
+        else
+        {
+            AudioSource.PlayClipAtPoint(clip, transform.position, soundVolume);
+        }
+    }
+
     private void AnimateHandleBlocked()
     {
         if (doorHandle == null)
             return;
 
         _handleTween?.Kill();
-
-        if (!string.IsNullOrEmpty(handleSoundName) && AudioManager.Instance != null)
-        {
-            AudioManager.Instance.Play(handleSoundName);
-        }
 
         // Subtelne szarpnięcie klamką przy zablokowanych drzwiach (np. 35% kąta i powrót)
         Vector3 jiggleRotation = _handleRestRotation;
@@ -399,21 +503,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
         IsOpen = false;
 
-        if (!string.IsNullOrEmpty(closeSoundName) && AudioManager.Instance != null)
-        {
-            if (closeSoundDelay > 0f)
-            {
-                DOVirtual.DelayedCall(closeSoundDelay, () =>
-                {
-                    if (AudioManager.Instance != null)
-                        AudioManager.Instance.Play(closeSoundName);
-                }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
-            }
-            else
-            {
-                AudioManager.Instance.Play(closeSoundName);
-            }
-        }
+        PlaySound(closeDoorClip, closeSoundName, closeSoundDelay, "door_close");
 
         if (motionMode == MotionMode.Rotate)
         {
