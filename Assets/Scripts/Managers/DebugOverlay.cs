@@ -8,35 +8,32 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// Profesjonalny panel debugowania (Dev Tools / Debug Overlay) z bocznym podglądem zadań (Quest Tracker).
-/// Działa WYŁĄCZNIE w Edytorze Unity (#if UNITY_EDITOR). W finalnym buildzie gry jest całkowicie wycięty.
-/// 
-/// Skróty klawiszowe:
-/// [F1] lub [~] (Tylda) -> Otwiera/Zamyka główny panel deweloperski
-/// [F2]                  -> Przypina/Odpina stałą listę zadań po prawej stronie ekranu
+/// Panel deweloperski (Dev Tools / Debug Overlay) do testowania gry.
+/// Otwierany w grze klawiszem [~] (Tylda / Backquote) lub [F1].
+/// Zoptymalizowany pod buildy (solidne tekstury GUI, brak emoji powodujących [□]).
 /// </summary>
 public class DebugOverlay : MonoBehaviour
 {
-#if !UNITY_EDITOR
-    // W buildzie gry skrypt jest całkowicie nieaktywny
-    private void Awake() => Destroy(this);
-#else
-
     public static DebugOverlay Instance { get; private set; }
 
+    [Header("Settings")]
+    [Tooltip("Czy panel deweloperski ma być dostępny w skompilowanym buildzie gry.")]
+    [SerializeField] private bool allowInBuild = true;
+
     [Header("Toggle Hotkeys")]
-    [Tooltip("Klawisz otwierający/zamykający główny panel deweloperski.")]
-    [SerializeField] private Key toggleKey = Key.F1;
-    [SerializeField] private Key alternateToggleKey = Key.Backquote; // tylda ~
+    [Tooltip("Klawisz otwierający/zamykający panel deweloperski (domyślnie Tylda ~).")]
+    [SerializeField] private Key primaryToggleKey = Key.Backquote; // tylda ~
+    [SerializeField] private Key secondaryToggleKey = Key.F1;
 
     [Tooltip("Klawisz przypinający listę questów po prawej stronie ekranu.")]
     [SerializeField] private Key pinQuestKey = Key.F2;
 
-    [Header("UI Styling")]
+    [Header("UI State")]
     [SerializeField] private bool showOverlay = false;
     [SerializeField] private bool showCompactHud = true;
     [SerializeField] private bool pinQuestTracker = false;
 
+#if UNITY_EDITOR
     [MenuItem("Tools/Cyrulik/Add Dev Debug Overlay to Scene", false, 50)]
     public static void AddDebugOverlayToScene()
     {
@@ -46,7 +43,7 @@ public class DebugOverlay : MonoBehaviour
             GameObject go = new GameObject("DebugOverlay", typeof(DebugOverlay));
             Undo.RegisterCreatedObjectUndo(go, "Create Debug Overlay");
             Selection.activeGameObject = go;
-            Debug.Log("[DebugOverlay] Pomyślnie dodano DebugOverlay do sceny! Otwieranie w grze klawiszem [F1] lub [~], Questy [F2].");
+            Debug.Log("[DebugOverlay] Pomyślnie dodano DebugOverlay do sceny! Otwieranie klawiszem [~] lub [F1].");
         }
         else
         {
@@ -54,36 +51,41 @@ public class DebugOverlay : MonoBehaviour
             Debug.Log("[DebugOverlay] DebugOverlay już istnieje w scenie.");
         }
     }
+#endif
 
-    // Zakładki w menu debugowania
-    private enum DebugTab
+    public enum DebugTab
     {
+        Quests,
+        TowelAndStove,
+        Inventory,
         Teleport,
         Time,
+        Atmosphere,
         Razor,
-        Quests,
-        Player,
         Dialogues,
-        Performance
+        Cheats
     }
 
-    private DebugTab _currentTab = DebugTab.Teleport;
+    private DebugTab _currentTab = DebugTab.Quests;
 
-    // Referencje do menedżerów
+    // Referencje do menedżerów w scenie
     private GameManager _gameManager;
     private GameTimeController _timeController;
     private PreparationStateManager _questManager;
     private PlayerMovement _playerMovement;
+    private PlayerHands _playerHands;
     private CharacterController _characterController;
     private Transform _playerTransform;
+    private StoveController _stoveController;
+    private RadioInteractable _radio;
 
-    // Zmienne debugowe
+    // Zmienne pomocnicze
     private bool _superSpeedActive = false;
     private float _originalWalkSpeed = 5f;
     private float _originalSprintSpeed = 6f;
+    private float _currentFps = 60f;
     private float _fpsAccumulator = 0f;
     private int _fpsFrames = 0;
-    private float _currentFps = 60f;
     private float _fpsTimeLeft = 0.5f;
 
     // Custom checkpoint
@@ -91,7 +93,20 @@ public class DebugOverlay : MonoBehaviour
     private Quaternion _customCheckpointRot;
     private bool _hasCustomCheckpoint = false;
 
-    // GUI Style
+    // Tekstury tła i krawędzi
+    private Texture2D _darkBgTex;
+    private Texture2D _panelBgTex;
+    private Texture2D _tabActiveBgTex;
+    private Texture2D _tabInactiveBgTex;
+    private Texture2D _btnBgTex;
+    private Texture2D _btnHoverBgTex;
+    private Texture2D _successBgTex;
+    private Texture2D _dangerBgTex;
+    private Texture2D _questDoneBgTex;
+    private Texture2D _questPendingBgTex;
+    private Texture2D _goldBorderTex;
+
+    // Style GUI
     private GUIStyle _boxStyle;
     private GUIStyle _panelBoxStyle;
     private GUIStyle _headerStyle;
@@ -106,9 +121,18 @@ public class DebugOverlay : MonoBehaviour
     private GUIStyle _questCardPendingStyle;
     private Vector2 _scrollPos;
     private Vector2 _questScrollPos;
+    private bool _stylesInitialized = false;
 
     private void Awake()
     {
+        if (!allowInBuild)
+        {
+#if !UNITY_EDITOR
+            Destroy(gameObject);
+            return;
+#endif
+        }
+
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -126,16 +150,15 @@ public class DebugOverlay : MonoBehaviour
 
     private void Update()
     {
-        // Sprawdź wciśnięcie klawisza F1 lub Tyldy ~ (Główny panel)
+        // Sprawdź wciśnięcie klawisza Tyldy ~ lub F1
         if (Keyboard.current != null)
         {
-            if (Keyboard.current[toggleKey].wasPressedThisFrame ||
-                Keyboard.current[alternateToggleKey].wasPressedThisFrame)
+            if (Keyboard.current[primaryToggleKey].wasPressedThisFrame ||
+                Keyboard.current[secondaryToggleKey].wasPressedThisFrame)
             {
                 ToggleOverlay();
             }
 
-            // Klawisz F2 (Przypięcie questów po prawej)
             if (Keyboard.current[pinQuestKey].wasPressedThisFrame)
             {
                 pinQuestTracker = !pinQuestTracker;
@@ -159,16 +182,16 @@ public class DebugOverlay : MonoBehaviour
     public void ToggleOverlay()
     {
         showOverlay = !showOverlay;
+        ResolveReferences();
 
         if (showOverlay)
         {
-            ResolveReferences();
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
         else
         {
-            if (InputModeManager.Instance != null && InputModeManager.Instance.CurrentScheme == InputModeManager.ControlScheme.Player)
+            if (InnerDialogueUI.Instance == null || !InnerDialogueUI.Instance.IsDialogueActive)
             {
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
@@ -179,131 +202,208 @@ public class DebugOverlay : MonoBehaviour
     private void ResolveReferences()
     {
         if (_gameManager == null) _gameManager = FindAnyObjectByType<GameManager>();
-        if (_timeController == null) _timeController = GameTimeController.Instance ?? FindAnyObjectByType<GameTimeController>();
-        if (_questManager == null) _questManager = PreparationStateManager.Instance ?? FindAnyObjectByType<PreparationStateManager>();
+        if (_timeController == null) _timeController = FindAnyObjectByType<GameTimeController>();
+        if (_questManager == null) _questManager = PreparationStateManager.Instance != null ? PreparationStateManager.Instance : FindAnyObjectByType<PreparationStateManager>();
         if (_playerMovement == null) _playerMovement = FindAnyObjectByType<PlayerMovement>();
+        if (_playerHands == null) _playerHands = FindAnyObjectByType<PlayerHands>();
+        if (_stoveController == null) _stoveController = FindAnyObjectByType<StoveController>();
+        if (_radio == null) _radio = FindAnyObjectByType<RadioInteractable>();
 
         if (_playerMovement != null)
         {
-            _playerTransform = _playerMovement.transform;
             _characterController = _playerMovement.GetComponent<CharacterController>();
+            _playerTransform = _playerMovement.transform;
         }
     }
 
     private void InitStyles()
     {
-        if (_boxStyle != null) return;
+        if (_stylesInitialized) return;
 
-        // Tło głównego okna
-        _boxStyle = new GUIStyle(GUI.skin.box);
-        Texture2D bgTex = new Texture2D(1, 1);
-        bgTex.SetPixel(0, 0, new Color(0.07f, 0.08f, 0.10f, 0.96f));
-        bgTex.Apply();
-        _boxStyle.normal.background = bgTex;
-        _boxStyle.padding = new RectOffset(16, 16, 16, 16);
+        _darkBgTex = MakeTex(16, 16, new Color(0.08f, 0.08f, 0.10f, 0.97f));
+        _panelBgTex = MakeTex(16, 16, new Color(0.14f, 0.14f, 0.16f, 0.95f));
+        _tabActiveBgTex = MakeTex(16, 16, new Color(0.88f, 0.70f, 0.28f, 1f));
+        _tabInactiveBgTex = MakeTex(16, 16, new Color(0.20f, 0.20f, 0.24f, 0.95f));
+        _btnBgTex = MakeTex(16, 16, new Color(0.25f, 0.25f, 0.30f, 1f));
+        _btnHoverBgTex = MakeTex(16, 16, new Color(0.35f, 0.35f, 0.42f, 1f));
+        _successBgTex = MakeTex(16, 16, new Color(0.18f, 0.58f, 0.28f, 1f));
+        _dangerBgTex = MakeTex(16, 16, new Color(0.72f, 0.22f, 0.22f, 1f));
+        _questDoneBgTex = MakeTex(16, 16, new Color(0.12f, 0.38f, 0.18f, 0.95f));
+        _questPendingBgTex = MakeTex(16, 16, new Color(0.24f, 0.20f, 0.16f, 0.95f));
+        _goldBorderTex = MakeTex(16, 16, new Color(0.92f, 0.78f, 0.38f, 1f));
 
-        // Tło bocznego panelu zadań
-        _panelBoxStyle = new GUIStyle(GUI.skin.box);
-        Texture2D panelBgTex = new Texture2D(1, 1);
-        panelBgTex.SetPixel(0, 0, new Color(0.09f, 0.10f, 0.12f, 0.94f));
-        panelBgTex.Apply();
-        _panelBoxStyle.normal.background = panelBgTex;
-        _panelBoxStyle.padding = new RectOffset(14, 14, 14, 14);
+        _boxStyle = new GUIStyle(GUI.skin.box)
+        {
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(12, 12, 12, 12),
+            normal = { background = _darkBgTex }
+        };
 
-        // Nagłówek
-        _headerStyle = new GUIStyle(GUI.skin.label);
-        _headerStyle.fontSize = 17;
-        _headerStyle.fontStyle = FontStyle.Bold;
-        _headerStyle.normal.textColor = new Color(0.98f, 0.78f, 0.35f, 1f); // Złoto
+        _panelBoxStyle = new GUIStyle(GUI.skin.box)
+        {
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(12, 12, 12, 12),
+            normal = { background = _panelBgTex }
+        };
 
-        // Podnagłówek
-        _subHeaderStyle = new GUIStyle(GUI.skin.label);
-        _subHeaderStyle.fontSize = 14;
-        _subHeaderStyle.fontStyle = FontStyle.Bold;
-        _subHeaderStyle.normal.textColor = new Color(0.4f, 0.8f, 1f, 1f);
+        _headerStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 18,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(0.96f, 0.85f, 0.45f, 1f) },
+            alignment = TextAnchor.MiddleLeft
+        };
 
-        // Zakładki
-        _tabActiveStyle = new GUIStyle(GUI.skin.button);
-        _tabActiveStyle.fontSize = 13;
-        _tabActiveStyle.fontStyle = FontStyle.Bold;
-        _tabActiveStyle.normal.textColor = Color.white;
+        _subHeaderStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(0.92f, 0.92f, 0.92f, 1f) }
+        };
 
-        _tabInactiveStyle = new GUIStyle(GUI.skin.button);
-        _tabInactiveStyle.fontSize = 12;
-        _tabInactiveStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f, 1f);
+        _tabActiveStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            border = new RectOffset(0, 0, 0, 0),
+            normal = { background = _tabActiveBgTex, textColor = Color.black },
+            hover = { background = _tabActiveBgTex, textColor = Color.black },
+            active = { background = _tabActiveBgTex, textColor = Color.black }
+        };
 
-        // Przyciski
-        _buttonStyle = new GUIStyle(GUI.skin.button);
-        _buttonStyle.fontSize = 13;
-        _buttonStyle.margin = new RectOffset(4, 4, 4, 4);
+        _tabInactiveStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            border = new RectOffset(0, 0, 0, 0),
+            normal = { background = _tabInactiveBgTex, textColor = new Color(0.85f, 0.85f, 0.85f, 1f) },
+            hover = { background = _btnHoverBgTex, textColor = Color.white },
+            active = { background = _tabActiveBgTex, textColor = Color.black }
+        };
 
-        _successButtonStyle = new GUIStyle(GUI.skin.button);
-        _successButtonStyle.fontSize = 13;
-        _successButtonStyle.fontStyle = FontStyle.Bold;
-        _successButtonStyle.normal.textColor = new Color(0.4f, 1f, 0.4f, 1f);
+        _buttonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(8, 8, 4, 4),
+            normal = { background = _btnBgTex, textColor = Color.white },
+            hover = { background = _btnHoverBgTex, textColor = Color.white },
+            active = { background = _tabActiveBgTex, textColor = Color.black }
+        };
 
-        _dangerButtonStyle = new GUIStyle(GUI.skin.button);
-        _dangerButtonStyle.fontSize = 13;
-        _dangerButtonStyle.fontStyle = FontStyle.Bold;
-        _dangerButtonStyle.normal.textColor = new Color(1f, 0.4f, 0.4f, 1f);
+        _successButtonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(8, 8, 4, 4),
+            normal = { background = _successBgTex, textColor = Color.white },
+            hover = { background = _successBgTex, textColor = Color.white },
+            active = { background = _btnHoverBgTex, textColor = Color.white }
+        };
 
-        // Etykiety stanu
-        _statusLabelStyle = new GUIStyle(GUI.skin.label);
-        _statusLabelStyle.fontSize = 12;
-        _statusLabelStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+        _dangerButtonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(8, 8, 4, 4),
+            normal = { background = _dangerBgTex, textColor = Color.white },
+            hover = { background = _dangerBgTex, textColor = Color.white },
+            active = { background = _btnHoverBgTex, textColor = Color.white }
+        };
 
-        // Karta zadania ukończonego
-        _questCardCompletedStyle = new GUIStyle(GUI.skin.box);
-        Texture2D compTex = new Texture2D(1, 1);
-        compTex.SetPixel(0, 0, new Color(0.08f, 0.18f, 0.10f, 0.85f));
-        compTex.Apply();
-        _questCardCompletedStyle.normal.background = compTex;
-        _questCardCompletedStyle.padding = new RectOffset(10, 10, 8, 8);
-        _questCardCompletedStyle.margin = new RectOffset(2, 2, 3, 3);
+        _statusLabelStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 12,
+            normal = { textColor = new Color(0.90f, 0.90f, 0.90f, 1f) }
+        };
 
-        // Karta zadania nieukończonego
-        _questCardPendingStyle = new GUIStyle(GUI.skin.box);
-        Texture2D pendTex = new Texture2D(1, 1);
-        pendTex.SetPixel(0, 0, new Color(0.16f, 0.10f, 0.10f, 0.85f));
-        pendTex.Apply();
-        _questCardPendingStyle.normal.background = pendTex;
-        _questCardPendingStyle.padding = new RectOffset(10, 10, 8, 8);
-        _questCardPendingStyle.margin = new RectOffset(2, 2, 3, 3);
+        _questCardCompletedStyle = new GUIStyle(GUI.skin.box)
+        {
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(10, 10, 8, 8),
+            margin = new RectOffset(0, 0, 3, 3),
+            normal = { background = _questDoneBgTex }
+        };
+
+        _questCardPendingStyle = new GUIStyle(GUI.skin.box)
+        {
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(10, 10, 8, 8),
+            margin = new RectOffset(0, 0, 3, 3),
+            normal = { background = _questPendingBgTex }
+        };
+
+        _stylesInitialized = true;
     }
 
     private void OnGUI()
     {
         InitStyles();
 
-        // 1. Mały pasek na górze ekranu (zawsze widoczny, gdy zamknięte)
-        if (!showOverlay)
+        // 1. Pasek statusu
+        if (showCompactHud && !showOverlay)
         {
-            if (showCompactHud)
-            {
-                DrawCompactHud();
-            }
-
-            // Jeśli przypięto questy (F2), rysuj panel zadań po prawej
-            if (pinQuestTracker)
-            {
-                Rect pinnedRect = new Rect(Screen.width - 420, 20, 400, Mathf.Min(600, Screen.height - 40));
-                DrawQuestsPanelArea(pinnedRect, isPinnedMode: true);
-            }
-            return;
+            DrawCompactHud();
         }
 
-        // 2. GŁÓWNY PANEL DEV TOOLS (Lewa strona)
-        float mainWidth = 520f;
-        float mainHeight = 610f;
-        Rect mainRect = new Rect(20, 20, mainWidth, mainHeight);
+        // 2. Przypięta lista zadań (F2)
+        if (pinQuestTracker && !showOverlay)
+        {
+            DrawPinnedQuestTracker();
+        }
 
-        GUILayout.BeginArea(mainRect, _boxStyle);
+        // 3. Główny panel
+        if (showOverlay)
+        {
+            DrawMainOverlayWindow();
+        }
+    }
 
-        // Nagłówek i przycisk X
+    private void DrawCompactHud()
+    {
+        string timeStr = _timeController != null ? $"{_timeController.Hour:00}:{_timeController.Minute:00}" : "--:--";
+        int completed = 0;
+        int total = 0;
+        if (_questManager != null && _questManager.Tasks != null)
+        {
+            total = _questManager.Tasks.Count;
+            foreach (var t in _questManager.Tasks) if (t != null && t.isCompleted) completed++;
+        }
+
+        string hudText = $"[~] DEV TOOLS | Czas: {timeStr} | Zadania: {completed}/{total} | FPS: {_currentFps:0.0}";
+
+        Rect hudRect = new Rect(12, 12, 380, 30);
+        GUI.DrawTexture(hudRect, _darkBgTex);
+        GUI.DrawTexture(new Rect(12, 12, 380, 2), _goldBorderTex);
+
+        if (GUI.Button(hudRect, hudText, _buttonStyle))
+        {
+            ToggleOverlay();
+        }
+    }
+
+    private void DrawMainOverlayWindow()
+    {
+        float width = 860f;
+        float height = 640f;
+        float x = (Screen.width - width) * 0.5f;
+        float y = (Screen.height - height) * 0.5f;
+
+        // Solid background and border lines
+        Rect fullWindowRect = new Rect(x, y, width, height);
+        GUI.DrawTexture(fullWindowRect, _darkBgTex);
+        GUI.DrawTexture(new Rect(x, y, width, 3), _goldBorderTex);
+        GUI.DrawTexture(new Rect(x, y + height - 3, width, 3), _goldBorderTex);
+
+        GUILayout.BeginArea(new Rect(x + 12, y + 10, width - 24, height - 20));
+
+        // Header
         GUILayout.BeginHorizontal();
-        GUILayout.Label("🛠️ CYRULIK DEV TOOLS", _headerStyle);
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("✕ Zamknij [F1]", GUILayout.Width(100), GUILayout.Height(28)))
+        GUILayout.Label("[~] CYRULIK — DEV TOOLS & DEBUG OVERLAY", _headerStyle);
+        if (GUILayout.Button("[X] ZAMKNIJ [~]", _dangerButtonStyle, GUILayout.Width(120), GUILayout.Height(30)))
         {
             ToggleOverlay();
         }
@@ -313,224 +413,234 @@ public class DebugOverlay : MonoBehaviour
 
         // Zakładki menu
         GUILayout.BeginHorizontal();
-        DrawTabButton(DebugTab.Teleport, "📍 Teleport");
-        DrawTabButton(DebugTab.Time, "⏰ Czas");
-        DrawTabButton(DebugTab.Razor, "🪒 Brzytwa");
-        DrawTabButton(DebugTab.Quests, "📋 Zadania");
-        DrawTabButton(DebugTab.Player, "🏃 Gracz");
-        DrawTabButton(DebugTab.Dialogues, "💬 Dialogi");
-        DrawTabButton(DebugTab.Performance, "📊 FPS");
+        DrawTabButton(DebugTab.Quests, "Zadania");
+        DrawTabButton(DebugTab.TowelAndStove, "Piec / Recznik");
+        DrawTabButton(DebugTab.Inventory, "Ekwipunek");
+        DrawTabButton(DebugTab.Teleport, "Teleport");
+        DrawTabButton(DebugTab.Time, "Czas");
+        DrawTabButton(DebugTab.Atmosphere, "Klimat");
+        DrawTabButton(DebugTab.Razor, "Brzytwa");
+        DrawTabButton(DebugTab.Dialogues, "Dialogi");
+        DrawTabButton(DebugTab.Cheats, "Cheaty");
         GUILayout.EndHorizontal();
 
-        GUILayout.Space(10);
+        GUILayout.Space(8);
 
-        // Zawartość aktywnej zakładki w ScrollView
-        _scrollPos = GUILayout.BeginScrollView(_scrollPos);
+        // Zawartość aktywnej zakładki w panelu
+        _scrollPos = GUILayout.BeginScrollView(_scrollPos, _panelBoxStyle);
 
         switch (_currentTab)
         {
-            case DebugTab.Teleport:
-                DrawTeleportTab();
-                break;
-            case DebugTab.Time:
-                DrawTimeTab();
-                break;
-            case DebugTab.Razor:
-                DrawRazorMinigameTab();
-                break;
-            case DebugTab.Quests:
-                DrawQuestsTab();
-                break;
-            case DebugTab.Player:
-                DrawPlayerTab();
-                break;
-            case DebugTab.Dialogues:
-                DrawDialoguesTab();
-                break;
-            case DebugTab.Performance:
-                DrawPerformanceTab();
-                break;
+            case DebugTab.Quests: DrawQuestsTab(); break;
+            case DebugTab.TowelAndStove: DrawTowelAndStoveTab(); break;
+            case DebugTab.Inventory: DrawInventoryTab(); break;
+            case DebugTab.Teleport: DrawTeleportTab(); break;
+            case DebugTab.Time: DrawTimeTab(); break;
+            case DebugTab.Atmosphere: DrawAtmosphereTab(); break;
+            case DebugTab.Razor: DrawRazorTab(); break;
+            case DebugTab.Dialogues: DrawDialoguesTab(); break;
+            case DebugTab.Cheats: DrawCheatsTab(); break;
         }
 
         GUILayout.EndScrollView();
 
-        GUILayout.FlexibleSpace();
+        GUILayout.Space(6);
+
+        // Pasek dolny
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"FPS: {_currentFps:0.0} | Mono RAM: {GC.GetTotalMemory(false) / (1024 * 1024):0.0} MB", _statusLabelStyle);
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("🔄 Odśwież referencje", GUILayout.Width(150)))
+        GUILayout.Label($"FPS: {_currentFps:0.0} | TimeScale: {Time.timeScale:0.0}x | [F2] Przypnij Zadania", _statusLabelStyle);
+        if (GUILayout.Button("[R] Odswiez referencje", _buttonStyle, GUILayout.Width(170), GUILayout.Height(24)))
         {
             ResolveReferences();
         }
         GUILayout.EndHorizontal();
 
         GUILayout.EndArea();
-
-        // 3. STAŁY PANEL ZADAŃ PO PRAWEJ STRONIE (Right Side Quest Tracker)
-        Rect questPanelRect = new Rect(555, 20, 440, mainHeight);
-        DrawQuestsPanelArea(questPanelRect, isPinnedMode: false);
-    }
-
-    // ──────────────────────────────────────────────────────────
-    // 📋 BOCZNY PANEL WSZYSTKICH ZADAŃ (QUEST TRACKER)
-    // ──────────────────────────────────────────────────────────
-    private void DrawQuestsPanelArea(Rect rect, bool isPinnedMode)
-    {
-        GUILayout.BeginArea(rect, _panelBoxStyle);
-
-        GUILayout.BeginHorizontal();
-        GUILayout.Label("📋 STATUS ZADAŃ (QUESTS)", _headerStyle);
-        GUILayout.FlexibleSpace();
-
-        string pinLabel = pinQuestTracker ? "📌 Odpięty [F2]" : "📌 Przypnij [F2]";
-        if (GUILayout.Button(pinLabel, _tabInactiveStyle, GUILayout.Width(105), GUILayout.Height(24)))
-        {
-            pinQuestTracker = !pinQuestTracker;
-        }
-        GUILayout.EndHorizontal();
-
-        GUILayout.Space(6);
-
-        if (_questManager != null)
-        {
-            var tasks = _questManager.Tasks;
-            int totalTasks = tasks != null ? tasks.Count : 0;
-            int completedCount = 0;
-
-            if (tasks != null)
-            {
-                foreach (var t in tasks)
-                {
-                    if (t.isCompleted) completedCount++;
-                }
-            }
-
-            float percent = totalTasks > 0 ? ((float)completedCount / totalTasks) * 100f : 0f;
-
-            // Pasek postępu
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label($"Postęp przygotowań: <b>{completedCount} / {totalTasks} ({percent:0}%)</b>", _subHeaderStyle);
-            GUILayout.EndVertical();
-
-            GUILayout.Space(6);
-
-            // Lista wszystkich zadań
-            _questScrollPos = GUILayout.BeginScrollView(_questScrollPos);
-
-            if (tasks != null && tasks.Count > 0)
-            {
-                for (int i = 0; i < tasks.Count; i++)
-                {
-                    var task = tasks[i];
-                    bool done = task.isCompleted;
-
-                    GUILayout.BeginVertical(done ? _questCardCompletedStyle : _questCardPendingStyle);
-
-                    GUILayout.BeginHorizontal();
-                    string statusIcon = done ? "✅" : "⏳";
-                    string statusText = done ? "<color=#55FF55><b>ZALICZONE</b></color>" : "<color=#FF6666>DO ZROBIENIA</color>";
-
-                    GUILayout.Label($"{statusIcon} <b>{task.displayName}</b>", GUILayout.ExpandWidth(true));
-                    GUILayout.Label(statusText, GUILayout.Width(100));
-                    GUILayout.EndHorizontal();
-
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label($"<color=#888888>ID: {task.taskId}</color>", _statusLabelStyle);
-                    GUILayout.FlexibleSpace();
-
-                    if (GUILayout.Button(done ? "Odznacz ❌" : "Zalicz ✅", done ? _dangerButtonStyle : _successButtonStyle, GUILayout.Width(90), GUILayout.Height(22)))
-                    {
-                        _questManager.SetTaskState(task.taskId, !done);
-                    }
-                    GUILayout.EndHorizontal();
-
-                    GUILayout.EndVertical();
-                }
-            }
-            else
-            {
-                GUILayout.Label("Brak zarejestrowanych zadań w PreparationStateManager.", _statusLabelStyle);
-            }
-
-            GUILayout.EndScrollView();
-
-            GUILayout.Space(6);
-
-            // Przyciski masowe
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("✅ Zalicz wszystkie", _successButtonStyle, GUILayout.Height(28)))
-            {
-                if (tasks != null)
-                {
-                    foreach (var t in tasks) _questManager.SetTaskState(t.taskId, true);
-                }
-            }
-
-            if (GUILayout.Button("❌ Zresetuj wszystkie", _dangerButtonStyle, GUILayout.Height(28)))
-            {
-                if (tasks != null)
-                {
-                    foreach (var t in tasks) _questManager.SetTaskState(t.taskId, false);
-                }
-            }
-            GUILayout.EndHorizontal();
-        }
-        else
-        {
-            GUILayout.Label("⚠️ Brak PreparationStateManager w scenie.", _statusLabelStyle);
-            if (GUILayout.Button("🔄 Szukaj ponownie", _buttonStyle))
-            {
-                ResolveReferences();
-            }
-        }
-
-        GUILayout.EndArea();
-    }
-
-    // ──────────────────────────────────────────────────────────
-    // MINI PASEK NA GÓRZE EKRANU
-    // ──────────────────────────────────────────────────────────
-    private void DrawCompactHud()
-    {
-        string timeStr = _timeController != null
-            ? $"{_timeController.Hour:00}:{_timeController.Minute:00}:{_timeController.Second:00}"
-            : "--:--:--";
-
-        int completed = 0;
-        int total = 0;
-        if (_questManager != null && _questManager.Tasks != null)
-        {
-            total = _questManager.Tasks.Count;
-            foreach (var t in _questManager.Tasks) if (t.isCompleted) completed++;
-        }
-
-        string hudText = $"[F1] Dev Tools | 🕒 {timeStr} | 📋 {completed}/{total} Zadania | ⚡ {_currentFps:0.0} FPS";
-
-        GUIStyle miniStyle = new GUIStyle(GUI.skin.box);
-        miniStyle.fontSize = 12;
-        miniStyle.normal.textColor = new Color(0.95f, 0.95f, 0.95f, 0.95f);
-
-        if (GUI.Button(new Rect(10, 10, 320, 26), hudText, miniStyle))
-        {
-            ToggleOverlay();
-        }
     }
 
     private void DrawTabButton(DebugTab tab, string title)
     {
         bool isActive = _currentTab == tab;
-        if (GUILayout.Button(title, isActive ? _tabActiveStyle : _tabInactiveStyle, GUILayout.Height(28)))
+        if (GUILayout.Button(title, isActive ? _tabActiveStyle : _tabInactiveStyle, GUILayout.Height(30)))
         {
             _currentTab = tab;
         }
     }
 
     // ──────────────────────────────────────────────────────────
-    // 📍 1. ZAKŁADKA TELEPORTACJI
+    // 1. ZAKŁADKA ZADAŃ (QUESTS)
+    // ──────────────────────────────────────────────────────────
+    private void DrawQuestsTab()
+    {
+        GUILayout.Label("[ZARZADZANIE ZADANIAMI - PreparationStateManager]", _subHeaderStyle);
+        GUILayout.Space(6);
+
+        if (_questManager == null)
+        {
+            GUILayout.Label("[!] Brak PreparationStateManager w scenie!", _statusLabelStyle);
+            return;
+        }
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[+] ZALICZ WSZYSTKIE ZADANIA", _successButtonStyle, GUILayout.Height(34)))
+        {
+            if (_questManager.Tasks != null)
+            {
+                foreach (var t in _questManager.Tasks)
+                {
+                    if (t != null) _questManager.SetTaskState(t.taskId, true);
+                }
+            }
+        }
+        if (GUILayout.Button("[-] RESETUJ WSZYSTKIE ZADANIA", _dangerButtonStyle, GUILayout.Height(34)))
+        {
+            if (_questManager.Tasks != null)
+            {
+                foreach (var t in _questManager.Tasks)
+                {
+                    if (t != null) _questManager.SetTaskState(t.taskId, false);
+                }
+            }
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+
+        if (_questManager.Tasks != null)
+        {
+            foreach (var task in _questManager.Tasks)
+            {
+                if (task == null) continue;
+
+                GUIStyle cardStyle = task.isCompleted ? _questCardCompletedStyle : _questCardPendingStyle;
+                GUILayout.BeginHorizontal(cardStyle);
+
+                string statusText = task.isCompleted ? "[ZROBIONE]" : "[W TOKU]";
+                GUILayout.Label($"<b>{task.displayName}</b>\n<size=11><color=#C0C0C0>ID: {task.taskId}</color></size>", _statusLabelStyle, GUILayout.Width(360));
+                GUILayout.Label(statusText, _statusLabelStyle, GUILayout.Width(110));
+
+                if (task.isCompleted)
+                {
+                    if (GUILayout.Button("Cofnij", _dangerButtonStyle, GUILayout.Width(80), GUILayout.Height(28)))
+                    {
+                        _questManager.SetTaskState(task.taskId, false);
+                    }
+                }
+                else
+                {
+                    if (GUILayout.Button("Zalicz", _successButtonStyle, GUILayout.Width(80), GUILayout.Height(28)))
+                    {
+                        _questManager.SetTaskState(task.taskId, true);
+                    }
+                }
+
+                GUILayout.EndHorizontal();
+                GUILayout.Space(4);
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 2. ZAKŁADKA PIEC & GORĄCY RĘCZNIK
+    // ──────────────────────────────────────────────────────────
+    private void DrawTowelAndStoveTab()
+    {
+        GUILayout.Label("[PRZYGOTOWANIE GORACEGO RECZNIKA]", _subHeaderStyle);
+        GUILayout.Space(6);
+
+        if (_stoveController == null)
+        {
+            GUILayout.Label("[!] Brak StoveController w scenie!", _statusLabelStyle);
+        }
+        else
+        {
+            GUILayout.BeginVertical(_panelBoxStyle);
+            GUILayout.Label($"Ogień w piecu: {(_stoveController.IsLit ? "[TAK] ROZPALONY" : "[NIE] WYGASZONY")}", _statusLabelStyle);
+            GUILayout.Label($"Garnek na piecu: {(_stoveController.HasPot ? "[TAK] POSTAWIONY" : "[NIE] BRAK")}", _statusLabelStyle);
+            GUILayout.Label($"Woda gotuje się: {(_stoveController.IsBoiling ? "[TAK] WRZACA" : "[NIE] ZIMNA")}", _statusLabelStyle);
+            GUILayout.Label($"Ręcznik włożony: {(_stoveController.HasTowel ? "[TAK] WLOZONY" : "[NIE] BRAK")}", _statusLabelStyle);
+            GUILayout.EndVertical();
+
+            GUILayout.Space(8);
+
+            GUILayout.Label("Szybkie akcje pieca:", _subHeaderStyle);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Rozpal ogien w piecu", _buttonStyle, GUILayout.Height(30)))
+            {
+                _stoveController.LightFire();
+            }
+            if (GUILayout.Button("Postaw garnek z woda", _buttonStyle, GUILayout.Height(30)))
+            {
+                _stoveController.PlacePot(true);
+            }
+            if (GUILayout.Button("Zagotuj wode natychmiast", _successButtonStyle, GUILayout.Height(30)))
+            {
+                _stoveController.InstantBoil();
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        GUILayout.Space(12);
+
+        GUILayout.Label("Spawnowanie przedmiotów do rąk gracza:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Pusty garnek", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("pot");
+        if (GUILayout.Button("Garnek z woda", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("pot_water");
+        if (GUILayout.Button("Czysty recznik", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("towel");
+        if (GUILayout.Button("Goracy recznik", _successButtonStyle, GUILayout.Height(30))) GiveItemToPlayer("hot_towel");
+        GUILayout.EndHorizontal();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 3. ZAKŁADKA EKWIPUNEK
+    // ──────────────────────────────────────────────────────────
+    private void DrawInventoryTab()
+    {
+        GUILayout.Label("[TRZYMANY PRZEDMIOT - PlayerHands]", _subHeaderStyle);
+        GUILayout.Space(6);
+
+        if (_playerHands != null)
+        {
+            string held = "--- PUSTE DLONIE ---";
+            if (_playerHands.HeldItem != null)
+            {
+                var pickupComp = _playerHands.HeldItem.GetComponentInChildren<PickupItem>();
+                held = pickupComp != null ? pickupComp.ItemId : _playerHands.HeldItem.name;
+            }
+
+            GUILayout.BeginVertical(_panelBoxStyle);
+            GUILayout.Label($"Aktualnie w rekach: <b>{held}</b>", _headerStyle);
+            if (_playerHands.HeldItem != null)
+            {
+                if (GUILayout.Button("[X] Upusc trzymany przedmiot", _dangerButtonStyle, GUILayout.Height(28)))
+                {
+                    _playerHands.DropHeldItem();
+                }
+            }
+            GUILayout.EndVertical();
+        }
+        else
+        {
+            GUILayout.Label("[!] Brak PlayerHands na graczu!", _statusLabelStyle);
+        }
+
+        GUILayout.Space(10);
+        GUILayout.Label("Szybkie dawanie przedmiotow:", _subHeaderStyle);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Brzytwa (razor)", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("razor");
+        if (GUILayout.Button("Martwa mysz (dead_mouse)", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("dead_mouse");
+        if (GUILayout.Button("Zapalki (matchbox)", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("matchbox");
+        if (GUILayout.Button("Walizka (suitcase)", _buttonStyle, GUILayout.Height(30))) GiveItemToPlayer("suitcase");
+        GUILayout.EndHorizontal();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 4. ZAKŁADKA TELEPORTACJI
     // ──────────────────────────────────────────────────────────
     private void DrawTeleportTab()
     {
-        GUILayout.Label("📍 Teleportacja do pozycji w scenie", _subHeaderStyle);
+        GUILayout.Label("[TELEPORTACJA DO MIEJSC W SALONIE]", _subHeaderStyle);
         GUILayout.Space(6);
 
         if (_gameManager != null)
@@ -543,43 +653,31 @@ public class DebugOverlay : MonoBehaviour
             Transform spawn2 = spawn2Field?.GetValue(_gameManager) as Transform;
             Transform spawn3 = spawn3Field?.GetValue(_gameManager) as Transform;
 
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Pozycje z GameManager:", _statusLabelStyle);
-            GUILayout.Space(4);
-
-            if (GUILayout.Button("🛏️ Pozycja 1 (Sypialnia / Spawn 1)", _buttonStyle, GUILayout.Height(34)))
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Sypialnia (Spawn 1)", _buttonStyle, GUILayout.Height(34)))
             {
                 if (spawn1 != null) TeleportPlayer(spawn1.position, spawn1.rotation);
-                else Debug.LogWarning("[DebugOverlay] spawnPosition1 nie jest przypisany w GameManager!");
             }
-
-            if (GUILayout.Button("💈 Pozycja 2 (Salon fryzjerski / Spawn 2)", _buttonStyle, GUILayout.Height(34)))
+            if (GUILayout.Button("Fotel fryzjerski (Spawn 2)", _buttonStyle, GUILayout.Height(34)))
             {
                 if (spawn2 != null) TeleportPlayer(spawn2.position, spawn2.rotation);
-                else Debug.LogWarning("[DebugOverlay] spawnPosition2 nie jest przypisany w GameManager!");
             }
-
-            if (GUILayout.Button("🚪 Pozycja 3 (Korytarz / Wyjście / Spawn 3)", _buttonStyle, GUILayout.Height(34)))
+            if (GUILayout.Button("Drzwi / Korytarz (Spawn 3)", _buttonStyle, GUILayout.Height(34)))
             {
                 if (spawn3 != null) TeleportPlayer(spawn3.position, spawn3.rotation);
-                else Debug.LogWarning("[DebugOverlay] spawnPosition3 nie jest przypisany w GameManager!");
             }
-            GUILayout.EndVertical();
-        }
-        else
-        {
-            GUILayout.Label("⚠️ Brak GameManager w scenie.", _statusLabelStyle);
+            GUILayout.EndHorizontal();
         }
 
-        GUILayout.Space(10);
+        GUILayout.Space(12);
 
-        // Własny punkt kontrolny (Custom Checkpoint)
-        GUILayout.BeginVertical(GUI.skin.box);
-        GUILayout.Label("Tymczasowy Checkpoint:", _statusLabelStyle);
+        // Checkpoint
+        GUILayout.BeginVertical(_panelBoxStyle);
+        GUILayout.Label("Tymczasowy punkt kontrolny (Checkpoint):", _statusLabelStyle);
         GUILayout.Space(4);
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("💾 Zapisz tu Checkpoint", _buttonStyle, GUILayout.Height(30)))
+        if (GUILayout.Button("[S] Zapisz tu Checkpoint", _buttonStyle, GUILayout.Height(30)))
         {
             if (_playerTransform != null)
             {
@@ -590,7 +688,7 @@ public class DebugOverlay : MonoBehaviour
         }
 
         GUI.enabled = _hasCustomCheckpoint;
-        if (GUILayout.Button("⚡ Wróć do Checkpointu", _successButtonStyle, GUILayout.Height(30)))
+        if (GUILayout.Button("[>] Wroc do Checkpointu", _successButtonStyle, GUILayout.Height(30)))
         {
             TeleportPlayer(_customCheckpointPos, _customCheckpointRot);
         }
@@ -599,231 +697,276 @@ public class DebugOverlay : MonoBehaviour
 
         if (_hasCustomCheckpoint)
         {
-            GUILayout.Label($"Zapisano: {_customCheckpointPos:F1}", _statusLabelStyle);
+            GUILayout.Label($"Zapisana pozycja: {_customCheckpointPos:F1}", _statusLabelStyle);
         }
         GUILayout.EndVertical();
     }
 
     // ──────────────────────────────────────────────────────────
-    // ⏰ 2. ZAKŁADKA CZASU (GAME CLOCK)
+    // 5. ZAKŁADKA CZASU (GAME CLOCK)
     // ──────────────────────────────────────────────────────────
     private void DrawTimeTab()
     {
-        GUILayout.Label("⏰ Kontrola zegara gry (GameTimeController)", _subHeaderStyle);
+        GUILayout.Label("[KONTROLA ZEGARA GRY - GameTimeController]", _subHeaderStyle);
         GUILayout.Space(6);
 
         if (_timeController != null)
         {
-            string openingStatus = _timeController.OpeningTimeReached ? "🟢 OTWARTE (Po godzinie otwarcia)" : "🔴 ZAMKNIĘTE (Przed otwarciem)";
+            string openingStatus = _timeController.OpeningTimeReached ? "[OTWARTE] Po godzinie otwarcia" : "[ZAMKNIETE] Przed otwarciem";
 
-            GUILayout.BeginVertical(GUI.skin.box);
+            GUILayout.BeginVertical(_panelBoxStyle);
             GUILayout.Label($"Aktualny czas gry: {_timeController.Hour:00}:{_timeController.Minute:00}:{_timeController.Second:00}", _headerStyle);
-            GUILayout.Label($"Status otwarcia: {openingStatus}", _statusLabelStyle);
+            GUILayout.Label($"Status salonu: {openingStatus}", _statusLabelStyle);
             GUILayout.EndVertical();
 
             GUILayout.Space(8);
 
-            // Szybkie ustawianie godzin
-            GUILayout.Label("Ustaw konkretną godzinę:", _statusLabelStyle);
+            GUILayout.Label("Ustaw konkretna godzine:", _statusLabelStyle);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("16:57:00 (Start)", _buttonStyle, GUILayout.Height(30))) _timeController.SetTime(16, 57, 0);
             if (GUILayout.Button("16:59:45 (Zaraz otwarcie)", _buttonStyle, GUILayout.Height(30))) _timeController.SetTime(16, 59, 45);
             if (GUILayout.Button("17:00:00 (Otwarcie)", _buttonStyle, GUILayout.Height(30))) _timeController.SetTime(17, 0, 0);
-            if (GUILayout.Button("18:00:00 (+1h)", _buttonStyle, GUILayout.Height(30))) _timeController.SetTime(18, 0, 0);
             GUILayout.EndHorizontal();
 
             GUILayout.Space(6);
 
-            // Zmiana o kroki
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("⏪ -1 Godzina", _buttonStyle)) _timeController.SetTime(Mathf.Max(0, _timeController.Hour - 1), _timeController.Minute, _timeController.Second);
-            if (GUILayout.Button("⏩ +1 Godzina", _buttonStyle)) _timeController.SetTime((_timeController.Hour + 1) % 24, _timeController.Minute, _timeController.Second);
-            if (GUILayout.Button("⏩ +15 Minut", _buttonStyle))
+            if (GUILayout.Button("<< -1 Minuta", _buttonStyle))
             {
-                int newMin = _timeController.Minute + 15;
+                int newMin = _timeController.Minute - 1;
+                int newHour = newMin < 0 ? (_timeController.Hour - 1 + 24) % 24 : _timeController.Hour;
+                _timeController.SetTime(newHour, (newMin + 60) % 60, _timeController.Second);
+            }
+            if (GUILayout.Button(">> +1 Minuta", _buttonStyle))
+            {
+                int newMin = _timeController.Minute + 1;
+                int newHour = (_timeController.Hour + newMin / 60) % 24;
+                _timeController.SetTime(newHour, newMin % 60, _timeController.Second);
+            }
+            if (GUILayout.Button(">> +5 Minut", _buttonStyle))
+            {
+                int newMin = _timeController.Minute + 5;
                 int newHour = (_timeController.Hour + newMin / 60) % 24;
                 _timeController.SetTime(newHour, newMin % 60, _timeController.Second);
             }
             GUILayout.EndHorizontal();
-
-            GUILayout.Space(6);
-
-            // Pauza i skala czasu gry
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("⏸️ Pauza", _buttonStyle)) _timeController.Pause();
-            if (GUILayout.Button("▶️ Wznów", _successButtonStyle)) _timeController.Resume();
-            if (GUILayout.Button("⚡ x5 Szybciej", _buttonStyle)) Time.timeScale = Time.timeScale == 5f ? 1f : 5f;
-            if (GUILayout.Button("⚡ x10 Szybciej", _buttonStyle)) Time.timeScale = Time.timeScale == 10f ? 1f : 10f;
-            GUILayout.EndHorizontal();
         }
         else
         {
-            GUILayout.Label("⚠️ Brak GameTimeController w scenie.", _statusLabelStyle);
+            GUILayout.Label("[!] Brak GameTimeController w scenie.", _statusLabelStyle);
         }
     }
 
     // ──────────────────────────────────────────────────────────
-    // 🪒 3. ZAKŁADKA MINIGRY OSTRZENIA BRZYTWY
+    // 6. ZAKŁADKA KLIMATU (RADIO & ŚWIATŁA)
     // ──────────────────────────────────────────────────────────
-    private void DrawRazorMinigameTab()
+    private void DrawAtmosphereTab()
     {
-        GUILayout.Label("🪒 Kontrola Minigry Ostrzenia Brzytwy", _subHeaderStyle);
+        GUILayout.Label("[KLIMAT SALONU - proper_atmosphere]", _subHeaderStyle);
         GUILayout.Space(6);
 
-        RazorMinigame razor = FindAnyObjectByType<RazorMinigame>();
-
-        if (razor != null)
+        if (_radio != null)
         {
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label($"Stan minigry: <b>{razor.CurrentStateName}</b>", _statusLabelStyle);
-            GUILayout.Label($"Czy ukończona: <b>{(razor.IsCompleted ? "<color=#55FF55>TAK (Naostrzona)</color>" : "<color=#FF6666>NIE (Wymaga naostrzenia)</color>")}</b>", _statusLabelStyle);
-            GUILayout.Label($"Aktualna ostrość: <b>{razor.CurrentSharpness:0.0}%</b>", _statusLabelStyle);
-            GUILayout.Label($"Wymóg żyletki w rękach: <b>{(razor.RequireBladeItem ? "TAK (Wymaga żyletki)" : "NIE (Bypass - wolny start)")}</b>", _statusLabelStyle);
-            GUILayout.EndVertical();
-
-            GUILayout.Space(8);
-
-            // Główne przyciski
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Uruchamianie minigry:", _statusLabelStyle);
-            GUILayout.Space(4);
-
-            if (GUILayout.Button("🚀 ODPAL MINIGRĘ NATYCHMIAST (Bypass żyletki)", _successButtonStyle, GUILayout.Height(38)))
+            GUILayout.BeginVertical(_panelBoxStyle);
+            GUILayout.Label($"Radio: {(_radio.IsOn ? "[WLACZONE] Gra muzyka" : "[WYLACZONE] Cisza")}", _headerStyle);
+            if (GUILayout.Button(_radio.IsOn ? "Wylacz Radio" : "Wlacz Radio", _buttonStyle, GUILayout.Height(32)))
             {
-                showOverlay = false;
-                razor.ForceStartMinigame();
-            }
-
-            GUILayout.Space(4);
-
-            if (GUILayout.Button("📍 Teleportuj przed stół do ostrzenia", _buttonStyle, GUILayout.Height(30)))
-            {
-                Vector3 standPos = razor.transform.position - razor.transform.forward * 0.9f;
-                TeleportPlayer(standPos, razor.transform.rotation);
-            }
-            GUILayout.EndVertical();
-
-            GUILayout.Space(8);
-
-            // Wymuszenie stanu / Obejścia
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Wymuszenie stanu / Cheaty:", _statusLabelStyle);
-            GUILayout.Space(4);
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("🏆 Zalicz PERFECT (100% ostrości)", _successButtonStyle, GUILayout.Height(32)))
-            {
-                razor.ForceCompleteMinigame(100f);
-            }
-
-            if (GUILayout.Button("🔄 Zresetuj stan (Ostrz od nowa)", _dangerButtonStyle, GUILayout.Height(32)))
-            {
-                razor.ResetMinigameState();
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(6);
-
-            bool newRequireBlade = GUILayout.Toggle(razor.RequireBladeItem, " Wymagaj przyniesienia żyletki w rękach gracza", GUILayout.Height(24));
-            if (newRequireBlade != razor.RequireBladeItem)
-            {
-                razor.RequireBladeItem = newRequireBlade;
+                _radio.ToggleRadio();
             }
             GUILayout.EndVertical();
         }
-        else
+
+        GUILayout.Space(10);
+        GUILayout.Label("Przelaczniki swiatla w scenie:", _subHeaderStyle);
+        if (GUILayout.Button("Wlacz wszystkie lampy w salonie", _buttonStyle, GUILayout.Height(32)))
         {
-            GUILayout.Label("⚠️ Nie znaleziono obiektu RazorMinigame w aktualnej scenie.", _statusLabelStyle);
-            if (GUILayout.Button("🔄 Szukaj ponownie", _buttonStyle))
+            LampSwitch[] lamps = FindObjectsByType<LampSwitch>(FindObjectsInactive.Include);
+            foreach (var lamp in lamps)
             {
-                ResolveReferences();
+                if (lamp != null && !lamp.IsOn) lamp.Interact();
             }
         }
     }
 
     // ──────────────────────────────────────────────────────────
-    // 📋 3. ZAKŁADKA ZADAŃ (PREPARATION TASKS)
+    // 7. ZAKŁADKA OSTRZENIA BRZYTWY
     // ──────────────────────────────────────────────────────────
-    private void DrawQuestsTab()
+    private void DrawRazorTab()
     {
-        GUILayout.Label("📋 Podgląd zadań i masowe akcje", _subHeaderStyle);
+        GUILayout.Label("[MINIGRA OSTRZENIA BRZYTWY - razor_sharpened]", _subHeaderStyle);
         GUILayout.Space(6);
 
-        GUILayout.Label("Wszystkie zadania są również stale widoczne i klikalne w panelu po prawej stronie 👉", _statusLabelStyle);
+        RazorMinigame minigame = FindAnyObjectByType<RazorMinigame>();
+        if (minigame != null)
+        {
+            GUILayout.BeginVertical(_panelBoxStyle);
+            GUILayout.Label($"Aktualna ostrosc: {minigame.CurrentSharpness:0.0}%", _headerStyle);
+            GUILayout.Label($"Status: {minigame.CurrentStateName} | Zaliczone: {(minigame.IsCompleted ? "[TAK]" : "[NIE]")}", _statusLabelStyle);
+            GUILayout.EndVertical();
+
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("[+] Zaostrz brzytwe (100%)", _successButtonStyle, GUILayout.Height(34)))
+            {
+                minigame.ForceCompleteMinigame(100f);
+            }
+            if (GUILayout.Button("[>] Wymus start minigry", _buttonStyle, GUILayout.Height(34)))
+            {
+                minigame.ForceStartMinigame();
+            }
+            if (GUILayout.Button("[-] Resetuj minigre", _dangerButtonStyle, GUILayout.Height(34)))
+            {
+                minigame.ResetMinigameState();
+            }
+            GUILayout.EndHorizontal();
+        }
+        else
+        {
+            GUILayout.Label("[!] Brak RazorMinigame w scenie.", _statusLabelStyle);
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 8. ZAKŁADKA DIALOGÓW
+    // ──────────────────────────────────────────────────────────
+    private void DrawDialoguesTab()
+    {
+        GUILayout.Label("[SYSTEM DIALOGOW I MYSLI]", _subHeaderStyle);
+        GUILayout.Space(6);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[>>] Pomin aktywny dialog", _dangerButtonStyle, GUILayout.Height(32)))
+        {
+            if (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive)
+            {
+                InnerDialogueUI.Instance.HideAllInstant();
+            }
+            if (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive)
+            {
+                ClientDialogueUI.Instance.HideAllInstant();
+            }
+        }
+        GUILayout.EndHorizontal();
+
         GUILayout.Space(8);
-
-        if (_questManager != null)
+        GUILayout.Label("Testuj monolog wewnetrzny:", _statusLabelStyle);
+        if (GUILayout.Button("Test: \"The razor is sharp enough now.\"", _buttonStyle, GUILayout.Height(30)))
         {
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("✅ ZALICZ WSZYSTKIE ZADANIA", _successButtonStyle, GUILayout.Height(36)))
+            if (InnerDialogueUI.Instance != null)
             {
-                if (_questManager.Tasks != null)
-                {
-                    foreach (var t in _questManager.Tasks) _questManager.SetTaskState(t.taskId, true);
-                }
+                InnerDialogueUI.Instance.ShowMessage("The razor is sharp enough now. Time to get ready.");
             }
-
-            if (GUILayout.Button("❌ ZRESETUJ WSZYSTKIE ZADANIA", _dangerButtonStyle, GUILayout.Height(36)))
-            {
-                if (_questManager.Tasks != null)
-                {
-                    foreach (var t in _questManager.Tasks) _questManager.SetTaskState(t.taskId, false);
-                }
-            }
-            GUILayout.EndHorizontal();
         }
     }
 
     // ──────────────────────────────────────────────────────────
-    // 🏃 4. ZAKŁADKA GRACZA (PLAYER & MOVEMENT)
+    // 9. ZAKŁADKA CHEATÓW & PRĘDKOŚCI
     // ──────────────────────────────────────────────────────────
-    private void DrawPlayerTab()
+    private void DrawCheatsTab()
     {
-        GUILayout.Label("🏃 Parametry gracza i ułatwienia", _subHeaderStyle);
+        GUILayout.Label("[MODYFIKACJE ROZGRYWKI & CHEATY]", _subHeaderStyle);
         GUILayout.Space(6);
 
-        if (_playerMovement != null)
+        GUILayout.BeginVertical(_panelBoxStyle);
+        GUILayout.Label($"Predkosc gracza (Super Speed): {(_superSpeedActive ? "[WLACZONE] (18 m/s)" : "[NORMALNA]")}", _statusLabelStyle);
+        if (GUILayout.Button(_superSpeedActive ? "Wylacz Super Speed" : "Wlacz Super Speed (3x)", _buttonStyle, GUILayout.Height(32)))
         {
-            GUILayout.BeginVertical(GUI.skin.box);
+            ToggleSuperSpeed();
+        }
+        GUILayout.EndVertical();
 
-            // Super prędkość do testów
-            string speedButtonText = _superSpeedActive ? "⚡ WYŁĄCZ SUPER SPEED (x3)" : "🚀 WŁĄCZ SUPER SPEED (x3)";
-            if (GUILayout.Button(speedButtonText, _superSpeedActive ? _dangerButtonStyle : _successButtonStyle, GUILayout.Height(36)))
+        GUILayout.Space(10);
+
+        GUILayout.Label($"Predkosc uplywu czasu (TimeScale): {Time.timeScale:0.0}x", _statusLabelStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("0.5x (SlowMo)", _buttonStyle)) Time.timeScale = 0.5f;
+        if (GUILayout.Button("1.0x (Normalny)", _buttonStyle)) Time.timeScale = 1.0f;
+        if (GUILayout.Button("2.0x (Szybko)", _buttonStyle)) Time.timeScale = 2.0f;
+        if (GUILayout.Button("5.0x (Super Szybko)", _successButtonStyle)) Time.timeScale = 5.0f;
+        GUILayout.EndHorizontal();
+    }
+
+    private void DrawPinnedQuestTracker()
+    {
+        float width = 320f;
+        float height = 340f;
+        float x = Screen.width - width - 15f;
+        float y = 15f;
+
+        Rect trackerRect = new Rect(x, y, width, height);
+        GUI.DrawTexture(trackerRect, _darkBgTex);
+        GUI.DrawTexture(new Rect(x, y, width, 2), _goldBorderTex);
+
+        GUILayout.BeginArea(new Rect(x + 10, y + 10, width - 20, height - 20));
+        GUILayout.Label("[ZADANIA - F2]", _subHeaderStyle);
+        GUILayout.Space(4);
+
+        _questScrollPos = GUILayout.BeginScrollView(_questScrollPos);
+
+        if (_questManager != null && _questManager.Tasks != null)
+        {
+            foreach (var task in _questManager.Tasks)
             {
-                ToggleSuperSpeed();
+                if (task == null) continue;
+                string icon = task.isCompleted ? "[OK]" : "[..]";
+                Color color = task.isCompleted ? new Color(0.45f, 0.95f, 0.5f) : new Color(0.95f, 0.80f, 0.45f);
+                GUIStyle qStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 12,
+                    fontStyle = task.isCompleted ? FontStyle.Normal : FontStyle.Bold,
+                    normal = { textColor = color }
+                };
+                GUILayout.Label($"{icon} {task.displayName}", qStyle);
             }
-
-            GUILayout.Space(6);
-
-            // Przełączanie schematów InputModeManager
-            if (InputModeManager.Instance != null)
-            {
-                GUILayout.Label($"Aktualny schemat Input: {InputModeManager.Instance.CurrentScheme}", _statusLabelStyle);
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Tryb Player", _buttonStyle)) InputModeManager.Instance.SwitchToPlayer();
-                if (GUILayout.Button("Tryb UI", _buttonStyle)) InputModeManager.Instance.SwitchToUI(unlockCursor: true);
-                if (GUILayout.Button("Tryb Minigra", _buttonStyle)) InputModeManager.Instance.SwitchToMinigame();
-                GUILayout.EndHorizontal();
-            }
-
-            GUILayout.Space(6);
-
-            // Kursor
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("🔓 Odblokuj Kursor", _buttonStyle)) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
-            if (GUILayout.Button("🔒 Zablokuj Kursor", _buttonStyle)) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
-            GUILayout.EndHorizontal();
-
-            GUILayout.EndVertical();
         }
         else
         {
-            GUILayout.Label("⚠️ Brak PlayerMovement w scenie.", _statusLabelStyle);
+            GUILayout.Label("Brak danych zadan.", _statusLabelStyle);
         }
+
+        GUILayout.EndScrollView();
+        GUILayout.EndArea();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // POMOCNICZE METODY
+    // ──────────────────────────────────────────────────────────
+
+    private void TeleportPlayer(Vector3 targetPos, Quaternion targetRot)
+    {
+        if (_playerMovement == null) ResolveReferences();
+        if (_playerMovement == null) return;
+
+        if (_characterController != null) _characterController.enabled = false;
+        _playerTransform.position = targetPos;
+        _playerTransform.rotation = targetRot;
+        if (_characterController != null) _characterController.enabled = true;
+
+        Debug.Log($"[DebugOverlay] Przeteleportowano gracza na pozycje: {targetPos}");
+    }
+
+    private void GiveItemToPlayer(string itemId)
+    {
+        if (_playerHands == null) ResolveReferences();
+        if (_playerHands == null) return;
+
+        PickupItem[] allItems = FindObjectsByType<PickupItem>(FindObjectsInactive.Include);
+        foreach (var item in allItems)
+        {
+            if (item != null && item.ItemId == itemId)
+            {
+                _playerHands.TryHold(item.gameObject);
+                Debug.Log($"[DebugOverlay] Dano graczowi przedmiot: {itemId}");
+                return;
+            }
+        }
+
+        Debug.LogWarning($"[DebugOverlay] Nie znaleziono w scenie przedmiotu o ItemId: {itemId}");
     }
 
     private void ToggleSuperSpeed()
     {
+        if (_playerMovement == null) ResolveReferences();
         if (_playerMovement == null) return;
 
         var walkField = typeof(PlayerMovement).GetField("walkSpeed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -831,11 +974,11 @@ public class DebugOverlay : MonoBehaviour
 
         if (!_superSpeedActive)
         {
-            _originalWalkSpeed = (float)(walkField?.GetValue(_playerMovement) ?? 5f);
-            _originalSprintSpeed = (float)(sprintField?.GetValue(_playerMovement) ?? 6f);
+            if (walkField != null) _originalWalkSpeed = (float)walkField.GetValue(_playerMovement);
+            if (sprintField != null) _originalSprintSpeed = (float)sprintField.GetValue(_playerMovement);
 
-            walkField?.SetValue(_playerMovement, _originalWalkSpeed * 3f);
-            sprintField?.SetValue(_playerMovement, _originalSprintSpeed * 3f);
+            walkField?.SetValue(_playerMovement, 14f);
+            sprintField?.SetValue(_playerMovement, 20f);
             _superSpeedActive = true;
         }
         else
@@ -846,124 +989,14 @@ public class DebugOverlay : MonoBehaviour
         }
     }
 
-    // ──────────────────────────────────────────────────────────
-    // 💬 5. ZAKŁADKA TESTOWANIA DIALOGÓW I MINIGIER
-    // ──────────────────────────────────────────────────────────
-    private void DrawDialoguesTab()
+    private Texture2D MakeTex(int width, int height, Color col)
     {
-        GUILayout.Label("💬 Testowanie Dialogów i Minigier", _subHeaderStyle);
-        GUILayout.Space(6);
-
-        GUILayout.BeginVertical(GUI.skin.box);
-        GUILayout.Label("Myśli wewnętrzne (InnerDialogueUI):", _statusLabelStyle);
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("💭 Myśl: 'Muszę się ubrać...'", _buttonStyle))
-        {
-            DialogueManager.Instance?.ShowThought("I should get dressed first...");
-        }
-        if (GUILayout.Button("💭 Myśl: 'Drzwi są zamknięte.'", _buttonStyle))
-        {
-            DialogueManager.Instance?.ShowThought("Drzwi są zamknięte na klucz.");
-        }
-        GUILayout.EndHorizontal();
-        GUILayout.EndVertical();
-
-        GUILayout.Space(6);
-
-        GUILayout.BeginVertical(GUI.skin.box);
-        GUILayout.Label("Dialog z klientem (ClientDialogueUI):", _statusLabelStyle);
-        if (GUILayout.Button("👤 Kwestia klienta: 'Dzień dobry, poproszę golenie.'", _buttonStyle, GUILayout.Height(30)))
-        {
-            DialogueManager.Instance?.ShowClientLine("Klient", "Dzień dobry panie majstrze, poproszę golenie brzytwą na gładko.");
-        }
-        GUILayout.EndVertical();
-
-        GUILayout.Space(6);
-
-        // Minigra Brzytwy
-        RazorMinigame razor = FindAnyObjectByType<RazorMinigame>();
-        if (razor != null)
-        {
-            GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label("Minigra Ostrzenia Brzytwy:", _statusLabelStyle);
-            if (GUILayout.Button("🪒 Uruchom Minigrę Brzytwy", _successButtonStyle, GUILayout.Height(32)))
-            {
-                razor.Interact();
-            }
-            GUILayout.EndVertical();
-        }
+        Color[] pix = new Color[width * height];
+        for (int i = 0; i < pix.Length; i++) pix[i] = col;
+        Texture2D result = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        result.SetPixels(pix);
+        result.Apply();
+        result.hideFlags = HideFlags.DontSave;
+        return result;
     }
-
-    // ──────────────────────────────────────────────────────────
-    // 📊 6. ZAKŁADKA WYDAJNOŚCI (PERFORMANCE & MEMORY)
-    // ──────────────────────────────────────────────────────────
-    private void DrawPerformanceTab()
-    {
-        GUILayout.Label("📊 Statystyki wydajności i pamięci", _subHeaderStyle);
-        GUILayout.Space(6);
-
-        long totalMemory = GC.GetTotalMemory(false) / (1024 * 1024);
-
-        GUILayout.BeginVertical(GUI.skin.box);
-        GUILayout.Label($"Klatkaż (FPS): {_currentFps:0.0} FPS ({1000f / Mathf.Max(1f, _currentFps):0.0} ms)", _headerStyle);
-        GUILayout.Label($"Alokacja pamięci zarządzanej (GC Heap): ~{totalMemory} MB", _statusLabelStyle);
-        GUILayout.Label($"Limit FPS w grze: {Application.targetFrameRate} FPS", _statusLabelStyle);
-        GUILayout.Label($"VSync Count: {QualitySettings.vSyncCount}", _statusLabelStyle);
-        GUILayout.EndVertical();
-
-        GUILayout.Space(8);
-
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("🧹 Wymuś GC.Collect()", _buttonStyle, GUILayout.Height(30)))
-        {
-            GC.Collect();
-            Resources.UnloadUnusedAssets();
-            Debug.Log("[DebugOverlay] Wyczyszczono pamięć (GC.Collect + UnloadUnusedAssets).");
-        }
-
-        if (GUILayout.Button("🗑️ Wyczyść Konsolę", _buttonStyle, GUILayout.Height(30)))
-        {
-#if UNITY_EDITOR
-            var logEntries = Type.GetType("UnityEditor.LogEntries, UnityEditor.dll");
-            var clearMethod = logEntries?.GetMethod("Clear", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
-            clearMethod?.Invoke(null, null);
-#endif
-        }
-        GUILayout.EndHorizontal();
-
-        GUILayout.Space(6);
-
-        // Limity FPS
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Ustaw 60 FPS", _buttonStyle)) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = 60; }
-        if (GUILayout.Button("Ustaw 120 FPS", _buttonStyle)) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = 120; }
-        if (GUILayout.Button("Bez limitu (-1)", _buttonStyle)) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1; }
-        GUILayout.EndHorizontal();
-    }
-
-    private void TeleportPlayer(Vector3 targetPos, Quaternion targetRot)
-    {
-        if (_playerTransform == null)
-        {
-            ResolveReferences();
-        }
-
-        if (_playerTransform == null)
-        {
-            Debug.LogWarning("[DebugOverlay] Nie znaleziono gracza do teleportacji!");
-            return;
-        }
-
-        if (_characterController != null)
-            _characterController.enabled = false;
-
-        _playerTransform.SetPositionAndRotation(targetPos, targetRot);
-
-        if (_characterController != null)
-            _characterController.enabled = true;
-
-        Debug.Log($"[DebugOverlay] Przeteleportowano gracza do: {targetPos}");
-    }
-
-#endif
 }

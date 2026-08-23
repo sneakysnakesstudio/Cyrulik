@@ -255,7 +255,7 @@ MonoBehaviour:
   - groupName: door_rattle_sound
     clips:
     - {fileID: 8300000, guid: 90969dda5505513458eebff977e8b06e, type: 3}
-    volume: 0.247
+    volume: 0.627
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95

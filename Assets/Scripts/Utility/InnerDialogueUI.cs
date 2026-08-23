@@ -662,8 +662,9 @@ public class InnerDialogueUI : MonoBehaviour
         }
     }
 
-    private void HideAllInstant()
+    public void HideAllInstant()
     {
+        StopAllAnimations();
         StopTypewriterAudio();
         HideContinuePrompt();
 
@@ -689,6 +690,10 @@ public class InnerDialogueUI : MonoBehaviour
             dialogueText.text = string.Empty;
             dialogueText.maxVisibleCharacters = 0;
         }
+
+        UnlockPlayerIfNeeded();
+        ResumeTimerIfNeeded();
+        _isDialogueActive = false;
     }
 
     private void StopAllAnimations()

@@ -119,15 +119,19 @@ public class MainMenu : MonoBehaviour
     public void StartGame()
     {
         PlayClickSound();
+        Time.timeScale = 1f;
+
+        string targetScene = !string.IsNullOrEmpty(gameSceneName) ? gameSceneName : "MainScene";
+        Debug.Log($"[MainMenu] Uruchamianie gry... Przechodzenie do sceny: {targetScene}");
 
         // Jeśli w scenie jest ScreenFader, używamy płynnego przejścia
         if (ScreenFader.Instance != null)
         {
-            ScreenFader.Instance.LoadScene(gameSceneName);
+            ScreenFader.Instance.LoadScene(targetScene, 0.4f);
         }
         else
         {
-            SceneManager.LoadScene(gameSceneName);
+            SceneManager.LoadScene(targetScene);
         }
     }
 

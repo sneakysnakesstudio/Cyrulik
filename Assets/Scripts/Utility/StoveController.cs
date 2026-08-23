@@ -104,8 +104,29 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
 
     public bool IsLit => _isLit;
     public bool PotOnStove => _potOnStove;
+    public bool HasPot => _potOnStove;
     public bool IsBoiling => _isBoiling;
+    public bool HasTowel => _towelInPot;
     public bool IsCompleted => _isCompleted;
+
+    public void LightFire() => LightStove();
+    public void PlacePot(bool withWater = true) => PlacePotOnStove();
+    public void InstantBoil()
+    {
+        if (_boilingCoroutine != null) StopCoroutine(_boilingCoroutine);
+        _isBoiling = true;
+        _boilingCoroutine = null;
+
+        if (steamVisual != null) steamVisual.SetActive(true);
+        if (boilingAudioSource != null) boilingAudioSource.Play();
+        else if (!string.IsNullOrEmpty(soundBoiling) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(soundBoiling);
+        }
+
+        onWaterBoiling?.Invoke();
+        Debug.Log("[Stove] Woda natychmiast wrze!");
+    }
 
     public bool CanInteract
     {

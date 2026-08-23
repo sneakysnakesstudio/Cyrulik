@@ -501,8 +501,9 @@ public class ClientDialogueUI : MonoBehaviour
         }
     }
 
-    private void HideAllInstant()
+    public void HideAllInstant()
     {
+        StopAllAnimations();
         StopTypewriterAudio();
         HideContinuePrompt();
 
@@ -524,6 +525,10 @@ public class ClientDialogueUI : MonoBehaviour
             dialogueText.text = string.Empty;
             dialogueText.maxVisibleCharacters = 0;
         }
+
+        InputModeManager.Instance?.SwitchToPlayer();
+        ResumeTimerIfNeeded();
+        _isDialogueActive = false;
     }
 
     private void StopAllAnimations()
