@@ -53,9 +53,17 @@ public class InputModeManager : MonoBehaviour
     private InputActionMap _playerMap;
     private InputActionMap _uiMap;
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        _instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        if (_instance != null && _instance != this)
+        if (_instance != null && _instance != this && _instance.gameObject != null)
         {
             Destroy(gameObject);
             return;

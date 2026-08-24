@@ -30,7 +30,7 @@ public class DebugOverlay : MonoBehaviour
 
     [Header("UI State")]
     [SerializeField] private bool showOverlay = false;
-    [SerializeField] private bool showCompactHud = true;
+    [SerializeField] private bool showCompactHud = false;
     [SerializeField] private bool pinQuestTracker = false;
 
 #if UNITY_EDITOR
@@ -123,6 +123,14 @@ public class DebugOverlay : MonoBehaviour
     private Vector2 _questScrollPos;
     private bool _stylesInitialized = false;
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
     private void Awake()
     {
         if (!allowInBuild)
@@ -133,7 +141,7 @@ public class DebugOverlay : MonoBehaviour
 #endif
         }
 
-        if (Instance != null && Instance != this)
+        if (Instance != null && Instance != this && Instance.gameObject != null)
         {
             Destroy(gameObject);
             return;
@@ -141,6 +149,14 @@ public class DebugOverlay : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     private void Start()

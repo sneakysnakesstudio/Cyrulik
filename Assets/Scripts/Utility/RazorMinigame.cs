@@ -15,6 +15,14 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
 {
     public static event Action<float> OnMinigameCompleted;
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        OnMinigameCompleted = null;
+    }
+#endif
+
     // ──────────────────────────────────────────────────────────
     // INTERAKCJA I WYMÓG ŻYLETKI
     // ──────────────────────────────────────────────────────────

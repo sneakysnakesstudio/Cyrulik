@@ -44,9 +44,17 @@ public class ScreenFader : MonoBehaviour
 
     public bool IsTransitioning => _isTransitioning;
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        _instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        if (_instance != null && _instance != this)
+        if (_instance != null && _instance != this && _instance.gameObject != null)
         {
             // Jeśli już istnieje instancja z DontDestroyOnLoad, usuń duplikat
             Destroy(gameObject);

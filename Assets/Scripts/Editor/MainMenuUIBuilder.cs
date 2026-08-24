@@ -436,6 +436,7 @@ public static class MainMenuUIBuilder
         contentTmp.text = "<b>CYRULIK</b>\n" +
                           "<size=16><color=#C0A060>A Psychological Horror Barber Experience</color></size>\n\n" +
                           "<b>Developed by:</b> SneakySnakesStudio\n" +
+                          "<b>Music by:</b> Tymon Urbańczyk\n" +
                           "<b>Inspired by:</b> <i>\"Chciałbym się ogolić\" (1966)</i>\n" +
                           "<b>Special Thanks:</b> To all testers & supporters!\n\n" +
                           "<size=14><color=#808080>All rights reserved. Poland 1980s retro aesthetic.</color></size>";

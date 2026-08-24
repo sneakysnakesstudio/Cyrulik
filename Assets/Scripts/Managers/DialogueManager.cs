@@ -25,9 +25,17 @@ public class DialogueManager : MonoBehaviour
         (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive) ||
         (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive);
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null && Instance != this && Instance.gameObject != null)
         {
             Destroy(gameObject);
             return;

@@ -45,9 +45,17 @@ public class PreparationStateManager : MonoBehaviour
     private readonly Dictionary<string, PreparationTask> _taskLookup = 
         new Dictionary<string, PreparationTask>(StringComparer.OrdinalIgnoreCase);
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null && Instance != this && Instance.gameObject != null)
         {
             Destroy(gameObject);
             return;
@@ -55,6 +63,14 @@ public class PreparationStateManager : MonoBehaviour
 
         Instance = this;
         RebuildLookup();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     private void RebuildLookup()

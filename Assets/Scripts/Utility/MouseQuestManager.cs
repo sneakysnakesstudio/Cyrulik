@@ -51,9 +51,17 @@ public class MouseQuestManager : MonoBehaviour
     public bool HasShavingStarted => _hasShavingStarted;
     public bool QuestFinished => _questFinished;
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null && Instance != this && Instance.gameObject != null)
         {
             Destroy(gameObject);
             return;
@@ -62,6 +70,14 @@ public class MouseQuestManager : MonoBehaviour
         Instance = this;
 
         SetupTrapLocations();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     private void SetupTrapLocations()

@@ -51,6 +51,19 @@ public class RadioInteractable : MonoBehaviour, IConditionalInteractable
     [Tooltip("Czy gracz może wyłączyć radio po jego włączeniu? Jeśli false (odznaczone), po włączeniu nie można go wyłączyć.")]
     [SerializeField] private bool canTurnOff = true;
 
+    [Header("Music Credit Notification")]
+    [Tooltip("Czy wyświetlać powiadomienie z autorem muzyki na ekranie po włączeniu radia?")]
+    [SerializeField] private bool showMusicCredit = true;
+
+    [Tooltip("Główny tekst powiadomienia (np. Music by 'Tymon Urbańczyk').")]
+    [SerializeField] private string musicCreditAuthor = "Music by 'Tymon Urbańczyk'";
+
+    [Tooltip("Podtytuł / kategoria (np. RADIO • NOW PLAYING).")]
+    [SerializeField] private string musicCreditSubheader = "RADIO • NOW PLAYING";
+
+    [Tooltip("Czas wyświetlania banera na ekranie (w sekundach).")]
+    [SerializeField] private float musicCreditDuration = 4.5f;
+
     public string InteractionName => _isOn ? promptTurnOff : promptTurnOn;
 
     public bool CanInteract
@@ -175,10 +188,20 @@ public class RadioInteractable : MonoBehaviour, IConditionalInteractable
                 .SetEase(Ease.OutQuad)
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
+
+        if (showMusicCredit)
+        {
+            ShowMusicCreditNotification();
+        }
     }
 
     private void StopPlayingMusic()
     {
+        if (MusicCreditUI.Instance != null)
+        {
+            MusicCreditUI.Instance.HideMusicCredit();
+        }
+
         if (radioAudioSource == null || !radioAudioSource.isPlaying) return;
 
         _fadeTween = radioAudioSource
@@ -192,6 +215,28 @@ public class RadioInteractable : MonoBehaviour, IConditionalInteractable
                     radioAudioSource.Stop();
                 }
             });
+    }
+
+    private void ShowMusicCreditNotification()
+    {
+        if (MusicCreditUI.Instance != null)
+        {
+            MusicCreditUI.Instance.ShowMusicCredit(musicCreditAuthor, musicCreditSubheader, musicCreditDuration);
+        }
+        else
+        {
+            MusicCreditUI foundUI = FindAnyObjectByType<MusicCreditUI>();
+            if (foundUI != null)
+            {
+                foundUI.ShowMusicCredit(musicCreditAuthor, musicCreditSubheader, musicCreditDuration);
+            }
+            else
+            {
+                GameObject uiGo = new GameObject("MusicCreditUI", typeof(MusicCreditUI));
+                MusicCreditUI createdUI = uiGo.GetComponent<MusicCreditUI>();
+                createdUI.ShowMusicCredit(musicCreditAuthor, musicCreditSubheader, musicCreditDuration);
+            }
+        }
     }
 
     private void UpdateVisuals()

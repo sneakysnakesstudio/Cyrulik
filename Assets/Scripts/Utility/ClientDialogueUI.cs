@@ -127,9 +127,17 @@ public class ClientDialogueUI : MonoBehaviour
     private float _dialogueStartTime = -100f;
     private string _currentVoiceGroup = "";
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (Instance != null && Instance != this && Instance.gameObject != null)
         {
             Destroy(gameObject);
             return;

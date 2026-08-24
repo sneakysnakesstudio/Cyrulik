@@ -12,6 +12,14 @@ public class TrashBinInteractable : MonoBehaviour, IConditionalInteractable
 {
     public static event Action OnAnyMouseDisposed;
 
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        OnAnyMouseDisposed = null;
+    }
+#endif
+
     [Header("Zadanie i Przedmioty")]
     [Tooltip("Akceptowane ID przedmiotu z PickupItem (domyślnie 'dead_mouse' i 'caught_mouse').")]
     [SerializeField] private string[] acceptedItemIds = new string[] { "dead_mouse", "caught_mouse" };
