@@ -26,13 +26,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2339009559419595408}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -3.3333325, y: 0, z: 0.000000161851}
+  m_LocalRotation: {x: -0.031600963, y: 0.7064003, z: 0.031600967, w: 0.70640033}
+  m_LocalPosition: {x: -1.1818923, y: -0.095537364, z: 0.000000047124775}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2524053950459916597}
-  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+  m_LocalEulerAnglesHint: {x: -5.123, y: 90, z: 0}
 --- !u!20 &3455203208567930951
 Camera:
   m_ObjectHideFlags: 0
@@ -40,7 +40,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2339009559419595408}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -250,7 +250,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6067666134554759894}
-  - component: {fileID: 4217577521040131872}
+  - component: {fileID: 5693742271984589848}
   m_Layer: 0
   m_Name: Mirror
   m_TagString: Untagged
@@ -276,7 +276,7 @@ Transform:
   - {fileID: 5094627513276573078}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4217577521040131872
+--- !u!114 &5693742271984589848
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -285,15 +285,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 5529944961556426409}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d16f6840e40a5e5489af77e1d7325dbe, type: 3}
+  m_Script: {fileID: 11500000, guid: c427f11da8737264ea6a85cdc9723def, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MirrorOptimizer
+  m_EditorClassIdentifier: Assembly-CSharp::PlanarMirror
   mirrorCamera: {fileID: 3455203208567930951}
-  playerCamera: {fileID: 0}
   mirrorRenderer: {fileID: 4592348832090410549}
-  maxDistance: 6
-  onlyRenderWhenVisible: 1
-  checkInterval: 0.08
+  textureHeight: 256
+  filterMode: 0
+  maxRenderDistance: 6
+  mirrorTargetFPS: 30
 --- !u!1 &6844650036767041178
 GameObject:
   m_ObjectHideFlags: 0
