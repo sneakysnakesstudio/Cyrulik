@@ -3008,6 +3008,7 @@ GameObject:
   - component: {fileID: 322073263}
   - component: {fileID: 322073266}
   - component: {fileID: 322073265}
+  - component: {fileID: 322073268}
   - component: {fileID: 322073264}
   - component: {fileID: 322073267}
   m_Layer: 0
@@ -3059,8 +3060,8 @@ MonoBehaviour:
         CancelDeltaTime: 0
       InputValue: 0
       Driver:
-        AccelTime: 0
-        DecelTime: 0
+        AccelTime: 0.45
+        DecelTime: 0.3
     - Name: Look Y (Tilt)
       Owner: {fileID: 322073265}
       Enabled: 1
@@ -3070,8 +3071,8 @@ MonoBehaviour:
         CancelDeltaTime: 0
       InputValue: 0
       Driver:
-        AccelTime: 0
-        DecelTime: 0
+        AccelTime: 0.45
+        DecelTime: 0.2
   PlayerIndex: -1
   AutoEnableInputs: 1
 --- !u!114 &322073265
@@ -3091,7 +3092,7 @@ MonoBehaviour:
   PanAxis:
     Value: 1
     Center: 0
-    Range: {x: -180, y: 180}
+    Range: {x: -360, y: 360}
     Wrap: 1
     Recentering:
       Enabled: 0
@@ -3167,7 +3168,29 @@ MonoBehaviour:
   bobAmplitudeY: 0.04
   bobAmplitudeX: 0.02
   bobFrequency: 2
+  enableIdleBob: 1
+  idleAmplitudeY: 0.015
+  idleAmplitudeX: 0.0125
+  idleFrequency: 0.66
+  idleSmoothSpeed: 4
   returnSpeed: 8
+--- !u!114 &322073268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 322073262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68bb026fafb42b14791938953eaace77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineBasicMultiChannelPerlin
+  NoiseProfile: {fileID: 11400000, guid: e9ce97b7a206dc64d90931ea044e0c72, type: 2}
+  PivotOffset: {x: 0, y: 0, z: 0}
+  AmplitudeGain: 0.02
+  FrequencyGain: 0.4
+  m_NoiseOffsets: {x: 382.25412, y: 412.64148, z: -235.28992}
 --- !u!1 &326910069
 GameObject:
   m_ObjectHideFlags: 0
