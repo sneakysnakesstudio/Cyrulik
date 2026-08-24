@@ -66,6 +66,9 @@ public class TrashBinInteractable : MonoBehaviour, IConditionalInteractable
     {
         get
         {
+            if (_hasDisposedMouse)
+                return promptAlreadyDisposed;
+
             if (IsPlayerHoldingAcceptedItem())
                 return promptThrow;
 

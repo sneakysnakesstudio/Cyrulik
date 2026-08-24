@@ -47,14 +47,14 @@ MonoBehaviour:
   m_AdditionalLightsRenderingMode: 1
   m_AdditionalLightsPerObjectLimit: 4
   m_AdditionalLightShadowsSupported: 1
-  m_AdditionalLightsShadowmapResolution: 256
-  m_AdditionalLightsShadowResolutionTierLow: 128
-  m_AdditionalLightsShadowResolutionTierMedium: 256
-  m_AdditionalLightsShadowResolutionTierHigh: 512
+  m_AdditionalLightsShadowmapResolution: 2048
+  m_AdditionalLightsShadowResolutionTierLow: 256
+  m_AdditionalLightsShadowResolutionTierMedium: 512
+  m_AdditionalLightsShadowResolutionTierHigh: 1024
   m_ReflectionProbeBlending: 1
   m_ReflectionProbeBoxProjection: 1
   m_ReflectionProbeAtlas: 1
-  m_ShadowDistance: 20
+  m_ShadowDistance: 14.9
   m_ShadowCascadeCount: 2
   m_Cascade2Split: 0.25
   m_Cascade3Split: {x: 0.1, y: 0.3}
@@ -87,9 +87,9 @@ MonoBehaviour:
   m_GPUResidentDrawerEnableOcclusionCullingInCameras: 0
   m_ShadowType: 1
   m_LocalShadowsSupported: 0
-  m_LocalShadowsAtlasResolution: 256
+  m_LocalShadowsAtlasResolution: 2048
   m_MaxPixelLights: 0
-  m_ShadowAtlasResolution: 256
+  m_ShadowAtlasResolution: 2048
   m_VolumeFrameworkUpdateMode: 0
   m_VolumeProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
   apvScenesData:

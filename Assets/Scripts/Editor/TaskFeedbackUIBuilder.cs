@@ -78,7 +78,7 @@ public static class TaskFeedbackUIBuilder
         headerRect.offsetMax = new Vector2(-16f, -6f);
 
         var headerTmp = headerGo.GetComponent<TextMeshProUGUI>();
-        headerTmp.text = "✓ TASK COMPLETED";
+        headerTmp.text = "TASK COMPLETED";
         headerTmp.fontSize = 15f;
         headerTmp.fontStyle = FontStyles.Bold;
         headerTmp.color = new Color(0.98f, 0.82f, 0.35f, 1f);

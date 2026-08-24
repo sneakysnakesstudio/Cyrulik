@@ -15,12 +15,46 @@ using UnityEngine.Events;
 /// </summary>
 public class StoveController : MonoBehaviour, IConditionalInteractable
 {
+    public enum MovementAxis
+    {
+        X,
+        Y,
+        Z
+    }
+
     [Header("Zadania (PreparationStateManager)")]
     [Tooltip("ID głównego zadania przygotowania ręcznika.")]
     [SerializeField] private string towelTaskId = "towel_prepared";
 
     [Tooltip("Opcjonalne ID zadania rozpalenia pieca (np. 'stove_lit').")]
     [SerializeField] private string stoveLitTaskId = "stove_lit";
+
+    [Header("Drzwiczki Pieca (Stove Door / Hatch)")]
+    [Tooltip("Transform drzwiczek pieca z własnego modelu.")]
+    [SerializeField] private Transform stoveDoor;
+
+    [Tooltip("Czy drzwiczki muszą zostać najpierw otwarte, aby rozpalić ogień.")]
+    [SerializeField] private bool requireDoorOpenToLight = true;
+
+    [Tooltip("Oś obrotu drzwiczek.")]
+    [SerializeField] private MovementAxis doorAxis = MovementAxis.Y;
+
+    [Tooltip("Kąt otwarcia drzwiczek w stopniach (np. 90, -90, 80).")]
+    [SerializeField] private float doorOpenAngle = 90f;
+
+    [Tooltip("Czas trwania animacji otwierania/zamykania drzwiczek.")]
+    [SerializeField] private float doorAnimationDuration = 0.45f;
+
+    [SerializeField] private Ease doorEase = Ease.OutQuad;
+
+    [Tooltip("Czy po rozpaleniu gracz może zamknąć drzwiczki.")]
+    [SerializeField] private bool allowCloseDoorWhenLit = true;
+
+    [Header("Dźwięki drzwiczek")]
+    [SerializeField] private AudioClip doorOpenClip;
+    [SerializeField] private AudioClip doorCloseClip;
+    [SerializeField] private string doorSoundGroup = "door_open";
+    [SerializeField] private string doorCloseSoundGroup = "door_close";
 
     [Header("Item IDs")]
     [Tooltip("ID garnka z wodą (z PickupItem).")]
@@ -36,11 +70,30 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     [SerializeField] private string hotTowelItemId = "hot_towel";
 
     [Header("Wizualia i Efekty Pieca")]
-    [Tooltip("Wizualny ogień w piecu.")]
+    [Tooltip("Wizualny ogień w piecu (GameObject / cząsteczki).")]
     [SerializeField] private GameObject fireVisual;
 
     [Tooltip("Światło ognia.")]
     [SerializeField] private Light fireLight;
+
+    [Header("Rozpalanie Ognia (Powolne Rozpalanie)")]
+    [Tooltip("Czas stopniowego rozpalania się ognia w sekundach (wzrost płomieni, światła i dźwięku).")]
+    [SerializeField] private float fireIgniteDuration = 3.0f;
+
+    [Tooltip("Docelowa intensywność światła ognia po pełnym rozpaleniu.")]
+    [SerializeField] private float targetLightIntensity = 2.0f;
+
+    [Tooltip("Docelowy zasięg światła ognia.")]
+    [SerializeField] private float targetLightRange = 3.5f;
+
+    [Tooltip("Krzywa rozpalania ognia.")]
+    [SerializeField] private Ease fireIgniteEase = Ease.InOutSine;
+
+    [Tooltip("Dźwięk inicjacji rozpalenia (np. zapałka / iskra / krzesiwo).")]
+    [SerializeField] private AudioClip ignitionStartClip;
+
+    [Tooltip("Dedykowany AudioSource dla dźwięku ognia do płynnego zgłaśniania.")]
+    [SerializeField] private AudioSource fireAudioSource;
 
     [Header("Garnek na Piecu")]
     [Tooltip("Punkt na płycie pieca, do którego przyczepia się garnek.")]
@@ -66,6 +119,8 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     [SerializeField] private float boilDuration = 6.0f;
 
     [Header("Interaction Prompts (English)")]
+    [SerializeField] private string promptOpenDoor = "Open stove door";
+    [SerializeField] private string promptCloseDoor = "Close stove door";
     [SerializeField] private string promptLightStove = "Light the stove";
     [SerializeField] private string promptPlacePot = "Place pot with water on stove";
     [SerializeField] private string promptNeedWater = "Fill pot with water at the sink first";
@@ -82,6 +137,8 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     [SerializeField] private AudioSource boilingAudioSource;
 
     [Header("Zdarzenia")]
+    [SerializeField] private UnityEvent onDoorOpened;
+    [SerializeField] private UnityEvent onDoorClosed;
     [SerializeField] private UnityEvent onStoveLit;
     [SerializeField] private UnityEvent onPotPlaced;
     [SerializeField] private UnityEvent onWaterBoiling;
@@ -92,6 +149,7 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     [SerializeField] private PlayerHands playerHands;
 
     // Stany wewnętrzne
+    private bool _isDoorOpen = false;
     private bool _isLit = false;
     private bool _potOnStove = false;
     private bool _isBoiling = false;
@@ -99,9 +157,17 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     private bool _towelReadyToTake = false;
     private bool _isCompleted = false;
 
-    private Coroutine _boilingCoroutine;
+    private Vector3 _doorClosedRotation;
+    private Vector3 _doorOpenRotation;
+    private Vector3 _fireVisualOriginalScale = Vector3.one;
+    private Tween _doorTween;
+    private Tween _fireScaleTween;
+    private Tween _fireLightTween;
     private Tween _fireLightFlicker;
+    private Coroutine _boilingCoroutine;
 
+    public bool IsDoorOpen => _isDoorOpen;
+    public Transform StoveDoor => stoveDoor;
     public bool IsLit => _isLit;
     public bool PotOnStove => _potOnStove;
     public bool HasPot => _potOnStove;
@@ -132,31 +198,58 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     {
         get
         {
-            if (_isCompleted) return false;
+            if (_isCompleted)
+            {
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen) return true;
+                return false;
+            }
 
-            // 1. Piec nierozpalony -> gracz może go rozpalić
-            if (!_isLit) return true;
+            // 1. Gracz trzyma garnek z wodą a ten jeszcze nie stoi na piecu -> stawia garnek
+            if (!_potOnStove && IsHoldingWaterPot()) return true;
 
-            // 2. Garnek nie stoi na piecu -> gracz może postawić garnek z wodą
+            // 2. Drzwiczki pieca: jeśli piec ma drzwiczki i wymagane jest ich otwarcie przed rozpaleniem
+            if (stoveDoor != null && requireDoorOpenToLight && !_isDoorOpen && !_isLit)
+            {
+                return true;
+            }
+
+            // 3. Piec nierozpalony:
+            // Jeśli wymaga otwartych drzwiczek -> gracz może go rozpalić TYLKO gdy drzwiczki są otwarte
+            // Jeśli nie wymaga lub brak drzwiczek -> gracz może go rozpalić
+            if (!_isLit)
+            {
+                if (stoveDoor != null && requireDoorOpenToLight)
+                    return _isDoorOpen;
+                return true;
+            }
+
+            // 4. Garnek nie stoi na piecu -> sprawdź czy gracz ma garnek z wodą
             if (!_potOnStove)
             {
-                return IsHoldingWaterPot();
+                if (IsHoldingWaterPot()) return true;
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen) return true;
+                return false;
             }
 
-            // 3. Woda się jeszcze grzeje -> czekamy
-            if (!_isBoiling) return false;
+            // 5. Woda się jeszcze grzeje -> czekamy na zagotowanie
+            if (!_isBoiling)
+            {
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen) return true;
+                return false;
+            }
 
-            // 4. Woda wrze, ręcznik jeszcze nie włożony -> gracz może włożyć ręcznik
+            // 6. Woda wrze, ręcznik jeszcze nie włożony -> gracz może wrzucić ręcznik
             if (!_towelInPot)
             {
-                return IsHoldingCleanTowel();
+                if (IsHoldingCleanTowel()) return true;
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen) return true;
+                return false;
             }
 
-            // 5. Ręcznik jest we wrzątku i gotowy do wyjęcia -> gracz musi mieć wolne ręce
-            if (_towelReadyToTake)
+            // 7. Opcjonalne zamknięcie drzwiczek po zakończeniu
+            if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen)
             {
-                if (playerHands == null) playerHands = FindAnyObjectByType<PlayerHands>();
-                return playerHands != null && !playerHands.HasItem;
+                return true;
             }
 
             return false;
@@ -167,14 +260,7 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     {
         get
         {
-            if (_isCompleted)
-                return promptCompleted;
-
-            // Krok A: Rozpalenie pieca
-            if (!_isLit)
-                return promptLightStove;
-
-            // Krok B: Postawienie garnka
+            // Krok: Postawienie garnka (gdy gracz go trzyma)
             if (!_potOnStove)
             {
                 if (IsHoldingWaterPot())
@@ -182,25 +268,62 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
                 if (IsHoldingEmptyPot())
                     return promptNeedWater;
 
+                // Jeśli piec wymaga otwarcia drzwiczek i są zamknięte
+                if (stoveDoor != null && requireDoorOpenToLight && !_isDoorOpen && !_isLit)
+                    return promptOpenDoor;
+
+                if (!_isLit)
+                    return promptLightStove;
+
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen)
+                    return promptCloseDoor;
+
                 return "Stove is lit (Place pot with water)";
             }
 
-            // Krok C: Woda się grzeje
-            if (!_isBoiling)
-                return promptWaitingBoil;
+            // Krok: Otwarcie drzwiczek pieca (gdy drzwiczki zamknięte i piec zgaszony)
+            if (stoveDoor != null && requireDoorOpenToLight && !_isDoorOpen && !_isLit)
+            {
+                return promptOpenDoor;
+            }
 
-            // Krok D: Włożenie ręcznika
+            // Krok: Rozpalenie pieca (gdy drzwiczki otwarte lub brak wymogu)
+            if (!_isLit)
+            {
+                return promptLightStove;
+            }
+
+            // Krok: Woda się podgrzewa
+            if (!_isBoiling)
+            {
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen)
+                    return promptCloseDoor;
+                return promptWaitingBoil;
+            }
+
+            // Krok: Wrząca woda - wrzucenie ręcznika
             if (!_towelInPot)
             {
                 if (IsHoldingCleanTowel())
                     return promptPutTowel;
 
+                if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen)
+                    return promptCloseDoor;
+
                 return promptNeedTowel;
             }
 
-            // Krok E: Wyjęcie gotowego gorącego ręcznika
+            // Krok: Gotowy do wyjęcia gorący ręcznik
             if (_towelReadyToTake)
+            {
                 return promptTakeHotTowel;
+            }
+
+            // Krok: Zakończono lub drzwiczki otwarte
+            if (stoveDoor != null && allowCloseDoorWhenLit && _isDoorOpen)
+            {
+                return promptCloseDoor;
+            }
 
             return promptCompleted;
         }
@@ -213,18 +336,55 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
             playerHands = FindAnyObjectByType<PlayerHands>();
         }
 
-        // Ukrywamy wizualia na starcie
-        if (fireVisual != null) fireVisual.SetActive(false);
+        // Ukrywamy wizualia na starcie i zapamiętujemy skalę ognia
+        if (fireVisual != null)
+        {
+            _fireVisualOriginalScale = fireVisual.transform.localScale;
+            fireVisual.SetActive(false);
+        }
+
         if (fireLight != null) fireLight.enabled = false;
         if (potOnStoveVisual != null) potOnStoveVisual.SetActive(false);
         if (waterInPotVisual != null) waterInPotVisual.SetActive(false);
         if (steamVisual != null) steamVisual.SetActive(false);
         if (towelInPotVisual != null) towelInPotVisual.SetActive(false);
+
+        // Inicjalizacja rotacji drzwiczek
+        if (stoveDoor != null)
+        {
+            _doorClosedRotation = stoveDoor.localEulerAngles;
+            _doorOpenRotation = _doorClosedRotation;
+
+            switch (doorAxis)
+            {
+                case MovementAxis.X:
+                    _doorOpenRotation.x += doorOpenAngle;
+                    break;
+                case MovementAxis.Y:
+                    _doorOpenRotation.y += doorOpenAngle;
+                    break;
+                case MovementAxis.Z:
+                    _doorOpenRotation.z += doorOpenAngle;
+                    break;
+            }
+        }
     }
 
     private void OnDestroy()
     {
         _fireLightFlicker?.Kill();
+        _fireLightTween?.Kill();
+        _fireScaleTween?.Kill();
+        _doorTween?.Kill();
+    }
+
+    private void OnDisable()
+    {
+        _fireLightFlicker?.Kill();
+        _fireLightTween?.Kill();
+        _fireScaleTween?.Kill();
+        _doorTween?.Kill();
+        _doorTween = null;
     }
 
     public void Interact()
@@ -232,37 +392,115 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
         if (playerHands == null)
             playerHands = FindAnyObjectByType<PlayerHands>();
 
-        // 1. Rozpalenie pieca
-        if (!_isLit)
-        {
-            LightStove();
-            return;
-        }
-
-        // 2. Położenie garnka z wodą na piecu
+        // 1. Jeśli gracz trzyma garnek z wodą i jeszcze go nie postawił -> stawia garnek na piecu
         if (!_potOnStove && IsHoldingWaterPot())
         {
             PlacePotOnStove();
             return;
         }
 
-        // 3. Włożenie ręcznika do wrzącej wody
+        // 2. Jeśli piec ma drzwiczki, które trzeba otworzyć, a są zamknięte i piec nie jest rozpalony -> otwiera drzwiczki
+        if (stoveDoor != null && requireDoorOpenToLight && !_isDoorOpen && !_isLit)
+        {
+            OpenDoor();
+            return;
+        }
+
+        // 3. Jeśli piec nie jest rozpalony -> rozpala piec
+        if (!_isLit)
+        {
+            if (stoveDoor != null && requireDoorOpenToLight && !_isDoorOpen)
+            {
+                OpenDoor();
+                return;
+            }
+
+            LightStove();
+            return;
+        }
+
+        // 4. Jeśli woda wrze i gracz trzyma czysty ręcznik -> wrzuca ręcznik i zalicza quest
         if (_isBoiling && !_towelInPot && IsHoldingCleanTowel())
         {
             InsertTowelIntoPot();
             return;
         }
 
-        // 4. Wyjęcie gorącego ręcznika
-        if (_towelReadyToTake && playerHands != null && !playerHands.HasItem)
+        // 5. Opcjonalne zamykanie/otwieranie drzwiczek gdy piec już pali się / po zadaniu
+        if (stoveDoor != null && allowCloseDoorWhenLit)
         {
-            TakeHotTowel();
+            ToggleDoor();
             return;
         }
     }
 
     /// <summary>
-    /// Krok 2: Rozpala ogień w piecu.
+    /// Otwiera drzwiczki pieca.
+    /// </summary>
+    public void OpenDoor()
+    {
+        if (stoveDoor == null || _isDoorOpen) return;
+
+        _isDoorOpen = true;
+        _doorTween?.Kill();
+
+        _doorTween = stoveDoor
+            .DOLocalRotate(_doorOpenRotation, doorAnimationDuration)
+            .SetEase(doorEase)
+            .SetLink(stoveDoor.gameObject, LinkBehaviour.KillOnDestroy);
+
+        PlayDoorSound(doorOpenClip, doorSoundGroup);
+        onDoorOpened?.Invoke();
+        Debug.Log("[Stove] Otwarto drzwiczki pieca.");
+    }
+
+    /// <summary>
+    /// Zamyka drzwiczki pieca.
+    /// </summary>
+    public void CloseDoor()
+    {
+        if (stoveDoor == null || !_isDoorOpen) return;
+
+        _isDoorOpen = false;
+        _doorTween?.Kill();
+
+        _doorTween = stoveDoor
+            .DOLocalRotate(_doorClosedRotation, doorAnimationDuration)
+            .SetEase(doorEase)
+            .SetLink(stoveDoor.gameObject, LinkBehaviour.KillOnDestroy);
+
+        PlayDoorSound(doorCloseClip, doorCloseSoundGroup);
+        onDoorClosed?.Invoke();
+        Debug.Log("[Stove] Zamknięto drzwiczki pieca.");
+    }
+
+    /// <summary>
+    /// Przełącza stan otwarcia drzwiczek pieca.
+    /// </summary>
+    public void ToggleDoor()
+    {
+        if (_isDoorOpen)
+            CloseDoor();
+        else
+            OpenDoor();
+    }
+
+    private void PlayDoorSound(AudioClip directClip, string soundGroupName)
+    {
+        if (directClip != null)
+        {
+            AudioSource.PlayClipAtPoint(directClip, stoveDoor != null ? stoveDoor.position : transform.position);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(soundGroupName) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(soundGroupName);
+        }
+    }
+
+    /// <summary>
+    /// Rozpala ogień w piecu z efektem powolnego, stopniowego rozpalania (wzrost płomieni, światła i dźwięku).
     /// </summary>
     public void LightStove()
     {
@@ -270,20 +508,69 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
 
         _isLit = true;
 
-        if (fireVisual != null) fireVisual.SetActive(true);
-
-        if (fireLight != null)
+        // 1. Dźwięk startowy rozpalenia (np. zapałka / iskra / krzesiwo)
+        if (ignitionStartClip != null)
         {
-            fireLight.enabled = true;
-            // Drobne migotanie światła ognia
-            _fireLightFlicker = fireLight
-                .DOIntensity(fireLight.intensity * 1.25f, 0.15f)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetEase(Ease.InOutSine)
-                .SetLink(fireLight.gameObject, LinkBehaviour.KillOnDestroy);
+            AudioSource.PlayClipAtPoint(ignitionStartClip, fireVisual != null ? fireVisual.transform.position : transform.position);
         }
 
-        if (!string.IsNullOrEmpty(soundLightFire) && AudioManager.Instance != null)
+        // 2. Stopniowe rozrastanie się płomieni ognia od zera do docelowej skali
+        if (fireVisual != null)
+        {
+            _fireScaleTween?.Kill();
+            fireVisual.transform.localScale = Vector3.zero;
+            fireVisual.SetActive(true);
+
+            _fireScaleTween = fireVisual.transform
+                .DOScale(_fireVisualOriginalScale, fireIgniteDuration)
+                .SetEase(fireIgniteEase)
+                .SetLink(fireVisual, LinkBehaviour.KillOnDestroy);
+
+            // Jeśli ogień zawiera ParticleSystem, upewnij się, że zaczyna emitować
+            var particleSystems = fireVisual.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in particleSystems)
+            {
+                ps.Play();
+            }
+        }
+
+        // 3. Stopniowe rozjaśnianie światła ognia
+        if (fireLight != null)
+        {
+            _fireLightTween?.Kill();
+            _fireLightFlicker?.Kill();
+
+            fireLight.enabled = true;
+            fireLight.intensity = 0f;
+            fireLight.range = targetLightRange * 0.25f;
+
+            // Płynny wzrost zasięgu światła
+            DOTween.To(() => fireLight.range, x => fireLight.range = x, targetLightRange, fireIgniteDuration)
+                .SetEase(fireIgniteEase)
+                .SetLink(fireLight.gameObject, LinkBehaviour.KillOnDestroy);
+
+            // Płynny wzrost intensywności, a po osiągnięciu pełnego rozpalenia - start migotania
+            _fireLightTween = fireLight
+                .DOIntensity(targetLightIntensity, fireIgniteDuration)
+                .SetEase(fireIgniteEase)
+                .SetLink(fireLight.gameObject, LinkBehaviour.KillOnDestroy)
+                .OnComplete(() =>
+                {
+                    StartFireFlicker();
+                });
+        }
+
+        // 4. Dźwięk stałego płonięcia ognia (płynne zgłaśnianie lub fallback do AudioManager)
+        if (fireAudioSource != null)
+        {
+            fireAudioSource.volume = 0f;
+            fireAudioSource.loop = true;
+            fireAudioSource.Play();
+            fireAudioSource.DOFade(1f, fireIgniteDuration)
+                .SetEase(Ease.InQuad)
+                .SetLink(fireAudioSource.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+        else if (!string.IsNullOrEmpty(soundLightFire) && AudioManager.Instance != null)
         {
             AudioManager.Instance.Play(soundLightFire);
         }
@@ -294,10 +581,22 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
         }
 
         onStoveLit?.Invoke();
-        Debug.Log("[Stove] Piec został rozpalony!");
+        Debug.Log($"[Stove] Piec zaczyna się powoli rozpalać... (czas rozpalania: {fireIgniteDuration}s)");
 
         // Jeśli garnek już wcześniej stał na piecu, rozpocznij gotowanie
         CheckStartBoiling();
+    }
+
+    private void StartFireFlicker()
+    {
+        if (fireLight == null || !_isLit) return;
+
+        _fireLightFlicker?.Kill();
+        _fireLightFlicker = fireLight
+            .DOIntensity(targetLightIntensity * 1.25f, 0.15f)
+            .SetLoops(-1, LoopType.Yoyo)
+            .SetEase(Ease.InOutSine)
+            .SetLink(fireLight.gameObject, LinkBehaviour.KillOnDestroy);
     }
 
     /// <summary>
@@ -401,13 +700,14 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     }
 
     /// <summary>
-    /// Krok 5: Gracz wrzuca ręcznik do wrzącej wody.
+    /// Krok 4: Gracz wrzuca ręcznik do wrzącej wody -> ZALICZENIE ZADANIA 'Clean towel'!
     /// </summary>
     private void InsertTowelIntoPot()
     {
         if (!_isBoiling || _towelInPot) return;
 
         _towelInPot = true;
+        _isCompleted = true;
 
         // Niszczymy suchy ręcznik z rąk
         if (playerHands != null && playerHands.HasItem)
@@ -426,10 +726,21 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
             AudioManager.Instance.Play(soundCloth);
         }
 
-        _towelReadyToTake = true;
-        onTowelInserted?.Invoke();
+        // ZALICZENIE GŁÓWNEGO ZADANIA "Clean towel"
+        if (PreparationStateManager.Instance != null)
+        {
+            PreparationStateManager.Instance.SetTaskState("clean_towel", true);
+        }
 
-        Debug.Log("[Stove] Ręcznik wrzucony do wrzącej wody! Gotowy do wyjęcia.");
+        // Rozbłysk cząsteczek przy sukcesie
+        if (ParticleManager.Instance != null)
+        {
+            Vector3 burstPos = towelInPotVisual != null ? towelInPotVisual.transform.position : transform.position + Vector3.up * 0.4f;
+            ParticleManager.Instance.PlayBurst(burstPos);
+        }
+
+        onTowelInserted?.Invoke();
+        Debug.Log("[Stove] Ręcznik wrzucony do wrzącej wody! Zadanie 'Clean towel' ZALICZONE!");
     }
 
     /// <summary>
@@ -509,7 +820,15 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
 
         if (held.TryGetComponent<PickupItem>(out var pickup))
         {
-            return string.Equals(pickup.ItemId, waterPotItemId, StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(pickup.ItemId))
+            {
+                string objName = held.name.ToLowerInvariant();
+                return objName.Contains("water") && (objName.Contains("pot") || objName.Contains("garnek"));
+            }
+
+            string id = pickup.ItemId.Trim().ToLowerInvariant();
+            string expected = !string.IsNullOrEmpty(waterPotItemId) ? waterPotItemId.Trim().ToLowerInvariant() : "pot_water";
+            return id == expected || id == "pot_water" || id == "water_pot" || id == "pot_with_water" || (id.Contains("pot") && id.Contains("water"));
         }
 
         return false;
@@ -521,10 +840,22 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
         GameObject held = playerHands.HeldItem;
         if (held == null) return false;
 
+        if (held.TryGetComponent<PotItem>(out var pot))
+        {
+            return !pot.HasWater;
+        }
+
         if (held.TryGetComponent<PickupItem>(out var pickup))
         {
-            return string.Equals(pickup.ItemId, emptyPotItemId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(pickup.ItemId, "pot", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(pickup.ItemId))
+            {
+                string objName = held.name.ToLowerInvariant();
+                return objName.Contains("pot") || objName.Contains("garnek");
+            }
+
+            string id = pickup.ItemId.Trim().ToLowerInvariant();
+            string expected = !string.IsNullOrEmpty(emptyPotItemId) ? emptyPotItemId.Trim().ToLowerInvariant() : "pot_empty";
+            return id == expected || id == "pot" || id == "pot_empty" || id == "empty_pot" || id == "garnek";
         }
 
         return false;
@@ -538,10 +869,18 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
 
         if (held.TryGetComponent<PickupItem>(out var pickup))
         {
-            return string.Equals(pickup.ItemId, cleanTowelItemId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(pickup.ItemId, "clean_towel", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(pickup.ItemId))
+            {
+                string objName = held.name.ToLowerInvariant();
+                return objName.Contains("towel") || objName.Contains("recznik");
+            }
+
+            string id = pickup.ItemId.Trim().ToLowerInvariant();
+            string expected = !string.IsNullOrEmpty(cleanTowelItemId) ? cleanTowelItemId.Trim().ToLowerInvariant() : "towel";
+            return id == expected || id == "towel" || id == "clean_towel" || id == "recznik" || id.Contains("towel") || id.Contains("recznik");
         }
 
-        return false;
+        string name = held.name.ToLowerInvariant();
+        return name.Contains("towel") || name.Contains("recznik");
     }
 }

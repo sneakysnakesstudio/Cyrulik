@@ -20,9 +20,6 @@ public class MirrorOptimizer : MonoBehaviour
     [Tooltip("Maksymalny dystans gracza od lustra w metrach.")]
     [SerializeField] private float maxDistance = 6f;
 
-    [Tooltip("Czy wyłączać lustro, gdy jest poza polem widzenia kamery.")]
-    [SerializeField] private bool onlyRenderWhenVisible = true;
-
     [Header("Performance Settings (stosowane raz przy starcie)")]
     [Tooltip("Wyłącz cienie w odbiciu (ogromny zysk FPS).")]
     [SerializeField] private bool disableShadowsInMirror = true;

@@ -571,6 +571,10 @@ public class DebugOverlay : MonoBehaviour
         else
         {
             GUILayout.BeginVertical(_panelBoxStyle);
+            if (_stoveController.StoveDoor != null)
+            {
+                GUILayout.Label($"Drzwiczki pieca: {(_stoveController.IsDoorOpen ? "[TAK] OTWARTE" : "[NIE] ZAMKNIĘTE")}", _statusLabelStyle);
+            }
             GUILayout.Label($"Ogień w piecu: {(_stoveController.IsLit ? "[TAK] ROZPALONY" : "[NIE] WYGASZONY")}", _statusLabelStyle);
             GUILayout.Label($"Garnek na piecu: {(_stoveController.HasPot ? "[TAK] POSTAWIONY" : "[NIE] BRAK")}", _statusLabelStyle);
             GUILayout.Label($"Woda gotuje się: {(_stoveController.IsBoiling ? "[TAK] WRZACA" : "[NIE] ZIMNA")}", _statusLabelStyle);
@@ -581,6 +585,13 @@ public class DebugOverlay : MonoBehaviour
 
             GUILayout.Label("Szybkie akcje pieca:", _subHeaderStyle);
             GUILayout.BeginHorizontal();
+            if (_stoveController.StoveDoor != null)
+            {
+                if (GUILayout.Button(_stoveController.IsDoorOpen ? "Zamknij drzwiczki" : "Otwórz drzwiczki", _buttonStyle, GUILayout.Height(30)))
+                {
+                    _stoveController.ToggleDoor();
+                }
+            }
             if (GUILayout.Button("Rozpal ogien w piecu", _buttonStyle, GUILayout.Height(30)))
             {
                 _stoveController.LightFire();

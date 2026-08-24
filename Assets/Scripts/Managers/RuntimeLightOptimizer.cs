@@ -41,7 +41,7 @@ public class RuntimeLightOptimizer : MonoBehaviour
         _playerCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
 
         // Zbierz wszystkie światła w scenie
-        _allLights = FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        _allLights = FindObjectsByType<Light>(FindObjectsInactive.Include);
         _originalShadows = new LightShadows[_allLights.Length];
 
         for (int i = 0; i < _allLights.Length; i++)
@@ -94,10 +94,15 @@ public class RuntimeLightOptimizer : MonoBehaviour
             float dist = Vector3.Distance(playerPos, light.transform.position);
 
             // Światło włączone przez grę (intensity > 0) — sprawdź odległość
-            if (light.enabled && light.intensity > 0.01f)
+            if (light.intensity > 0.01f)
             {
+                if (lightCullDistance > 0)
+                {
+                    light.enabled = dist <= lightCullDistance;
+                }
+
                 // Włącz shadow casting tylko gdy gracz jest blisko
-                if (disableAdditionalLightShadows && shadowCastingMaxDistance > 0)
+                if (light.enabled && disableAdditionalLightShadows && shadowCastingMaxDistance > 0)
                 {
                     light.shadows = dist <= shadowCastingMaxDistance
                         ? LightShadows.Hard

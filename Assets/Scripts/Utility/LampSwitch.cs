@@ -22,6 +22,11 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     [Header("Audio")]
     [SerializeField] private string interactionSound = "small_lamp";
 
+    [Header("Particle Dust Effects (Optional)")]
+    [Tooltip("Czy włączać drobinki kurzu / poświatę (dust motes) w świetle lampy po jej włączeniu?")]
+    [SerializeField] private bool spawnDustParticles = false;
+    [SerializeField] private string dustParticleEffectId = "lamp_dust";
+
     [Header("Normal Animation")]
     [SerializeField] private float turnOnDuration = 0.1f;
     [SerializeField] private float turnOffDuration = 0.1f;
@@ -119,7 +124,6 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
         {
             TurnOn();
         }
-        OnLightStateChanged?.Invoke(_isOn);
     }
 
     private void PlayInteractionSound()
@@ -134,6 +138,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     {
         KillTweens();
 
+        bool wasOn = _isOn;
         _isOn = true;
 
         SetLightsEnabled(true);
@@ -146,13 +151,41 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
         {
             NormalTurnOn();
         }
+
+        if (spawnDustParticles && ParticleManager.Instance != null && targetLights != null)
+        {
+            foreach (var light in targetLights)
+            {
+                if (light != null)
+                {
+                    ParticleManager.Instance.AttachLoopingEffect(dustParticleEffectId, light.transform, Vector3.zero, $"lamp_dust_{light.GetEntityId()}");
+                }
+            }
+        }
+
+        if (!wasOn)
+        {
+            OnLightStateChanged?.Invoke(true);
+        }
     }
 
     public void TurnOff()
     {
         KillTweens();
 
+        bool wasOn = _isOn;
         _isOn = false;
+
+        if (spawnDustParticles && ParticleManager.Instance != null && targetLights != null)
+        {
+            foreach (var light in targetLights)
+            {
+                if (light != null)
+                {
+                    ParticleManager.Instance.DetachLoopingEffect(light.transform, $"lamp_dust_{light.GetEntityId()}");
+                }
+            }
+        }
 
         float currentMultiplier =
             GetCurrentMultiplier();
@@ -173,6 +206,11 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
             {
                 SetLightsEnabled(false);
             });
+
+        if (wasOn)
+        {
+            OnLightStateChanged?.Invoke(false);
+        }
     }
 
     private void NormalTurnOn()

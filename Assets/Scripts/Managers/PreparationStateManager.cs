@@ -32,8 +32,7 @@ public class PreparationStateManager : MonoBehaviour
     private List<PreparationTask> tasks = new List<PreparationTask>
     {
         new PreparationTask("proper_atmosphere", "Set the right mood"),
-        new PreparationTask("stove_lit", "Lit the stove fire"),
-        new PreparationTask("towel_prepared", "Prepared a hot towel"),
+        new PreparationTask("clean_towel", "Clean towel"),
         new PreparationTask("razor_sharpened", "Sharpened the razor"),
         new PreparationTask("mouse_disposed", "Disposed of the mouse")
     };
@@ -85,6 +84,15 @@ public class PreparationStateManager : MonoBehaviour
         }
     }
 
+    private string NormalizeTaskId(string taskId)
+    {
+        if (string.IsNullOrWhiteSpace(taskId)) return taskId;
+        string lower = taskId.Trim().ToLowerInvariant();
+        if (lower == "towel_prepared" || lower == "towel_ready" || lower == "clean_towel" || lower == "towel")
+            return "clean_towel";
+        return taskId;
+    }
+
     /// <summary>
     /// Ustawia stan zadania (true = zaliczone poprawnie, false = niezaliczone).
     /// </summary>
@@ -93,23 +101,30 @@ public class PreparationStateManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(taskId))
             return;
 
-        if (_taskLookup.TryGetValue(taskId, out PreparationTask existingTask))
+        // Ignorujemy niechciane zadania pomocnicze, aby nie pojawiały się na liście podsumowania
+        string lower = taskId.Trim().ToLowerInvariant();
+        if (lower == "stove_lit" || lower == "water_boiled" || lower == "water_heated" || lower == "pot_water")
+            return;
+
+        string normalizedId = NormalizeTaskId(taskId);
+
+        if (_taskLookup.TryGetValue(normalizedId, out PreparationTask existingTask))
         {
             if (existingTask.isCompleted != completed)
             {
                 existingTask.isCompleted = completed;
-                OnTaskStateChanged?.Invoke(taskId, completed);
-                Debug.Log($"[PreparationState] Zadanie '{taskId}' -> {(completed ? "ZALICZONE" : "NIEZALICZONE")}");
+                OnTaskStateChanged?.Invoke(normalizedId, completed);
+                Debug.Log($"[PreparationState] Zadanie '{normalizedId}' -> {(completed ? "ZALICZONE" : "NIEZALICZONE")}");
             }
         }
         else
         {
             // Dynamiczne dodanie zadania, jeśli nie było wcześniej na liście w Inspectorze
-            PreparationTask newTask = new PreparationTask(taskId, taskId, completed);
+            PreparationTask newTask = new PreparationTask(normalizedId, normalizedId, completed);
             tasks.Add(newTask);
-            _taskLookup[taskId] = newTask;
-            OnTaskStateChanged?.Invoke(taskId, completed);
-            Debug.Log($"[PreparationState] Nowe zadanie '{taskId}' -> {(completed ? "ZALICZONE" : "NIEZALICZONE")}");
+            _taskLookup[normalizedId] = newTask;
+            OnTaskStateChanged?.Invoke(normalizedId, completed);
+            Debug.Log($"[PreparationState] Nowe zadanie '{normalizedId}' -> {(completed ? "ZALICZONE" : "NIEZALICZONE")}");
         }
     }
 
@@ -137,7 +152,9 @@ public class PreparationStateManager : MonoBehaviour
         if (string.IsNullOrWhiteSpace(taskId))
             return false;
 
-        if (_taskLookup.TryGetValue(taskId, out PreparationTask task))
+        string normalizedId = NormalizeTaskId(taskId);
+
+        if (_taskLookup.TryGetValue(normalizedId, out PreparationTask task))
         {
             return task.isCompleted;
         }

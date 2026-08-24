@@ -78,6 +78,11 @@ public class PickupItem : MonoBehaviour, IInteractable
         if (_playerHands == null)
             return;
 
+        if (ParticleManager.Instance != null)
+        {
+            ParticleManager.Instance.PlayBurst(transform.position);
+        }
+
         _playerHands.TryHold(gameObject);
     }
 }

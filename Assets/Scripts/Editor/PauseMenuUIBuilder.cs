@@ -136,7 +136,7 @@ public static class PauseMenuUIBuilder
         restartTextRect.offsetMax = Vector2.zero;
 
         var restartTmp = restartTextGo.GetComponent<TextMeshProUGUI>();
-        restartTmp.text = "↻ RESTART";
+        restartTmp.text = "RESTART";
         restartTmp.fontSize = 22;
         restartTmp.fontStyle = FontStyles.Bold;
         restartTmp.color = new Color(0.96f, 0.88f, 0.72f, 1f);

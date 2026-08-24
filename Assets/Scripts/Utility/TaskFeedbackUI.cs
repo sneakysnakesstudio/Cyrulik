@@ -40,14 +40,14 @@ public class TaskFeedbackUI : MonoBehaviour
     [Tooltip("RectTransform banera (do animacji wysuwania z góry).")]
     [SerializeField] private RectTransform bannerRectTransform;
 
-    [Tooltip("Tekst nagłówka (np. '✓ TASK COMPLETED').")]
+    [Tooltip("Tekst nagłówka (np. 'TASK COMPLETED').")]
     [SerializeField] private TextMeshProUGUI headerText;
 
     [Tooltip("Tekst nazwy wykonanego zadania.")]
     [SerializeField] private TextMeshProUGUI taskNameText;
 
     [Tooltip("Domyślny tekst nagłówka.")]
-    [SerializeField] private string defaultHeader = "✓ TASK COMPLETED";
+    [SerializeField] private string defaultHeader = "TASK COMPLETED";
 
     [Header("Animacja Banera")]
     [Tooltip("Wysokość początkowa (ukryta za górną krawędzią ekranu).")]
