@@ -28,12 +28,31 @@ public class HeadBobbing : MonoBehaviour
     [Tooltip("Jak szybko głowa kołysze się podczas chodzenia (cykli na sekundę). Typowo 1.8–2.5.")]
     [SerializeField] private float bobFrequency = 2.0f;
 
+    [Header("Idle Bob — oddychanie / ruch w spoczynku")]
+    [Tooltip("Czy włączyć subtelny ruch/oddychanie głowy, gdy gracz stoi w miejscu.")]
+    [SerializeField] private bool enableIdleBob = true;
+
+    [Tooltip("Amplituda pionowa w spoczynku (oddychanie).")]
+    [SerializeField] private float idleAmplitudeY = 0.005f;
+
+    [Tooltip("Amplituda pozioma w spoczynku (delikatne kołysanie).")]
+    [SerializeField] private float idleAmplitudeX = 0.0025f;
+
+    [Tooltip("Tempo oddychania/kołysania w spoczynku (cykli na sekundę). Typowo 0.8–1.2.")]
+    [SerializeField] private float idleFrequency = 1.0f;
+
+    [Tooltip("Płynność śledzenia i przejść ruchu w spoczynku.")]
+    [SerializeField] private float idleSmoothSpeed = 4f;
+
     [Header("Smooth — płynność powrotu do pozycji neutralnej")]
     [Tooltip("Im wyższy, tym szybciej kamera wraca do centrum, gdy gracz stanie. 0.1 = bardzo leniwie, 12 = natychmiastowo.")]
     [SerializeField] private float returnSpeed = 8f;
 
-    // Wewnętrzna faza sinusoidy (rośnie w czasie chodzenia, stoi w miejscu, gdy gracz stoi)
+    // Wewnętrzna faza sinusoidy chodu
     private float _bobTimer;
+
+    // Wewnętrzna faza sinusoidy w spoczynku
+    private float _idleTimer;
 
     // Domyślna pozycja lokalna transformu (punkt bazowy, od którego liczymy offset)
     private Vector3 _defaultLocalPosition;
@@ -41,6 +60,10 @@ public class HeadBobbing : MonoBehaviour
     private void Awake()
     {
         _defaultLocalPosition = transform.localPosition;
+        if (playerMovement == null)
+        {
+            playerMovement = GetComponentInParent<PlayerMovement>();
+        }
     }
 
     private void LateUpdate()
@@ -58,6 +81,10 @@ public class HeadBobbing : MonoBehaviour
         if (isMoving)
         {
             ApplyBob();
+        }
+        else if (enableIdleBob)
+        {
+            ApplyIdleBob();
         }
         else
         {
@@ -99,6 +126,27 @@ public class HeadBobbing : MonoBehaviour
             targetPos,
             Time.deltaTime * returnSpeed * 4f   // szybkie śledzenie, żeby sinusoida była płynna
         );
+    }
+
+    private void ApplyIdleBob()
+    {
+        // Faza rośnie proporcjonalnie do częstotliwości oddychania
+        _idleTimer += Time.deltaTime * idleFrequency * (2f * Mathf.PI);
+
+        // Subtelne oddychanie pionowe i bardzo łagodne kołysanie poziome
+        float offsetY = Mathf.Sin(_idleTimer) * idleAmplitudeY;
+        float offsetX = Mathf.Cos(_idleTimer * 0.5f) * idleAmplitudeX;
+
+        Vector3 targetPos = _defaultLocalPosition + new Vector3(offsetX, offsetY, 0f);
+
+        transform.localPosition = Vector3.Lerp(
+            transform.localPosition,
+            targetPos,
+            Time.deltaTime * idleSmoothSpeed
+        );
+
+        // Reset timera chodu, aby kolejny krok zaczynał się płynnie
+        _bobTimer = 0f;
     }
 
     private void ReturnToDefault()
