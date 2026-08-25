@@ -680,8 +680,9 @@ public class DebugOverlay : MonoBehaviour
         GUILayout.Label($"Klient: <b>Jurek</b>", _headerStyle);
         GUILayout.Space(2);
         GUILayout.Label($"Status Przybycia (HasArrived): {(_customerJurek.HasArrived ? "<color=#70FF70>[TAK] Przybyl do salonu</color>" : "<color=#FFC040>[NIE] Czeka na wywolanie</color>")}", _statusLabelStyle);
-        GUILayout.Label($"Status Marszu (IsWalking): {(_customerJurek.IsWalking ? "<color=#70D0FF>[TAK] W ruchu (schody / korytarz)</color>" : "[NIE] Stoi w miejscu")}", _statusLabelStyle);
+        GUILayout.Label($"Status Marszu (IsWalking): {(_customerJurek.IsWalking ? "<color=#70D0FF>[TAK] W ruchu</color>" : "[NIE] Stoi w miejscu")}", _statusLabelStyle);
         GUILayout.Label($"Czekanie na gracza (Patience): {(_customerJurek.IsWaitingForPlayer ? $"<color=#FFFF00>[CZEKA] Pozostalo {_customerJurek.PatienceRemaining:0.0}s</color>" : "[NIE]")}", _statusLabelStyle);
+        GUILayout.Label($"Przy fotelu (HasReachedChair): {(_customerJurek.HasReachedChair ? "<color=#70FF70>[TAK] Gotowy na stanowisku fryzjerskim</color>" : "[NIE]")}", _statusLabelStyle);
         GUILayout.Label($"Status Ucieczki (HasLeft): {(_customerJurek.HasLeft ? "<color=#FF5050>[TAK] Uciekl przed mysza</color>" : "[NIE] Obecny / Brak ucieczki")}", _statusLabelStyle);
         GUILayout.Label($"Interakcja z graczem (CanInteract): {(_customerJurek.CanInteract ? "<color=#70FF70>[TAK] Gotowy do rozmowy (wcisnij [E])</color>" : "[NIE]")}", _statusLabelStyle);
         GUILayout.EndVertical();
@@ -691,11 +692,11 @@ public class DebugOverlay : MonoBehaviour
         // Sekcja natychmiastowych przywołań
         GUILayout.Label("Szybkie przywolanie Jurka:", _subHeaderStyle);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("[>] WYWOLAJ PRZYBYCIE (Schody -> Drzwi -> Salon)", _successButtonStyle, GUILayout.Height(36)))
+        if (GUILayout.Button("[>] WYWOLAJ PRZYBYCIE (Auto -> Schody -> Drzwi -> Waiting Point)", _successButtonStyle, GUILayout.Height(36)))
         {
             _customerJurek.TriggerArrival();
         }
-        if (GUILayout.Button("[>>] TELEPORTUJ OD RAZU DO SALONU", _tabActiveStyle, GUILayout.Height(36)))
+        if (GUILayout.Button("[>>] TELEPORTUJ DO WAITING POINTU", _tabActiveStyle, GUILayout.Height(36)))
         {
             _customerJurek.ForceSpawnInsideSalon();
         }
@@ -717,10 +718,16 @@ public class DebugOverlay : MonoBehaviour
         if (_customerJurek.CanInteract || _customerJurek.IsWaitingForPlayer)
         {
             GUILayout.Space(4);
-            if (GUILayout.Button("[E] ROZPOCZNIJ ROZMOWE Z JURKIEM (Symuluj podejscie gracza)", _successButtonStyle, GUILayout.Height(32)))
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("[E] ROZPOCZNIJ ROZMOWE (Symuluj interakcje [E])", _successButtonStyle, GUILayout.Height(32)))
             {
                 _customerJurek.Interact();
             }
+            if (GUILayout.Button("[>>] POSLIJ DO FOTELA (Pomin dialog)", _buttonStyle, GUILayout.Height(32)))
+            {
+                _customerJurek.WalkToBarberChair();
+            }
+            GUILayout.EndHorizontal();
         }
 
         GUILayout.Space(10);

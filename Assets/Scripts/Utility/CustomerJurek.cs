@@ -21,7 +21,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private string walkingAnimBool = "IsWalking";
 
     [Header("Punkt Startowy (Spawn / Wysiadka z auta)")]
-    [Tooltip("Punkt w scenie, gdzie Jurek pojawia się na starcie (np. przy aucie). Jeśli pusty, użyje pierwszego punktu trasy schodów.")]
+    [Tooltip("Punkt w scenie, gdzie Jurek pojawia się na starcie (np. przy aucie).")]
     [SerializeField] private Transform spawnPoint;
 
     public enum MovementSpeedMode
@@ -42,6 +42,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [Tooltip("Mnożnik prędkości odtwarzania animacji chodu (np. 0.8 - 1.0), aby tempo kroków pasowało do prędkości.")]
     [SerializeField] private float animationSpeed = 1.0f;
 
+    [Tooltip("Typ ścieżki (Linear idealny na schody w linii prostej, CatmullRom dla zaokrąglonych łuków).")]
+    [SerializeField] private PathType pathType = PathType.Linear;
+
     [Header("Harmonogram Czasowy (Game Time)")]
     [Tooltip("Czy Jurek ma pojawiać się automatycznie o określonej godzinie w grze?")]
     [SerializeField] private bool triggerByGameTime = true;
@@ -49,41 +52,33 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private int arrivalMinute = 1;
     [SerializeField] private int arrivalSecond = 33;
 
-    [Header("Trasa 1: Wejście po schodach przed drzwi")]
-    [Tooltip("Punkty trasy od dołu schodów (lub ulicy) aż pod same drzwi wejściowe.")]
-    [SerializeField] private Transform[] stairsWaypoints;
-    [Tooltip("Czas w sekundach potrzebny na wejście po schodach (używane gdy tryb to FixedDurationInSeconds).")]
-    [SerializeField] private float stairsWalkDuration = 6.0f;
+    [Header("1. Trasa: Od auta do początku schodków")]
+    [Tooltip("Punkty trasy od auta (spawnPoint) aż do dolnego stopnia schodów na zewnątrz.")]
+    [SerializeField] private Transform[] approachWaypoints;
+    [SerializeField] private float approachWalkDuration = 4.0f;
 
-    [Header("Drzwi i Dzwonek")]
+    [Header("2. Trasa: Po zewnętrznych schodkach do drzwi")]
+    [Tooltip("Punkty trasy wspinania się po zewnętrznych schodkach pod same drzwi.")]
+    [SerializeField] private Transform[] stairsWaypoints;
+    [SerializeField] private float stairsWalkDuration = 4.0f;
+
+    [Header("Drzwi wejściowe i Dzwonek")]
     [Tooltip("Komponent DoorInteractable drzwi wejściowych.")]
     [SerializeField] private DoorInteractable frontDoor;
-
-    [Tooltip("Dźwięk dzwoneczka przy wejściu (AudioClip) - odtwarza się gdy Jurek otwiera drzwi.")]
     [SerializeField] private AudioClip doorBellClip;
     [SerializeField] private string soundDoorBell = "door_bell";
-
-    [Tooltip("Dźwięk pukania do drzwi (jeśli używany zamiast dzwonka).")]
     [SerializeField] private string soundKnock = "door_knock";
     [SerializeField] private AudioClip customKnockClip;
-
-    [Tooltip("Opóźnienie otwarcia drzwi po dotarciu Jurka pod wejście (w sekundach).")]
     [SerializeField] private float doorOpenDelay = 0.5f;
-
-    [Header("Trasa 2: Wejście do środka salonu")]
-    [Tooltip("Punkty trasy od progu drzwi, przez schody, aż do fotela fryzjerskiego.")]
-    [SerializeField] private Transform[] insideWaypoints;
-    [Tooltip("Docelowy punkt w salonie (np. przed fotelem fryzjerskim), gdzie Jurek staje i obraca się twarzą do gracza.")]
-    [SerializeField] private Transform waitingSpot;
-    [Tooltip("Czas przejścia od drzwi do miejsca docelowego w salonie (używane gdy tryb to FixedDurationInSeconds).")]
-    [SerializeField] private float insideWalkDuration = 5.0f;
-
-    [Tooltip("Typ ścieżki (Linear idealny na schody w linii prostej, CatmullRom dla zaokrąglonych łuków).")]
-    [SerializeField] private PathType pathType = PathType.Linear;
-
-    [Tooltip("Czy automatycznie zamknąć drzwi po wejściu Jurka do środka?")]
     [SerializeField] private bool autoCloseDoor = true;
     [SerializeField] private float autoCloseDoorDelay = 1.5f;
+
+    [Header("Wejście do salonu -> Waiting Point (Dół salonu)")]
+    [Tooltip("Opcjonalne punkty przejścia tuż za progiem drzwi do punktu oczekiwania.")]
+    [SerializeField] private Transform[] insideEntranceWaypoints;
+    [Tooltip("Docelowy punkt na dole salonu, gdzie Jurek staje i czeka na podejście gracza.")]
+    [SerializeField] private Transform waitingSpot;
+    [SerializeField] private float waitingSpotWalkDuration = 3.0f;
 
     [Header("Oczekiwanie na gracza (Patience Timer)")]
     [Tooltip("Czy włączyć odliczanie czasu cierpliwości Jurka?")]
@@ -92,33 +87,50 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private float patienceDuration = 30.0f;
     [Tooltip("Kwestia Jurka, gdy minie 30 sekund bez podejścia gracza.")]
     [TextArea(2, 4)]
-    [SerializeField] private string timeoutComplaintText = "Długo jeszcze mam tu sterczeć?! Skoro nikt mnie nie obsługuje, to idę gdzie indziej!";
+    [SerializeField] private string timeoutComplaintText = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
     [Tooltip("Czy Jurek ma wyjść z salonu po upływie czasu oczekiwania?")]
     [SerializeField] private bool leaveOnTimeout = true;
 
+    [Header("Śledzenie gracza wzrokiem (Look At Player)")]
+    [Tooltip("Czy Jurek podczas oczekiwania w salonie ma płynnie obracać się w stronę podchodzącego gracza?")]
+    [SerializeField] private bool lookAtPlayerWhileWaiting = true;
+    [Tooltip("Prędkość płynnego obrotu w stronę gracza.")]
+    [SerializeField] private float rotationSpeedTowardsPlayer = 4.5f;
+    [Tooltip("Transform gracza (jeśli pusty, skrypt znajdzie go automatycznie).")]
+    [SerializeField] private Transform playerTransform;
+
     [Header("Dialog po interakcji z graczem")]
     [SerializeField] private string jurekSpeakerName = "Jurek";
-    [TextArea(2, 4)]
-    [SerializeField] private string[] arrivalDialogueLines = new string[]
+    [SerializeField] private string interactionName = "Talk to Jurek";
+    [SerializeField] private List<ClientDialogueUI.DialogueLine> dialogueLines = new List<ClientDialogueUI.DialogueLine>()
     {
-        "Dzień dobry! Słyszałem, że to najlepszy cyrulik w mieście.",
-        "Mogę prosić o porządne golenie?"
+        new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
+        new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
+        new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
+        new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
+        new ClientDialogueUI.DialogueLine("Jurek", "...")
     };
 
-    [Header("Reakcja na Mysza (Fail Branch)")]
+    [Header("3. Trasa: Po wewnętrznych schodkach do Fotela (Górny podest)")]
+    [Tooltip("Punkty trasy prowadzące od Waiting Pointu, po wewnętrznych schodkach na podest (dodaj tutaj punkty schodków!).")]
+    [SerializeField] private Transform[] toChairWaypoints;
+    [Tooltip("Docelowy punkt przy stanowisku fryzjerskim / fotelu.")]
+    [SerializeField] private Transform chairSpot;
+    [SerializeField] private float chairWalkDuration = 4.5f;
+
+    [Header("Trasa Wyjścia / Reakcja na Mysza (Fail Branch)")]
     [TextArea(2, 4)]
-    [SerializeField] private string mouseScareReactionText = "Jezus Maria, mysz! W salonie fryzjerskim?! Wychodzę stąd natychmiast!";
+    [SerializeField] private string mouseScareReactionText = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
     [SerializeField] private Transform exitDestination;
     [SerializeField] private float exitWalkDuration = 3.5f;
-
-    [Header("Interakcja ręczna gracza")]
-    [SerializeField] private string interactionName = "Porozmawiaj z Jurkiem";
 
     [Header("Zdarzenia")]
     [SerializeField] private UnityEvent onJurekSpawned;
     [SerializeField] private UnityEvent onJurekAtDoor;
-    [SerializeField] private UnityEvent onJurekEntered;
+    [SerializeField] private UnityEvent onJurekReachedWaitingSpot;
     [SerializeField] private UnityEvent onPlayerInteracted;
+    [SerializeField] private UnityEvent onDialogueCompleted;
+    [SerializeField] private UnityEvent onReachedBarberChair;
     [SerializeField] private UnityEvent onPatienceTimeout;
     [SerializeField] private UnityEvent onJurekLeft;
 
@@ -130,6 +142,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     private bool _hasLeft = false;
     private bool _isWaitingForPlayer = false;
     private bool _hasInteractedWithPlayer = false;
+    private bool _hasReachedChair = false;
     private float _patienceRemaining = 0f;
     private Tween _movementTween;
 
@@ -137,10 +150,12 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     public bool HasLeft => _hasLeft;
     public bool IsWalking => _isWalking;
     public bool IsWaitingForPlayer => _isWaitingForPlayer;
+    public bool HasReachedChair => _hasReachedChair;
     public float PatienceRemaining => _patienceRemaining;
 
     public bool CanInteract => _hasArrived && !_isWalking && !_hasLeft && !_hasInteractedWithPlayer && (ClientDialogueUI.Instance == null || !ClientDialogueUI.Instance.IsDialogueActive);
     public string InteractionName => interactionName;
+    public string BlockedMessage => null;
 
     private void Awake()
     {
@@ -160,6 +175,36 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
+        }
+
+        if (playerTransform == null)
+        {
+            var playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null)
+            {
+                playerTransform = playerObj.transform;
+            }
+            else
+            {
+                var pm = FindAnyObjectByType<PlayerMovement>();
+                if (pm != null) playerTransform = pm.transform;
+            }
+        }
+
+        // Zapewnij obecność Collisera do detekcji promienia interakcji gracza
+        if (GetComponent<Collider>() == null && GetComponentInChildren<Collider>() == null)
+        {
+            var col = gameObject.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0f, 0.9f, 0f);
+            col.radius = 0.35f;
+            col.height = 1.8f;
+        }
+
+        // Ustaw warstwę Interactable jeśli istnieje
+        int interactableLayer = LayerMask.NameToLayer("Interactable");
+        if (interactableLayer != -1 && gameObject.layer == 0)
+        {
+            gameObject.layer = interactableLayer;
         }
 
         if (hideOnStart && jurekVisual != null && jurekVisual != gameObject)
@@ -183,7 +228,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        // 2. Odliczanie cierpliwości Jurka (oczekiwanie na gracza w salonie)
+        // 2. Oczekiwanie na gracza w salonie + płynne obracanie się twarzą do gracza
         if (_isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
         {
             if (usePatienceTimer)
@@ -192,22 +237,35 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 if (_patienceRemaining <= 0f)
                 {
                     TriggerPatienceTimeout();
+                    return;
+                }
+            }
+
+            // Płynne śledzenie gracza wzrokiem (obrót wokół osi Y)
+            if (lookAtPlayerWhileWaiting && playerTransform != null)
+            {
+                Vector3 lookDir = playerTransform.position - transform.position;
+                lookDir.y = 0f;
+                if (lookDir.sqrMagnitude > 0.05f)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(lookDir);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSpeedTowardsPlayer);
                 }
             }
         }
     }
 
     /// <summary>
-    /// Rozpoczyna sekwencję przyjścia Jurka (wejście po schodach -> dzwonek/drzwi -> wejście do środka).
-    /// Może być wywołane przez czas (Update) lub przez zdarzenie w grze (np. MouseQuestManager).
+    /// Rozpoczyna sekwencję przyjścia Jurka.
+    /// Krok 1: Trasa od auta do początku schodków.
     /// </summary>
     public void TriggerArrival()
     {
         if (_hasArrived) return;
         _hasArrived = true;
 
-        // 1. Ustawienie pozycji startowej (spawnPoint lub pierwszy punkt schodów)
-        Transform startTransform = spawnPoint != null ? spawnPoint : (stairsWaypoints != null && stairsWaypoints.Length > 0 ? stairsWaypoints[0] : null);
+        // 1. Ustawienie pozycji startowej przy aucie
+        Transform startTransform = spawnPoint != null ? spawnPoint : (approachWaypoints != null && approachWaypoints.Length > 0 ? approachWaypoints[0] : (stairsWaypoints != null && stairsWaypoints.Length > 0 ? stairsWaypoints[0] : null));
         if (startTransform != null)
         {
             transform.position = startTransform.position;
@@ -216,14 +274,30 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
         else
         {
-            Debug.LogWarning("[CustomerJurek] Brak przypisanego Spawn Point ani Stairs Waypoints! Jurek startuje z obecnej pozycji obiektu.");
+            Debug.LogWarning("[CustomerJurek] Brak przypisanego Spawn Point! Jurek startuje z obecnej pozycji obiektu.");
         }
 
         onJurekSpawned?.Invoke();
 
         EnsureVisualsActive();
 
-        // 2. Jeśli zdefiniowano trasę, Jurek idzie po wyznaczonych punktach
+        // 2. Krok 1: Marsz od auta do początku schodków
+        if (approachWaypoints != null && approachWaypoints.Length > 0 && approachWaypoints[0] != null)
+        {
+            float duration = GetMovementDuration(approachWaypoints, approachWalkDuration);
+            WalkAlongWaypoints(approachWaypoints, duration, WalkUpStairsToDoor);
+        }
+        else
+        {
+            WalkUpStairsToDoor();
+        }
+    }
+
+    /// <summary>
+    /// Krok 2: Marsz po zewnętrznych schodkach pod same drzwi.
+    /// </summary>
+    private void WalkUpStairsToDoor()
+    {
         if (stairsWaypoints != null && stairsWaypoints.Length > 0 && stairsWaypoints[0] != null)
         {
             float duration = GetMovementDuration(stairsWaypoints, stairsWalkDuration);
@@ -231,7 +305,6 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
         else
         {
-            // Brak schodów - od razu przejdź pod drzwi
             OnReachedDoor();
         }
     }
@@ -307,7 +380,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     }
 
     /// <summary>
-    /// Krok 2: Jurek dotarł pod drzwi wejściowe.
+    /// Krok 3: Jurek dotarł pod drzwi wejściowe.
     /// Dźwięk dzwoneczka / pukania, odblokowanie i otwarcie drzwi, następnie wejście do środka.
     /// </summary>
     private void OnReachedDoor()
@@ -330,20 +403,20 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 frontDoor.OpenDoor();
             }
 
-            // Krok 3: Wejście do środka salonu
-            EnterSalon();
+            // Krok 4: Wejście do środka salonu do Waiting Pointu
+            EnterSalonToWaitingSpot();
         }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
 
     /// <summary>
-    /// Krok 3: Jurek wchodzi przez otwarte drzwi do wnętrza salonu.
+    /// Krok 4: Jurek wchodzi przez otwarte drzwi do wnętrza salonu i idzie do Waiting Pointu.
     /// </summary>
-    private void EnterSalon()
+    private void EnterSalonToWaitingSpot()
     {
         List<Transform> route = new List<Transform>();
-        if (insideWaypoints != null && insideWaypoints.Length > 0)
+        if (insideEntranceWaypoints != null && insideEntranceWaypoints.Length > 0)
         {
-            foreach (var wp in insideWaypoints)
+            foreach (var wp in insideEntranceWaypoints)
             {
                 if (wp != null) route.Add(wp);
             }
@@ -356,12 +429,12 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         if (route.Count > 0)
         {
-            float duration = GetMovementDuration(route.ToArray(), insideWalkDuration);
-            WalkAlongWaypoints(route.ToArray(), duration, OnFullyEnteredSalon);
+            float duration = GetMovementDuration(route.ToArray(), waitingSpotWalkDuration);
+            WalkAlongWaypoints(route.ToArray(), duration, OnFullyReachedWaitingSpot);
         }
         else
         {
-            OnFullyEnteredSalon();
+            OnFullyReachedWaitingSpot();
         }
     }
 
@@ -388,12 +461,12 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     }
 
     /// <summary>
-    /// Krok 4: Jurek dotarł na swoje miejsce docelowe w salonie.
-    /// Zatrzymuje się, obraca w stronę pokoju/fotela i czeka na interakcję gracza (np. 30s).
+    /// Krok 5: Jurek zajął miejsce w Waiting Point (dół salonu).
+    /// Zatrzymuje się, obraca twarzą do pokoju i czeka na interakcję gracza (np. 30s).
     /// </summary>
-    private void OnFullyEnteredSalon()
+    private void OnFullyReachedWaitingSpot()
     {
-        Debug.Log("[CustomerJurek] Jurek zajął miejsce w salonie i czeka na interakcję gracza.");
+        Debug.Log("[CustomerJurek] Jurek dotarł do Waiting Pointu i czeka na interakcję gracza.");
         SetWalkingAnimation(false);
 
         // Płynne obrócenie w wyznaczoną stronę (bez teleportu pozycji!)
@@ -403,7 +476,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
-        onJurekEntered?.Invoke();
+        onJurekReachedWaitingSpot?.Invoke();
 
         // Opcjonalne zamknięcie drzwi za klientem
         if (autoCloseDoor && frontDoor != null)
@@ -593,7 +666,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 .OnComplete(() =>
                 {
                     SetWalkingAnimation(false);
-                    if (jurekVisual != null) jurekVisual.SetActive(false);
+                    if (jurekVisual != null && jurekVisual != gameObject) jurekVisual.SetActive(false);
                     onJurekLeft?.Invoke();
                     onComplete?.Invoke();
                 });
@@ -601,7 +674,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         else
         {
             SetWalkingAnimation(false);
-            if (jurekVisual != null) jurekVisual.SetActive(false);
+            if (jurekVisual != null && jurekVisual != gameObject) jurekVisual.SetActive(false);
             onJurekLeft?.Invoke();
             onComplete?.Invoke();
         }
@@ -614,29 +687,84 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _isWaitingForPlayer = false;
         _hasInteractedWithPlayer = true;
 
-        Debug.Log("[CustomerJurek] Gracz wszedł w interakcję z Jurkiem!");
-        onPlayerInteracted?.Invoke();
-
-        StartArrivalDialogue();
-    }
-
-    private void StartArrivalDialogue()
-    {
-        if (ClientDialogueUI.Instance == null || arrivalDialogueLines == null) return;
-
-        List<ClientDialogueUI.DialogueLine> lines = new List<ClientDialogueUI.DialogueLine>();
-        foreach (string line in arrivalDialogueLines)
+        if (playerTransform != null)
         {
-            if (!string.IsNullOrWhiteSpace(line))
+            Vector3 lookDir = playerTransform.position - transform.position;
+            lookDir.y = 0f;
+            if (lookDir.sqrMagnitude > 0.05f)
             {
-                lines.Add(new ClientDialogueUI.DialogueLine(jurekSpeakerName, line));
+                transform.rotation = Quaternion.LookRotation(lookDir);
             }
         }
 
-        if (lines.Count > 0)
+        Debug.Log("[CustomerJurek] Gracz podszedł i wszedł w interakcję z Jurkiem!");
+        onPlayerInteracted?.Invoke();
+
+        StartInteractionDialogue();
+    }
+
+    private void StartInteractionDialogue()
+    {
+        if (ClientDialogueUI.Instance == null || dialogueLines == null || dialogueLines.Count == 0)
         {
-            ClientDialogueUI.Instance.StartDialogue(lines);
+            OnDialogueCompleted();
+            return;
         }
+
+        ClientDialogueUI.Instance.StartDialogue(dialogueLines, OnDialogueCompleted);
+    }
+
+    private void OnDialogueCompleted()
+    {
+        Debug.Log("[CustomerJurek] Zakończono rozmowę z Jurkiem. Jurek idzie po schodkach do stanowiska fryzjerskiego!");
+        onDialogueCompleted?.Invoke();
+
+        WalkToBarberChair();
+    }
+
+    /// <summary>
+    /// Krok 6: Marsz po wewnętrznych schodkach na podest do fotela fryzjerskiego.
+    /// </summary>
+    public void WalkToBarberChair()
+    {
+        List<Transform> route = new List<Transform>();
+        if (toChairWaypoints != null && toChairWaypoints.Length > 0)
+        {
+            foreach (var wp in toChairWaypoints)
+            {
+                if (wp != null) route.Add(wp);
+            }
+        }
+
+        if (chairSpot != null && (route.Count == 0 || route[route.Count - 1] != chairSpot))
+        {
+            route.Add(chairSpot);
+        }
+
+        if (route.Count > 0)
+        {
+            float duration = GetMovementDuration(route.ToArray(), chairWalkDuration);
+            WalkAlongWaypoints(route.ToArray(), duration, OnFullyReachedChair);
+        }
+        else
+        {
+            OnFullyReachedChair();
+        }
+    }
+
+    private void OnFullyReachedChair()
+    {
+        _hasReachedChair = true;
+        SetWalkingAnimation(false);
+
+        if (chairSpot != null)
+        {
+            transform.DORotateQuaternion(Quaternion.Euler(0f, chairSpot.rotation.eulerAngles.y, 0f), 0.35f)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+        }
+
+        Debug.Log("[CustomerJurek] Jurek dotarł na stanowisko fryzjerskie i jest gotowy do golenia!");
+        onReachedBarberChair?.Invoke();
     }
 
     private void PlayDoorBellSound()
@@ -710,22 +838,13 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             transform.position = waitingSpot.position;
             transform.rotation = waitingSpot.rotation;
         }
-        else if (insideWaypoints != null && insideWaypoints.Length > 0)
-        {
-            Transform finalPoint = insideWaypoints[insideWaypoints.Length - 1];
-            if (finalPoint != null)
-            {
-                transform.position = finalPoint.position;
-                transform.rotation = finalPoint.rotation;
-            }
-        }
 
         if (frontDoor != null)
         {
             frontDoor.Unlock();
         }
 
-        OnFullyEnteredSalon();
+        OnFullyReachedWaitingSpot();
     }
 
     /// <summary>
@@ -739,6 +858,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _isWalking = false;
         _isWaitingForPlayer = false;
         _hasInteractedWithPlayer = false;
+        _hasReachedChair = false;
         _patienceRemaining = patienceDuration;
 
         SetWalkingAnimation(false);
@@ -748,7 +868,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             jurekVisual.SetActive(false);
         }
 
-        Transform startTransform = spawnPoint != null ? spawnPoint : (stairsWaypoints != null && stairsWaypoints.Length > 0 ? stairsWaypoints[0] : null);
+        Transform startTransform = spawnPoint != null ? spawnPoint : (approachWaypoints != null && approachWaypoints.Length > 0 ? approachWaypoints[0] : (stairsWaypoints != null && stairsWaypoints.Length > 0 ? stairsWaypoints[0] : null));
         if (startTransform != null)
         {
             transform.position = startTransform.position;
@@ -756,6 +876,24 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
 
         Debug.Log("[CustomerJurek] Stan klienta został zresetowany do wartości początkowych.");
+    }
+
+    [ContextMenu("Reset Dialogue Lines to Default (EN)")]
+    public void ResetDialogueLinesToDefaultEN()
+    {
+        dialogueLines = new List<ClientDialogueUI.DialogueLine>()
+        {
+            new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
+            new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
+            new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
+            new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
+            new ClientDialogueUI.DialogueLine("Jurek", "...")
+        };
+        timeoutComplaintText = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
+        mouseScareReactionText = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
+        interactionName = "Talk to Jurek";
+        jurekSpeakerName = "Jurek";
+        Debug.Log("[CustomerJurek] Zaktualizowano kwestie dialogowe do wersji angielskiej (EN)!");
     }
 
     public void PlayDoorBellManual() => PlayDoorBellSound();
@@ -775,11 +913,29 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             Gizmos.DrawRay(spawnPoint.position, spawnPoint.forward * 0.8f);
         }
 
-        // 2. Trasa Schodów (Stairs Waypoints) - Kolor żółty
+        // 2. Trasa 1: Od auta do schodków (Kolor pomarańczowy)
+        if (approachWaypoints != null && approachWaypoints.Length > 0)
+        {
+            Gizmos.color = new Color(1f, 0.55f, 0.1f);
+            Vector3 prev = spawnPoint != null ? spawnPoint.position : transform.position;
+            for (int i = 0; i < approachWaypoints.Length; i++)
+            {
+                if (approachWaypoints[i] != null)
+                {
+                    Gizmos.DrawSphere(approachWaypoints[i].position, 0.2f);
+                    Gizmos.DrawLine(prev, approachWaypoints[i].position);
+                    prev = approachWaypoints[i].position;
+                }
+            }
+        }
+
+        // 3. Trasa 2: Schodki zewnętrzne do drzwi (Kolor żółty)
         if (stairsWaypoints != null && stairsWaypoints.Length > 0)
         {
             Gizmos.color = Color.yellow;
-            Vector3 prev = spawnPoint != null ? spawnPoint.position : (stairsWaypoints[0] != null ? stairsWaypoints[0].position : transform.position);
+            Vector3 prev = approachWaypoints != null && approachWaypoints.Length > 0 && approachWaypoints[approachWaypoints.Length - 1] != null
+                ? approachWaypoints[approachWaypoints.Length - 1].position
+                : (spawnPoint != null ? spawnPoint.position : transform.position);
 
             for (int i = 0; i < stairsWaypoints.Length; i++)
             {
@@ -792,25 +948,6 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        // 3. Trasa wewnątrz salonu (Inside Waypoints) - Kolor zielony
-        if (insideWaypoints != null && insideWaypoints.Length > 0)
-        {
-            Gizmos.color = Color.green;
-            Vector3 prev = stairsWaypoints != null && stairsWaypoints.Length > 0 && stairsWaypoints[stairsWaypoints.Length - 1] != null
-                ? stairsWaypoints[stairsWaypoints.Length - 1].position
-                : (spawnPoint != null ? spawnPoint.position : transform.position);
-
-            for (int i = 0; i < insideWaypoints.Length; i++)
-            {
-                if (insideWaypoints[i] != null)
-                {
-                    Gizmos.DrawSphere(insideWaypoints[i].position, 0.2f);
-                    Gizmos.DrawLine(prev, insideWaypoints[i].position);
-                    prev = insideWaypoints[i].position;
-                }
-            }
-        }
-
         // 4. Miejsce Oczekiwania w salonie (Waiting Spot) - Kolor fioletowy / Magenta
         if (waitingSpot != null)
         {
@@ -819,7 +956,32 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             Gizmos.DrawRay(waitingSpot.position, waitingSpot.forward * 0.9f);
         }
 
-        // 5. Punkt ucieczki (Exit Destination) - Kolor czerwony
+        // 5. Trasa 3: Po wewnętrznych schodkach do fotela (Kolor zielony)
+        if (toChairWaypoints != null && toChairWaypoints.Length > 0)
+        {
+            Gizmos.color = Color.green;
+            Vector3 prev = waitingSpot != null ? waitingSpot.position : transform.position;
+
+            for (int i = 0; i < toChairWaypoints.Length; i++)
+            {
+                if (toChairWaypoints[i] != null)
+                {
+                    Gizmos.DrawSphere(toChairWaypoints[i].position, 0.22f);
+                    Gizmos.DrawLine(prev, toChairWaypoints[i].position);
+                    prev = toChairWaypoints[i].position;
+                }
+            }
+        }
+
+        // 6. Stanowisko / Fotel Fryzjerski (Chair Spot) - Kolor niebieski / Cyan
+        if (chairSpot != null)
+        {
+            Gizmos.color = new Color(0.2f, 0.8f, 1f);
+            Gizmos.DrawWireSphere(chairSpot.position, 0.45f);
+            Gizmos.DrawRay(chairSpot.position, chairSpot.forward * 1.0f);
+        }
+
+        // 7. Punkt ucieczki (Exit Destination) - Kolor czerwony
         if (exitDestination != null)
         {
             Gizmos.color = Color.red;
@@ -834,4 +996,3 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _movementTween?.Kill();
     }
 }
-
