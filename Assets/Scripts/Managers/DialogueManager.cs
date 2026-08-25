@@ -44,10 +44,10 @@ public class DialogueManager : MonoBehaviour
         Instance = this;
 
         if (innerThoughtsUI == null)
-            innerThoughtsUI = InnerDialogueUI.Instance ?? FindAnyObjectByType<InnerDialogueUI>();
+            innerThoughtsUI = InnerDialogueUI.Instance ?? FindAnyObjectByType<InnerDialogueUI>(FindObjectsInactive.Include);
 
         if (clientDialogueUI == null)
-            clientDialogueUI = ClientDialogueUI.Instance ?? FindAnyObjectByType<ClientDialogueUI>();
+            clientDialogueUI = ClientDialogueUI.Instance ?? FindAnyObjectByType<ClientDialogueUI>(FindObjectsInactive.Include);
     }
 
     private void OnDestroy()
@@ -66,7 +66,7 @@ public class DialogueManager : MonoBehaviour
     public void ShowThought(string thoughtText)
     {
         if (innerThoughtsUI == null)
-            innerThoughtsUI = InnerDialogueUI.Instance ?? FindAnyObjectByType<InnerDialogueUI>();
+            innerThoughtsUI = InnerDialogueUI.Instance ?? FindAnyObjectByType<InnerDialogueUI>(FindObjectsInactive.Include);
 
         if (innerThoughtsUI != null)
         {
@@ -88,7 +88,7 @@ public class DialogueManager : MonoBehaviour
     public void ShowClientLine(string speakerName, string text, Action onComplete = null)
     {
         if (clientDialogueUI == null)
-            clientDialogueUI = ClientDialogueUI.Instance ?? FindAnyObjectByType<ClientDialogueUI>();
+            clientDialogueUI = ClientDialogueUI.Instance ?? FindAnyObjectByType<ClientDialogueUI>(FindObjectsInactive.Include);
 
         if (clientDialogueUI != null)
         {
@@ -96,7 +96,7 @@ public class DialogueManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[DialogueManager] Brak ClientDialogueUI w scenie dla wypowiedzi: [{speakerName}] \"{text}\"");
+            Debug.LogWarning($"[DialogueManager] Brak ClientDialogueUI w scenie dla wypowiedzi: [{speakerName}] \"{text}\". Użyj menu: Tools -> Cyrulik -> Create Full Dialogue System");
         }
     }
 
@@ -106,7 +106,7 @@ public class DialogueManager : MonoBehaviour
     public void StartClientConversation(List<ClientDialogueUI.DialogueLine> lines, Action onComplete = null)
     {
         if (clientDialogueUI == null)
-            clientDialogueUI = ClientDialogueUI.Instance ?? FindAnyObjectByType<ClientDialogueUI>();
+            clientDialogueUI = ClientDialogueUI.Instance ?? FindAnyObjectByType<ClientDialogueUI>(FindObjectsInactive.Include);
 
         if (clientDialogueUI != null)
         {
@@ -114,7 +114,69 @@ public class DialogueManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[DialogueManager] Brak ClientDialogueUI w scenie dla sekwencji dialogowej.");
+            Debug.LogWarning($"[DialogueManager] Brak ClientDialogueUI w scenie dla sekwencji dialogowej. Użyj menu: Tools -> Cyrulik -> Create Full Dialogue System");
         }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 3. DIALOGI KLIENTA: JUREK (FIRST CUSTOMER)
+    // ──────────────────────────────────────────────────────────
+    [Header("Jurek (First Customer) Dialogue")]
+    [Tooltip("Kwestie dialogowe po podejściu gracza i wciśnięciu [E] przy Jurku.")]
+    [SerializeField] private List<ClientDialogueUI.DialogueLine> jurekArrivalDialogue = new List<ClientDialogueUI.DialogueLine>()
+    {
+        new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
+        new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
+        new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
+        new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
+        new ClientDialogueUI.DialogueLine("Jurek", "...")
+    };
+
+    [Tooltip("Kwestia wypowiadana przez Jurka, gdy minie czas cierpliwości (np. 30s) i nikt do niego nie podchodzi.")]
+    [TextArea(2, 4)]
+    [SerializeField] private string jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
+
+    [Tooltip("Kwestia wypowiadana przez Jurka, gdy zauważy mysz w salonie.")]
+    [TextArea(2, 4)]
+    [SerializeField] private string jurekMouseScareReaction = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
+
+    /// <summary>
+    /// Rozpoczyna powitalny dialog Jurka z graczem. Po zakończeniu dialogu wywoływany jest callback onComplete (marsz do fotela).
+    /// </summary>
+    public void StartJurekArrivalDialogue(Action onComplete = null)
+    {
+        StartClientConversation(jurekArrivalDialogue, onComplete);
+    }
+
+    /// <summary>
+    /// Wyświetla kwestię zniecierpliwienia Jurka po upływie czasu oczekiwania.
+    /// </summary>
+    public void ShowJurekTimeoutDialogue(Action onComplete = null)
+    {
+        ShowClientLine("Jurek", jurekTimeoutComplaint, onComplete);
+    }
+
+    /// <summary>
+    /// Wyświetla reakcję Jurka na mysz.
+    /// </summary>
+    public void ShowJurekMouseScareDialogue(Action onComplete = null)
+    {
+        ShowClientLine("Jurek", jurekMouseScareReaction, onComplete);
+    }
+
+    [ContextMenu("Reset Jurek Dialogue to Default (EN)")]
+    public void ResetJurekDialogueToDefaultEN()
+    {
+        jurekArrivalDialogue = new List<ClientDialogueUI.DialogueLine>()
+        {
+            new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
+            new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
+            new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
+            new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
+            new ClientDialogueUI.DialogueLine("Jurek", "...")
+        };
+        jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
+        jurekMouseScareReaction = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
+        Debug.Log("[DialogueManager] Zresetowano dialogi Jurka do domyślnych (EN)!");
     }
 }

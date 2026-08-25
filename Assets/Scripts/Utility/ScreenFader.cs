@@ -91,20 +91,9 @@ public class ScreenFader : MonoBehaviour
 
     private void EnsureRootDontDestroyOnLoad()
     {
-        Transform rootTransform = transform.root;
-        if (rootTransform != null)
-        {
-            DontDestroyOnLoad(rootTransform.gameObject);
-        }
-        else
+        if (transform.parent == null)
         {
             DontDestroyOnLoad(gameObject);
-        }
-
-        // Jeśli canvasGroup jest na innym roocie, również go zachowaj
-        if (canvasGroup != null && canvasGroup.transform.root != rootTransform)
-        {
-            DontDestroyOnLoad(canvasGroup.transform.root.gameObject);
         }
     }
 

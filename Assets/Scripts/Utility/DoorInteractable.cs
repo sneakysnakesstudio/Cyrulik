@@ -286,7 +286,11 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         AnimateHandleBlocked();
 
         string msg = GetBlockedDialogueMessage();
-        if (InnerDialogueUI.Instance != null && !string.IsNullOrEmpty(msg))
+        if (DialogueManager.Instance != null && !string.IsNullOrEmpty(msg))
+        {
+            DialogueManager.Instance.ShowThought(msg);
+        }
+        else if (InnerDialogueUI.Instance != null && !string.IsNullOrEmpty(msg))
         {
             InnerDialogueUI.Instance.ShowMessage(msg);
         }
@@ -294,11 +298,20 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     private string GetBlockedDialogueMessage()
     {
-        // Dialog wewnętrzny wyświetla się TYLKO dla drzwi z First Doors, gdy gracz jeszcze się nie ubrał
+        // 1. Drzwi z wymogiem ubrania się (First Doors)
         if (firstDoors && !IsRequiredTaskDone())
         {
-            OnDoorBlocked?.Invoke(blockedMessage);
-            return blockedMessage;
+            string msg = !string.IsNullOrEmpty(blockedMessage) ? blockedMessage : "I should get dressed first...";
+            OnDoorBlocked?.Invoke(msg);
+            return msg;
+        }
+
+        // 2. Drzwi zablokowane na klucz / zamknięte
+        if (!_isUnlocked)
+        {
+            string msg = !string.IsNullOrEmpty(blockedMessage) ? blockedMessage : "It's locked...";
+            OnDoorBlocked?.Invoke(msg);
+            return msg;
         }
 
         return null;

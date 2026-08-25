@@ -51,20 +51,22 @@ public static class InnerDialogueUIBuilder
 
     private static Canvas GetOrCreateCanvas()
     {
-        Canvas canvas = Object.FindAnyObjectByType<Canvas>();
-        if (canvas == null)
+        var found = GameObject.Find("Dialogue_Canvas");
+        if (found != null && found.GetComponent<Canvas>() != null)
         {
-            GameObject canvasGo = new GameObject("Dialogue_Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvas = canvasGo.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            CanvasScaler scaler = canvasGo.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            Undo.RegisterCreatedObjectUndo(canvasGo, "Create Dialogue Canvas");
+            return found.GetComponent<Canvas>();
         }
+
+        GameObject canvasGo = new GameObject("Dialogue_Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas canvas = canvasGo.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        CanvasScaler scaler = canvasGo.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        Undo.RegisterCreatedObjectUndo(canvasGo, "Create Dialogue Canvas");
         return canvas;
     }
 

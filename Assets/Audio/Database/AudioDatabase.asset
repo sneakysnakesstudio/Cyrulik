@@ -294,6 +294,28 @@ MonoBehaviour:
     randomizeVolume: 0
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: dialogue_sound_player
+    clips:
+    - {fileID: 8300000, guid: b8ee7603bbffb43438f94587fc06520c, type: 3}
+    volume: 1
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: dialogue_sound_jurek
+    clips:
+    - {fileID: 8300000, guid: b8ee7603bbffb43438f94587fc06520c, type: 3}
+    volume: 1
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.16
+    maxPitch: 0.48
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
   otherSounds:
   - groupName: task_complete
     clips:

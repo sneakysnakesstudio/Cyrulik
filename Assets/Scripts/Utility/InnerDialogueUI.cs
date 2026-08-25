@@ -167,10 +167,34 @@ public class InnerDialogueUI : MonoBehaviour
 
         Instance = this;
 
-        if (dialogueCanvasGroup == null)
+        // ZAWSZE upewnij się, że dialogueCanvasGroup to CanvasGroup na TYM obiekcie (InnerThought_Bubble)
+        var ownCg = GetComponent<CanvasGroup>();
+        if (ownCg == null)
+            ownCg = gameObject.AddComponent<CanvasGroup>();
+        dialogueCanvasGroup = ownCg;
+        dialogueCanvasGroup.ignoreParentGroups = true;
+
+        if (dialogueCanvas == null)
+            dialogueCanvas = GetComponentInParent<Canvas>(true);
+
+        // Jeśli na samym DialogueCanvas jest CanvasGroup, wymuś alpha = 1, bo ten komponent blokuje cały Canvas
+        if (dialogueCanvas != null)
         {
-            dialogueCanvasGroup = GetComponent<CanvasGroup>();
+            CanvasGroup rootCg = dialogueCanvas.GetComponent<CanvasGroup>();
+            if (rootCg != null)
+            {
+                rootCg.alpha = 1f;
+                rootCg.interactable = true;
+                rootCg.blocksRaycasts = true;
+                rootCg.ignoreParentGroups = true;
+            }
         }
+
+        if (dialogueContainer == null)
+            dialogueContainer = gameObject;
+
+        if (dialogueText == null)
+            dialogueText = GetComponentInChildren<TextMeshProUGUI>(true);
 
         if (gameTimeController == null)
         {
@@ -330,10 +354,32 @@ public class InnerDialogueUI : MonoBehaviour
     /// </summary>
     public void ShowMessage(string message)
     {
-        if (string.IsNullOrEmpty(message) || dialogueText == null)
+        if (string.IsNullOrEmpty(message))
             return;
 
+        if (dialogueText == null)
+            dialogueText = GetComponentInChildren<TextMeshProUGUI>(true);
+
+        if (dialogueText == null)
+        {
+            Debug.LogWarning("[InnerDialogueUI] Brak komponentu dialogueText!");
+            return;
+        }
+
         Debug.Log($"[InnerDialogueUI] Showing message: \"{message}\"");
+
+        // Aktywuj Canvas i GameObject PRZED wywołaniem StartCoroutine
+        if (dialogueCanvas != null)
+            dialogueCanvas.enabled = true;
+
+        if (transform.parent != null && !transform.parent.gameObject.activeSelf)
+            transform.parent.gameObject.SetActive(true);
+
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        if (dialogueContainer != null && !dialogueContainer.activeSelf)
+            dialogueContainer.SetActive(true);
 
         StopAllAnimations();
 
@@ -378,17 +424,23 @@ public class InnerDialogueUI : MonoBehaviour
         int totalVisibleChars = dialogueText.textInfo.characterCount;
         dialogueText.maxVisibleCharacters = 0;
 
+        // Jeśli pod DialogueCanvas jest stary BlackImage (czarny pełnoekranowy fader), wyłącz go, aby nie zasłaniał widoku gry!
+        if (transform.parent != null)
+        {
+            Transform blackImg = transform.parent.Find("BlackImage");
+            if (blackImg != null)
+            {
+                blackImg.gameObject.SetActive(false);
+            }
+        }
+
         // 4. Płynne pojawienie się całego okna/ramki dialogu
         if (dialogueCanvasGroup != null)
         {
-            dialogueCanvasGroup.alpha = 0f;
+            dialogueCanvasGroup.ignoreParentGroups = true;
+            dialogueCanvasGroup.alpha = 1f;
             dialogueCanvasGroup.blocksRaycasts = true;
-            _fadeTween = dialogueCanvasGroup
-                .DOFade(1f, fadeInDuration)
-                .SetEase(Ease.OutQuad)
-                .SetLink(dialogueCanvasGroup.gameObject, LinkBehaviour.KillOnDestroy);
-
-            yield return _fadeTween.WaitForCompletion();
+            dialogueCanvasGroup.interactable = true;
         }
 
         // Resetujemy flagę skipa i odświeżamy czas po zakończeniu animacji pojawiania się okna
@@ -401,10 +453,6 @@ public class InnerDialogueUI : MonoBehaviour
         // Start ciągłego dźwięku maszynopisu / gadania (np. "DU DU DU DU DU")
         StartTypewriterAudio();
 
-        // Upewnij się że WaitForSeconds dla guard jest zkeszowany
-        if (_waitContinueGuard == null)
-            _waitContinueGuard = new WaitForSeconds(0.15f);
-
         for (int i = 1; i <= totalVisibleChars; i++)
         {
             if (_skipRequested)
@@ -415,15 +463,12 @@ public class InnerDialogueUI : MonoBehaviour
             }
 
             dialogueText.maxVisibleCharacters = i;
-
-            // Pobierz aktualny znak
             char currentChar = dialogueText.textInfo.characterInfo[i - 1].character;
-            bool isWhitespace = char.IsWhiteSpace(currentChar);
 
             // Dźwięk przy literce (tylko w trybie pojedynczych kliknięć PerCharacter)
             if (audioMode == TypewriterAudioMode.PerCharacter)
             {
-                if (!isWhitespace || !playSoundOnlyOnNonWhitespace)
+                if (!char.IsWhiteSpace(currentChar) || !playSoundOnlyOnNonWhitespace)
                 {
                     soundCounter++;
                     if (soundCounter % soundFrequency == 0)
@@ -442,13 +487,7 @@ public class InnerDialogueUI : MonoBehaviour
 
             if (delay > 0f)
             {
-                // Cache WaitForSeconds dla normalnego opóźnienia — zamiast new() co znak
-                if (_cachedCharDelay != delay || _waitChar == null)
-                {
-                    _cachedCharDelay = delay;
-                    _waitChar = new WaitForSeconds(delay);
-                }
-                yield return _waitChar;
+                yield return new WaitForSecondsRealtime(delay);
             }
         }
 
@@ -458,13 +497,16 @@ public class InnerDialogueUI : MonoBehaviour
         dialogueText.maxVisibleCharacters = totalVisibleChars;
 
         // 6. Pokaż i animuj wskaźnik [E] + strzałka w dół
-        ShowContinuePrompt();
+        if (requireInteractionToClose)
+        {
+            ShowContinuePrompt();
+        }
 
         // 7. Czekanie na interakcję gracza (E) lub timeout
         if (requireInteractionToClose)
         {
             // Małe opóźnienie ochronne (0.15s), żeby to samo wciśnięcie E nie zamknęło natychmiast okna
-            yield return _waitContinueGuard;
+            yield return new WaitForSecondsRealtime(0.12f);
             _continuePressed = false;
 
             while (!_continuePressed)
@@ -496,6 +538,7 @@ public class InnerDialogueUI : MonoBehaviour
             _fadeTween = dialogueCanvasGroup
                 .DOFade(0f, fadeOutDuration)
                 .SetEase(Ease.InQuad)
+                .SetUpdate(true)
                 .SetLink(dialogueCanvasGroup.gameObject, LinkBehaviour.KillOnDestroy);
 
             yield return _fadeTween.WaitForCompletion();
@@ -507,7 +550,7 @@ public class InnerDialogueUI : MonoBehaviour
         // 11. Przywróć HUD, ruch gracza i zegar gry
         if (hudToHide != null)
         {
-            hudToHide.DOFade(1f, fadeOutDuration).SetLink(hudToHide.gameObject, LinkBehaviour.KillOnDestroy);
+            hudToHide.DOFade(1f, fadeOutDuration).SetUpdate(true).SetLink(hudToHide.gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         UnlockPlayerIfNeeded();
@@ -525,6 +568,7 @@ public class InnerDialogueUI : MonoBehaviour
             _promptFadeTween = continuePromptGroup
                 .DOFade(1f, 0.2f)
                 .SetEase(Ease.OutQuad)
+                .SetUpdate(true)
                 .SetLink(continuePromptGroup.gameObject, LinkBehaviour.KillOnDestroy);
         }
 
@@ -538,6 +582,7 @@ public class InnerDialogueUI : MonoBehaviour
                 .DOAnchorPosY(_arrowOriginalAnchoredPos.y - arrowBobDistance, arrowBobDuration)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
+                .SetUpdate(true)
                 .SetLink(arrowTransform.gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
@@ -681,16 +726,6 @@ public class InnerDialogueUI : MonoBehaviour
             dialogueCanvasGroup.alpha = 0f;
             dialogueCanvasGroup.blocksRaycasts = false;
             dialogueCanvasGroup.interactable = false;
-        }
-
-        if (dialogueCanvas != null)
-        {
-            dialogueCanvas.enabled = false;
-        }
-
-        if (dialogueContainer != null && dialogueContainer != gameObject)
-        {
-            dialogueContainer.SetActive(false);
         }
 
         if (dialogueText != null)

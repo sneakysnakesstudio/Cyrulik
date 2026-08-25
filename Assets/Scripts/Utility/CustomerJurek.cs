@@ -71,7 +71,20 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private AudioClip customKnockClip;
     [SerializeField] private float doorOpenDelay = 0.5f;
     [SerializeField] private bool autoCloseDoor = true;
-    [SerializeField] private float autoCloseDoorDelay = 1.5f;
+    [Tooltip("Czas w sekundach po wejściu przez próg drzwi, po którym drzwi się zamykają (domyślnie 1.0s).")]
+    [SerializeField] private float autoCloseDoorDelay = 1.0f;
+
+    [Header("Dźwięki kroków (Footsteps SFX)")]
+    [Tooltip("Czy Jurek ma odtwarzać dźwięki kroków podczas chodu?")]
+    [SerializeField] private bool playFootsteps = true;
+    [Tooltip("Interwał czasowy między krokami w sekundach (domyślnie 0.45s).")]
+    [SerializeField] private float footstepInterval = 0.45f;
+    [Tooltip("Nazwa grupy dźwięków w AudioManager dla kroków (np. 'player_steps').")]
+    [SerializeField] private string footstepSoundGroup = "player_steps";
+    [Tooltip("Opcjonalne bezpośrednie AudioClipy kroków (zostaw puste aby używać AudioManager).")]
+    [SerializeField] private AudioClip[] customFootstepClips;
+    [Range(0f, 1f)]
+    [SerializeField] private float footstepVolume = 0.7f;
 
     [Header("Wejście do salonu -> Waiting Point (Dół salonu)")]
     [Tooltip("Opcjonalne punkty przejścia tuż za progiem drzwi do punktu oczekiwania.")]
@@ -85,9 +98,6 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private bool usePatienceTimer = true;
     [Tooltip("Czas w sekundach, przez jaki Jurek czeka na interakcję gracza (np. 30s).")]
     [SerializeField] private float patienceDuration = 30.0f;
-    [Tooltip("Kwestia Jurka, gdy minie 30 sekund bez podejścia gracza.")]
-    [TextArea(2, 4)]
-    [SerializeField] private string timeoutComplaintText = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
     [Tooltip("Czy Jurek ma wyjść z salonu po upływie czasu oczekiwania?")]
     [SerializeField] private bool leaveOnTimeout = true;
 
@@ -99,17 +109,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [Tooltip("Transform gracza (jeśli pusty, skrypt znajdzie go automatycznie).")]
     [SerializeField] private Transform playerTransform;
 
-    [Header("Dialog po interakcji z graczem")]
-    [SerializeField] private string jurekSpeakerName = "Jurek";
+    [Header("Interakcja z graczem")]
     [SerializeField] private string interactionName = "Talk to Jurek";
-    [SerializeField] private List<ClientDialogueUI.DialogueLine> dialogueLines = new List<ClientDialogueUI.DialogueLine>()
-    {
-        new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
-        new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
-        new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
-        new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
-        new ClientDialogueUI.DialogueLine("Jurek", "...")
-    };
 
     [Header("3. Trasa: Po wewnętrznych schodkach do Fotela (Górny podest)")]
     [Tooltip("Punkty trasy prowadzące od Waiting Pointu, po wewnętrznych schodkach na podest (dodaj tutaj punkty schodków!).")]
@@ -118,9 +119,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Transform chairSpot;
     [SerializeField] private float chairWalkDuration = 4.5f;
 
-    [Header("Trasa Wyjścia / Reakcja na Mysza (Fail Branch)")]
-    [TextArea(2, 4)]
-    [SerializeField] private string mouseScareReactionText = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
+    [Header("Trasa Wyjścia (Fail Branch)")]
     [SerializeField] private Transform exitDestination;
     [SerializeField] private float exitWalkDuration = 3.5f;
 
@@ -144,6 +143,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     private bool _hasInteractedWithPlayer = false;
     private bool _hasReachedChair = false;
     private float _patienceRemaining = 0f;
+    private float _footstepTimer = 0f;
     private Tween _movementTween;
 
     public bool HasArrived => _hasArrived;
@@ -252,6 +252,21 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSpeedTowardsPlayer);
                 }
             }
+        }
+
+        // 3. Odtwarzanie dźwięków kroków podczas marszu
+        if (_isWalking && playFootsteps)
+        {
+            _footstepTimer -= Time.deltaTime * Mathf.Max(0.2f, animationSpeed);
+            if (_footstepTimer <= 0f)
+            {
+                _footstepTimer = footstepInterval;
+                PlayFootstepSound();
+            }
+        }
+        else
+        {
+            _footstepTimer = 0.05f;
         }
     }
 
@@ -413,6 +428,18 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     /// </summary>
     private void EnterSalonToWaitingSpot()
     {
+        // Zamknij drzwi 1 sekundę po tym, jak Jurek przekroczy próg wejścia
+        if (autoCloseDoor && frontDoor != null)
+        {
+            DOVirtual.DelayedCall(autoCloseDoorDelay, () =>
+            {
+                if (frontDoor != null && frontDoor.IsOpen)
+                {
+                    frontDoor.CloseDoor();
+                }
+            }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+        }
+
         List<Transform> route = new List<Transform>();
         if (insideEntranceWaypoints != null && insideEntranceWaypoints.Length > 0)
         {
@@ -478,18 +505,6 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         onJurekReachedWaitingSpot?.Invoke();
 
-        // Opcjonalne zamknięcie drzwi za klientem
-        if (autoCloseDoor && frontDoor != null)
-        {
-            DOVirtual.DelayedCall(autoCloseDoorDelay, () =>
-            {
-                if (frontDoor != null && frontDoor.IsOpen)
-                {
-                    frontDoor.CloseDoor();
-                }
-            }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
-        }
-
         // Rozpoczęcie odliczania czasu cierpliwości na podejście gracza
         _hasInteractedWithPlayer = false;
         _isWaitingForPlayer = true;
@@ -510,9 +525,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         onPatienceTimeout?.Invoke();
 
-        if (ClientDialogueUI.Instance != null && !string.IsNullOrEmpty(timeoutComplaintText))
+        if (DialogueManager.Instance != null)
         {
-            ClientDialogueUI.Instance.ShowLine(jurekSpeakerName, timeoutComplaintText, () =>
+            DialogueManager.Instance.ShowJurekTimeoutDialogue(() =>
             {
                 if (leaveOnTimeout)
                 {
@@ -630,9 +645,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         Debug.Log("[CustomerJurek] Klient ucieka z salonu po zauważeniu myszy!");
 
-        if (ClientDialogueUI.Instance != null && !string.IsNullOrEmpty(mouseScareReactionText))
+        if (DialogueManager.Instance != null)
         {
-            ClientDialogueUI.Instance.ShowLine(jurekSpeakerName, mouseScareReactionText, () =>
+            DialogueManager.Instance.ShowJurekMouseScareDialogue(() =>
             {
                 WalkOut(onComplete);
             });
@@ -700,18 +715,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         Debug.Log("[CustomerJurek] Gracz podszedł i wszedł w interakcję z Jurkiem!");
         onPlayerInteracted?.Invoke();
 
-        StartInteractionDialogue();
-    }
-
-    private void StartInteractionDialogue()
-    {
-        if (ClientDialogueUI.Instance == null || dialogueLines == null || dialogueLines.Count == 0)
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.StartJurekArrivalDialogue(OnDialogueCompleted);
+        }
+        else
         {
             OnDialogueCompleted();
-            return;
         }
-
-        ClientDialogueUI.Instance.StartDialogue(dialogueLines, OnDialogueCompleted);
     }
 
     private void OnDialogueCompleted()
@@ -765,6 +776,24 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         Debug.Log("[CustomerJurek] Jurek dotarł na stanowisko fryzjerskie i jest gotowy do golenia!");
         onReachedBarberChair?.Invoke();
+    }
+
+    private void PlayFootstepSound()
+    {
+        if (customFootstepClips != null && customFootstepClips.Length > 0)
+        {
+            AudioClip clip = customFootstepClips[UnityEngine.Random.Range(0, customFootstepClips.Length)];
+            if (clip != null)
+            {
+                AudioSource.PlayClipAtPoint(clip, transform.position, footstepVolume);
+                return;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(footstepSoundGroup) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(footstepSoundGroup);
+        }
     }
 
     private void PlayDoorBellSound()
@@ -876,24 +905,6 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
 
         Debug.Log("[CustomerJurek] Stan klienta został zresetowany do wartości początkowych.");
-    }
-
-    [ContextMenu("Reset Dialogue Lines to Default (EN)")]
-    public void ResetDialogueLinesToDefaultEN()
-    {
-        dialogueLines = new List<ClientDialogueUI.DialogueLine>()
-        {
-            new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
-            new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
-            new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
-            new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
-            new ClientDialogueUI.DialogueLine("Jurek", "...")
-        };
-        timeoutComplaintText = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
-        mouseScareReactionText = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
-        interactionName = "Talk to Jurek";
-        jurekSpeakerName = "Jurek";
-        Debug.Log("[CustomerJurek] Zaktualizowano kwestie dialogowe do wersji angielskiej (EN)!");
     }
 
     public void PlayDoorBellManual() => PlayDoorBellSound();

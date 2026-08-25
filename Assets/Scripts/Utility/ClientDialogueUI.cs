@@ -145,8 +145,56 @@ public class ClientDialogueUI : MonoBehaviour
 
         Instance = this;
 
-        if (dialogueCanvasGroup == null)
-            dialogueCanvasGroup = GetComponent<CanvasGroup>();
+        // ZAWSZE upewnij się, że dialogueCanvasGroup to CanvasGroup na TYM obiekcie (ClientDialogue_Box), a NIE na rodzicu DialogueCanvas!
+        var ownCg = GetComponent<CanvasGroup>();
+        if (ownCg == null)
+            ownCg = gameObject.AddComponent<CanvasGroup>();
+        dialogueCanvasGroup = ownCg;
+        dialogueCanvasGroup.ignoreParentGroups = true;
+
+        if (dialogueCanvas == null)
+            dialogueCanvas = GetComponentInParent<Canvas>(true);
+
+        // Jeśli na samym DialogueCanvas jest CanvasGroup, wymuś alpha = 1, bo ten komponent blokuje cały Canvas
+        if (dialogueCanvas != null)
+        {
+            CanvasGroup rootCg = dialogueCanvas.GetComponent<CanvasGroup>();
+            if (rootCg != null)
+            {
+                rootCg.alpha = 1f;
+                rootCg.interactable = true;
+                rootCg.blocksRaycasts = true;
+                rootCg.ignoreParentGroups = true;
+            }
+        }
+
+        if (dialogueContainer == null)
+            dialogueContainer = gameObject;
+
+        if (dialogueText == null)
+            dialogueText = GetComponentInChildren<TextMeshProUGUI>(true);
+
+        if (speakerBadgeContainer == null)
+        {
+            Transform badge = transform.Find("Speaker_Badge");
+            if (badge != null) speakerBadgeContainer = badge.gameObject;
+        }
+
+        if (speakerNameText == null && speakerBadgeContainer != null)
+            speakerNameText = speakerBadgeContainer.GetComponentInChildren<TextMeshProUGUI>(true);
+
+        if (continuePromptGroup == null)
+        {
+            Transform cp = transform.Find("Continue_Prompt");
+            if (cp != null) continuePromptGroup = cp.GetComponent<CanvasGroup>();
+        }
+
+        if (arrowTransform == null && continuePromptGroup != null)
+        {
+            Transform arrow = continuePromptGroup.transform.Find("Prompt_Arrow");
+            if (arrow == null) arrow = continuePromptGroup.transform.Find("Arrow_Icon");
+            if (arrow != null) arrowTransform = arrow.GetComponent<RectTransform>();
+        }
 
         if (arrowTransform != null)
             _arrowOriginalAnchoredPos = arrowTransform.anchoredPosition;
@@ -244,8 +292,28 @@ public class ClientDialogueUI : MonoBehaviour
     /// </summary>
     public void StartDialogue(List<DialogueLine> lines, Action onComplete = null)
     {
+        if (dialogueText == null)
+            dialogueText = GetComponentInChildren<TextMeshProUGUI>(true);
+
         if (lines == null || lines.Count == 0 || dialogueText == null)
+        {
+            Debug.LogWarning("[ClientDialogueUI] Brak kwestii dialogowych lub komponentu dialogueText!");
+            onComplete?.Invoke();
             return;
+        }
+
+        // Aktywuj Canvas i GameObject PRZED wywołaniem StartCoroutine
+        if (dialogueCanvas != null)
+            dialogueCanvas.enabled = true;
+
+        if (transform.parent != null && !transform.parent.gameObject.activeSelf)
+            transform.parent.gameObject.SetActive(true);
+
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        if (dialogueContainer != null && !dialogueContainer.activeSelf)
+            dialogueContainer.SetActive(true);
 
         StopAllAnimations();
         _dialogueCoroutine = StartCoroutine(DialogueSequenceRoutine(lines, onComplete));
@@ -261,25 +329,33 @@ public class ClientDialogueUI : MonoBehaviour
         PauseTimerIfNeeded();
 
         // 2. Aktywuj okno
-        if (dialogueContainer != null && dialogueContainer != gameObject)
-            dialogueContainer.SetActive(true);
-
         if (dialogueCanvas != null)
             dialogueCanvas.enabled = true;
 
+        // Jeśli pod DialogueCanvas jest stary BlackImage (czarny pełnoekranowy fader), wyłącz go, aby nie zasłaniał widoku gry!
+        if (transform.parent != null)
+        {
+            Transform blackImg = transform.parent.Find("BlackImage");
+            if (blackImg != null)
+            {
+                blackImg.gameObject.SetActive(false);
+            }
+        }
+
+        if (dialogueContainer != null && dialogueContainer != gameObject)
+            dialogueContainer.SetActive(true);
+
+        gameObject.SetActive(true);
+
         if (hudToHide != null)
-            hudToHide.DOFade(0f, fadeInDuration).SetLink(hudToHide.gameObject, LinkBehaviour.KillOnDestroy);
+            hudToHide.DOFade(0f, fadeInDuration).SetUpdate(true).SetLink(hudToHide.gameObject, LinkBehaviour.KillOnDestroy);
 
         if (dialogueCanvasGroup != null)
         {
-            dialogueCanvasGroup.alpha = 0f;
+            dialogueCanvasGroup.ignoreParentGroups = true;
+            dialogueCanvasGroup.alpha = 1f;
             dialogueCanvasGroup.blocksRaycasts = true;
-            _fadeTween = dialogueCanvasGroup
-                .DOFade(1f, fadeInDuration)
-                .SetEase(Ease.OutQuad)
-                .SetLink(dialogueCanvasGroup.gameObject, LinkBehaviour.KillOnDestroy);
-
-            yield return _fadeTween.WaitForCompletion();
+            dialogueCanvasGroup.interactable = true;
         }
 
         // 3. Pętla kolejnych kwestii dialogu
@@ -342,7 +418,7 @@ public class ClientDialogueUI : MonoBehaviour
                 float delay = charDelay;
                 if (IsPunctuation(c)) delay += punctuationExtraDelay;
 
-                if (delay > 0f) yield return new WaitForSeconds(delay);
+                if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
             }
 
             StopTypewriterAudio();
@@ -353,7 +429,7 @@ public class ClientDialogueUI : MonoBehaviour
             ShowContinuePrompt();
 
             // Czekaj na wciśnięcie E
-            yield return new WaitForSeconds(0.12f);
+            yield return new WaitForSecondsRealtime(0.12f);
             _continuePressed = false;
 
             while (!_continuePressed)
@@ -375,6 +451,7 @@ public class ClientDialogueUI : MonoBehaviour
             _fadeTween = dialogueCanvasGroup
                 .DOFade(0f, fadeOutDuration)
                 .SetEase(Ease.InQuad)
+                .SetUpdate(true)
                 .SetLink(dialogueCanvasGroup.gameObject, LinkBehaviour.KillOnDestroy);
 
             yield return _fadeTween.WaitForCompletion();
@@ -383,7 +460,7 @@ public class ClientDialogueUI : MonoBehaviour
         HideAllInstant();
 
         if (hudToHide != null)
-            hudToHide.DOFade(1f, fadeOutDuration).SetLink(hudToHide.gameObject, LinkBehaviour.KillOnDestroy);
+            hudToHide.DOFade(1f, fadeOutDuration).SetUpdate(true).SetLink(hudToHide.gameObject, LinkBehaviour.KillOnDestroy);
 
         ResumeTimerIfNeeded();
         InputModeManager.Instance?.SwitchToPlayer();
@@ -403,6 +480,7 @@ public class ClientDialogueUI : MonoBehaviour
             _promptFadeTween = continuePromptGroup
                 .DOFade(1f, 0.2f)
                 .SetEase(Ease.OutQuad)
+                .SetUpdate(true)
                 .SetLink(continuePromptGroup.gameObject, LinkBehaviour.KillOnDestroy);
         }
 
@@ -414,6 +492,7 @@ public class ClientDialogueUI : MonoBehaviour
                 .DOAnchorPosY(_arrowOriginalAnchoredPos.y - arrowBobDistance, arrowBobDuration)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
+                .SetUpdate(true)
                 .SetLink(arrowTransform.gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
@@ -521,12 +600,6 @@ public class ClientDialogueUI : MonoBehaviour
             dialogueCanvasGroup.blocksRaycasts = false;
             dialogueCanvasGroup.interactable = false;
         }
-
-        if (dialogueCanvas != null)
-            dialogueCanvas.enabled = false;
-
-        if (dialogueContainer != null && dialogueContainer != gameObject)
-            dialogueContainer.SetActive(false);
 
         if (dialogueText != null)
         {
