@@ -200,7 +200,7 @@ public static class RazorStropBuilder
         bgGo.transform.SetAsFirstSibling();
         EditorUtility.SetDirty(bgGo);
 
-        // 3. Główny Pas Skórzany (Pasek - vintage_strop_main.png)
+        // 3. Główny Pas Skórzany (Pasek - czysty, autentyczny pas z ryciny w Guide)
         Transform pasekTransform = canvasTransform.Find("Pasek");
         GameObject pasekGo = pasekTransform != null ? pasekTransform.gameObject : null;
         if (pasekGo == null)
@@ -212,16 +212,25 @@ public static class RazorStropBuilder
         pasekRect.anchorMin = new Vector2(0.5f, 0.5f);
         pasekRect.anchorMax = new Vector2(0.5f, 0.5f);
         pasekRect.pivot = new Vector2(0.5f, 0.5f);
-        pasekRect.anchoredPosition = new Vector2(60f, 0f);
+        pasekRect.anchoredPosition = new Vector2(30f, 0f);
         pasekRect.sizeDelta = new Vector2(1150f, 1150f);
         Image pasekImg = pasekGo.GetComponent<Image>();
-        Sprite vintageStrop = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/vintage_strop_main.png");
+        Sprite vintageStrop = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/vintage_strop_main.png")
+                           ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/strop_biuletyn_czysty.png");
         if (vintageStrop != null) pasekImg.sprite = vintageStrop;
         pasekImg.preserveAspect = true;
         pasekImg.raycastTarget = false;
+
+        // Usuwamy ewentualne nakładane obiekty stref z paska
+        Transform oldPerf = pasekGo.transform.Find("PerfectZone_Image");
+        if (oldPerf != null) Object.DestroyImmediate(oldPerf.gameObject);
+
+        Transform oldGood = pasekGo.transform.Find("GoodZone_Image");
+        if (oldGood != null) Object.DestroyImmediate(oldGood.gameObject);
+
         EditorUtility.SetDirty(pasekGo);
 
-        // Anchory trasy ostrzenia (BottomAnchor i TopAnchor)
+        // Anchory trasy ostrzenia wzdłuż czystego pasa
         Transform botAnchorT = canvasTransform.Find("BottomAnchor");
         if (botAnchorT == null)
         {
@@ -230,7 +239,7 @@ public static class RazorStropBuilder
             botAnchorT = botGo.transform;
         }
         RectTransform botRect = botAnchorT.GetComponent<RectTransform>();
-        botRect.anchoredPosition = new Vector2(-230f, -440f);
+        botRect.anchoredPosition = new Vector2(-160f, -230f);
 
         Transform topAnchorT = canvasTransform.Find("TopAnchor");
         if (topAnchorT == null)
@@ -240,44 +249,7 @@ public static class RazorStropBuilder
             topAnchorT = topGo.transform;
         }
         RectTransform topRect = topAnchorT.GetComponent<RectTransform>();
-        topRect.anchoredPosition = new Vector2(480f, 380f);
-
-        // Strefy trafień (Perfect i Good)
-        Transform perfectZoneT = pasekGo.transform.Find("PerfectZone_Image");
-        GameObject perfGo = perfectZoneT != null ? perfectZoneT.gameObject : null;
-        if (perfGo == null)
-        {
-            perfGo = new GameObject("PerfectZone_Image", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            perfGo.transform.SetParent(pasekGo.transform, false);
-        }
-        RectTransform perfRect = perfGo.GetComponent<RectTransform>();
-        perfRect.anchoredPosition = new Vector2(240f, 260f);
-        perfRect.sizeDelta = new Vector2(180f, 180f);
-        Image perfImg = perfGo.GetComponent<Image>();
-        Sprite perfSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/strefa_perfect_biuletyn.png")
-                         ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/strefa_perfect_v2.png");
-        if (perfSprite != null) perfImg.sprite = perfSprite;
-        perfImg.preserveAspect = true;
-        perfImg.raycastTarget = false;
-        EditorUtility.SetDirty(perfGo);
-
-        Transform goodZoneT = pasekGo.transform.Find("GoodZone_Image");
-        GameObject goodGo = goodZoneT != null ? goodZoneT.gameObject : null;
-        if (goodGo == null)
-        {
-            goodGo = new GameObject("GoodZone_Image", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            goodGo.transform.SetParent(pasekGo.transform, false);
-        }
-        RectTransform goodRect = goodGo.GetComponent<RectTransform>();
-        goodRect.anchoredPosition = new Vector2(80f, 100f);
-        goodRect.sizeDelta = new Vector2(200f, 200f);
-        Image goodImg = goodGo.GetComponent<Image>();
-        Sprite goodSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/strefa_good_biuletyn.png")
-                         ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/strefa_good_v2.png");
-        if (goodSprite != null) goodImg.sprite = goodSprite;
-        goodImg.preserveAspect = true;
-        goodImg.raycastTarget = false;
-        EditorUtility.SetDirty(goodGo);
+        topRect.anchoredPosition = new Vector2(240f, 170f);
 
         // 4. Brzytwa na pasie (RazorImage)
         Transform razorTransform = canvasTransform.Find("RazorImage");
@@ -288,8 +260,8 @@ public static class RazorStropBuilder
             razorGo.transform.SetParent(canvasTransform, false);
         }
         RectTransform razorRect = razorGo.GetComponent<RectTransform>();
-        razorRect.anchoredPosition = new Vector2(-230f, -440f);
-        razorRect.sizeDelta = new Vector2(380f, 220f);
+        razorRect.anchoredPosition = new Vector2(-150f, -220f);
+        razorRect.sizeDelta = new Vector2(340f, 190f);
         Image razorImg = razorGo.GetComponent<Image>();
         Sprite razorSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_1ostrze_drewno.png")
                           ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_wskaznik_v3_orzech.png");
@@ -468,8 +440,8 @@ public static class RazorStropBuilder
         so.FindProperty("showTutorialOnStart").boolValue = true;
         so.FindProperty("bottomAnchor").objectReferenceValue = botRect;
         so.FindProperty("topAnchor").objectReferenceValue = topRect;
-        so.FindProperty("zoneGood").objectReferenceValue = goodRect;
-        so.FindProperty("zonePerfect").objectReferenceValue = perfRect;
+        so.FindProperty("zoneGood").objectReferenceValue = null;
+        so.FindProperty("zonePerfect").objectReferenceValue = null;
 
         // Automatyczne podpięcie gracza i kamery
         SerializedProperty moveProp = so.FindProperty("playerMovement");
@@ -491,6 +463,13 @@ public static class RazorStropBuilder
         {
             var brain = Object.FindAnyObjectByType<Unity.Cinemachine.CinemachineBrain>(FindObjectsInactive.Include);
             if (brain != null) cineProp.objectReferenceValue = brain;
+        }
+
+        SerializedProperty bobProp = so.FindProperty("headBobbing");
+        if (bobProp != null && bobProp.objectReferenceValue == null)
+        {
+            HeadBobbing bob = Object.FindAnyObjectByType<HeadBobbing>(FindObjectsInactive.Include);
+            if (bob != null) bobProp.objectReferenceValue = bob;
         }
 
         // Ustawienie wszystkich promptów na język angielski

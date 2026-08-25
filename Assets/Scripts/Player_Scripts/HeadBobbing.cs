@@ -66,6 +66,16 @@ public class HeadBobbing : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        if (_defaultLocalPosition != Vector3.zero)
+        {
+            transform.localPosition = _defaultLocalPosition;
+        }
+        _bobTimer = 0f;
+        _idleTimer = 0f;
+    }
+
     private void LateUpdate()
     {
         // Wyłącz kiwanie głową jeśli trwa dialog, myśli, minigra lub schemat UI
@@ -94,6 +104,9 @@ public class HeadBobbing : MonoBehaviour
 
     private bool IsDialogueOrUIActive()
     {
+        if (RazorMinigame.Instance != null && RazorMinigame.Instance.IsActive)
+            return true;
+
         if (InputModeManager.Instance != null && InputModeManager.Instance.CurrentScheme != InputModeManager.ControlScheme.Player)
             return true;
 

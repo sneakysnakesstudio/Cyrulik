@@ -340,6 +340,7 @@ public class ParticleManager : MonoBehaviour
         go.transform.rotation = rotation == default ? Quaternion.identity : rotation;
 
         ParticleSystem ps = go.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
 
         if (_defaultParticleMaterial == null)
@@ -354,6 +355,7 @@ public class ParticleManager : MonoBehaviour
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
 
         var main = ps.main;
+        main.playOnAwake = false;
         var emission = ps.emission;
         var shape = ps.shape;
         var colorOverLifetime = ps.colorOverLifetime;
@@ -388,7 +390,9 @@ public class ParticleManager : MonoBehaviour
             shape.scale = new Vector3(0.5f, 0.5f, 0.5f);
 
             velocityOverLifetime.enabled = true;
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
             velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(0.05f, 0.12f);
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
         }
         else // Domyślne: "interactive_glint" / "sparkles"
         {
@@ -402,7 +406,9 @@ public class ParticleManager : MonoBehaviour
             shape.radius = 0.25f;
 
             velocityOverLifetime.enabled = true;
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
             velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(0.08f, 0.18f);
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
         }
 
         // Krzywa zanikania (Fade in / Fade out)

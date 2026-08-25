@@ -145,7 +145,9 @@ public static class StoveQuestSetupBuilder
             steamGo.transform.localPosition = new Vector3(0f, 0.8f, 0f);
 
             ParticleSystem ps = steamGo.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
+            main.playOnAwake = false;
             main.duration = 2f;
             main.loop = true;
             main.startLifetime = 1.8f;
@@ -162,7 +164,9 @@ public static class StoveQuestSetupBuilder
 
             var vel = ps.velocityOverLifetime;
             vel.enabled = true;
+            vel.x = 0f;
             vel.y = 0.35f;
+            vel.z = 0f;
 
             var colorOverLife = ps.colorOverLifetime;
             colorOverLife.enabled = true;

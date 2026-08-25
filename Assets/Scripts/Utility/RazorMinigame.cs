@@ -77,6 +77,7 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
     [SerializeField] private CinemachineBrain cinemachineBrain;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerHands playerHands;
+    [SerializeField] private HeadBobbing headBobbing;
 
     // ──────────────────────────────────────────────────────────
     // REFERENCJE UI
@@ -264,6 +265,9 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         Finished          // Minigra zakończona
     }
 
+    public static RazorMinigame Instance { get; private set; }
+    public bool IsActive => _state != State.Inactive && _state != State.Finished;
+
     private State _state = State.Inactive;
     private int _attemptsDone = 0;
     private float _sharpness = 0f;
@@ -293,6 +297,7 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
 
     private void Awake()
     {
+        Instance = this;
         HideInstant();
     }
 
@@ -1236,6 +1241,14 @@ public class RazorMinigame : MonoBehaviour, IConditionalInteractable
         if (playerMovement != null) playerMovement.enabled = !locked;
         if (playerHands != null) playerHands.enabled = !locked;
         if (cinemachineBrain != null) cinemachineBrain.enabled = !locked;
+
+        if (headBobbing == null)
+            headBobbing = UnityEngine.Object.FindAnyObjectByType<HeadBobbing>(FindObjectsInactive.Include);
+
+        if (headBobbing != null)
+        {
+            headBobbing.enabled = !locked;
+        }
     }
 
     private void UpdateAttemptsText()
