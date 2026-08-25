@@ -64,7 +64,7 @@ public class DebugOverlay : MonoBehaviour
 
     public static void FixAllSceneCanvasScalers()
     {
-        Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
         int fixedCount = 0;
 
         foreach (Canvas canvas in allCanvases)
@@ -681,8 +681,9 @@ public class DebugOverlay : MonoBehaviour
         GUILayout.Space(2);
         GUILayout.Label($"Status Przybycia (HasArrived): {(_customerJurek.HasArrived ? "<color=#70FF70>[TAK] Przybyl do salonu</color>" : "<color=#FFC040>[NIE] Czeka na wywolanie</color>")}", _statusLabelStyle);
         GUILayout.Label($"Status Marszu (IsWalking): {(_customerJurek.IsWalking ? "<color=#70D0FF>[TAK] W ruchu (schody / korytarz)</color>" : "[NIE] Stoi w miejscu")}", _statusLabelStyle);
+        GUILayout.Label($"Czekanie na gracza (Patience): {(_customerJurek.IsWaitingForPlayer ? $"<color=#FFFF00>[CZEKA] Pozostalo {_customerJurek.PatienceRemaining:0.0}s</color>" : "[NIE]")}", _statusLabelStyle);
         GUILayout.Label($"Status Ucieczki (HasLeft): {(_customerJurek.HasLeft ? "<color=#FF5050>[TAK] Uciekl przed mysza</color>" : "[NIE] Obecny / Brak ucieczki")}", _statusLabelStyle);
-        GUILayout.Label($"Interakcja z graczem (CanInteract): {(_customerJurek.CanInteract ? "<color=#70FF70>[TAK] Gotowy do rozmowy</color>" : "[NIE]")}", _statusLabelStyle);
+        GUILayout.Label($"Interakcja z graczem (CanInteract): {(_customerJurek.CanInteract ? "<color=#70FF70>[TAK] Gotowy do rozmowy (wcisnij [E])</color>" : "[NIE]")}", _statusLabelStyle);
         GUILayout.EndVertical();
 
         GUILayout.Space(8);
@@ -712,6 +713,15 @@ public class DebugOverlay : MonoBehaviour
             _customerJurek.ResetCustomerState();
         }
         GUILayout.EndHorizontal();
+
+        if (_customerJurek.CanInteract || _customerJurek.IsWaitingForPlayer)
+        {
+            GUILayout.Space(4);
+            if (GUILayout.Button("[E] ROZPOCZNIJ ROZMOWE Z JURKIEM (Symuluj podejscie gracza)", _successButtonStyle, GUILayout.Height(32)))
+            {
+                _customerJurek.Interact();
+            }
+        }
 
         GUILayout.Space(10);
 

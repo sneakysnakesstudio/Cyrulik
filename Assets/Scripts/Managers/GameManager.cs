@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -31,10 +32,42 @@ public class GameManager : MonoBehaviour
     private PlayerSpawnPosition selectedSpawnPosition =
         PlayerSpawnPosition.Position1;
 
+    [Header("Debug / Quick Start")]
+    [Tooltip("Czy na starcie gry natychmiast wywołać spawn Jurka (pomija czekanie na czas lub klikanie F3)?")]
+    [SerializeField] private bool autoSpawnJurekOnStart = true;
+    [Tooltip("Opóźnienie w sekundach przed wywołaniem przyjścia Jurka na starcie.")]
+    [SerializeField] private float autoSpawnJurekDelay = 0.5f;
+
     private void Awake()
     {
         SetFpsLimit(fpsLimit);
         SpawnPlayer();
+    }
+
+    private void Start()
+    {
+        if (autoSpawnJurekOnStart)
+        {
+            if (autoSpawnJurekDelay > 0.01f)
+            {
+                DG.Tweening.DOVirtual.DelayedCall(autoSpawnJurekDelay, SpawnJurekImmediately)
+                    .SetLink(gameObject, DG.Tweening.LinkBehaviour.KillOnDestroy);
+            }
+            else
+            {
+                SpawnJurekImmediately();
+            }
+        }
+    }
+
+    private void SpawnJurekImmediately()
+    {
+        CustomerJurek jurek = FindAnyObjectByType<CustomerJurek>(FindObjectsInactive.Include);
+        if (jurek != null)
+        {
+            jurek.TriggerArrival();
+            Debug.Log("<color=#70FF70>[GameManager] [Debug Auto-Spawn] Natychmiast wywołano przyjście Jurka na starcie gry!</color>");
+        }
     }
 
     private void SpawnPlayer()
