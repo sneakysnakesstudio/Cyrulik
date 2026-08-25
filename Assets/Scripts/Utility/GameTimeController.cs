@@ -35,6 +35,14 @@ public class GameTimeController : MonoBehaviour
 
     public bool OpeningTimeReached { get; private set; }
 
+    public float CurrentTimeInSeconds => _currentTime;
+
+    public bool HasTimeReached(int hour, int minute, int second = 0)
+    {
+        float targetTime = hour * 3600f + minute * 60f + second;
+        return _currentTime >= targetTime;
+    }
+
     private float _currentTime;
     private float _openingTime;
 

@@ -312,8 +312,9 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         return PreparationStateManager.Instance.IsTaskCompleted(requiredTaskId);
     }
 
-    private void OpenDoor()
+    public void OpenDoor()
     {
+        if (IsOpen) return;
         _motionTween?.Kill();
 
         IsOpen = true;
@@ -497,8 +498,9 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         _handleTween = blockedSeq;
     }
 
-    private void CloseDoor()
+    public void CloseDoor()
     {
+        if (!IsOpen) return;
         _motionTween?.Kill();
 
         IsOpen = false;

@@ -25,8 +25,11 @@ public class DebugOverlay : MonoBehaviour
     [SerializeField] private Key primaryToggleKey = Key.Backquote; // tylda ~
     [SerializeField] private Key secondaryToggleKey = Key.F1;
 
+    [Tooltip("Klawisz przesuwający czas gry na przyjście Jurka (17:01:30).")]
+    [SerializeField] private Key jurekSpawnTimeKey = Key.F3;
+
     [Tooltip("Klawisz przypinający listę questów po prawej stronie ekranu.")]
-    [SerializeField] private Key pinQuestKey = Key.F2;
+    [SerializeField] private Key pinQuestKey = Key.F4;
 
     [Header("UI State")]
     [SerializeField] private bool showOverlay = false;
@@ -51,11 +54,43 @@ public class DebugOverlay : MonoBehaviour
             Debug.Log("[DebugOverlay] DebugOverlay już istnieje w scenie.");
         }
     }
+
+    [MenuItem("Tools/Cyrulik/Fix & Optimize All UI Canvas Scalers", false, 40)]
+    public static void FixAllSceneCanvasScalersMenu()
+    {
+        FixAllSceneCanvasScalers();
+    }
 #endif
+
+    public static void FixAllSceneCanvasScalers()
+    {
+        Canvas[] allCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int fixedCount = 0;
+
+        foreach (Canvas canvas in allCanvases)
+        {
+            if (canvas == null || canvas.renderMode == RenderMode.WorldSpace) continue;
+
+            UnityEngine.UI.CanvasScaler scaler = canvas.GetComponent<UnityEngine.UI.CanvasScaler>();
+            if (scaler == null)
+            {
+                scaler = canvas.gameObject.AddComponent<UnityEngine.UI.CanvasScaler>();
+            }
+
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = UnityEngine.UI.CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+            fixedCount++;
+        }
+
+        Debug.Log($"[CanvasScaler] Zoptymalizowano i dopasowano skalowanie ekranu (1920x1080) dla {fixedCount} Canvasów w scenie!");
+    }
 
     public enum DebugTab
     {
         Quests,
+        NPC,
         TowelAndStove,
         Inventory,
         Teleport,
@@ -78,6 +113,7 @@ public class DebugOverlay : MonoBehaviour
     private Transform _playerTransform;
     private StoveController _stoveController;
     private RadioInteractable _radio;
+    private CustomerJurek _customerJurek;
 
     // Zmienne pomocnicze
     private bool _superSpeedActive = false;
@@ -131,8 +167,18 @@ public class DebugOverlay : MonoBehaviour
     }
 #endif
 
+    private void OnValidate()
+    {
+        if (jurekSpawnTimeKey == Key.F2) jurekSpawnTimeKey = Key.F3;
+        if (pinQuestKey == Key.F2 || pinQuestKey == Key.F3) pinQuestKey = Key.F4;
+    }
+
     private void Awake()
     {
+        // Automatyczna migracja ze starych danych w scenie (uwolnienie klawisza F2)
+        if (jurekSpawnTimeKey == Key.F2) jurekSpawnTimeKey = Key.F3;
+        if (pinQuestKey == Key.F2 || pinQuestKey == Key.F3) pinQuestKey = Key.F4;
+
         if (!allowInBuild)
         {
 #if !UNITY_EDITOR
@@ -166,7 +212,7 @@ public class DebugOverlay : MonoBehaviour
 
     private void Update()
     {
-        // Sprawdź wciśnięcie klawisza Tyldy ~ lub F1
+        // Sprawdź wciśnięcie klawiszy
         if (Keyboard.current != null)
         {
             if (Keyboard.current[primaryToggleKey].wasPressedThisFrame ||
@@ -175,7 +221,14 @@ public class DebugOverlay : MonoBehaviour
                 ToggleOverlay();
             }
 
-            if (Keyboard.current[pinQuestKey].wasPressedThisFrame)
+            // Klawisz F3 (Nadejście Jurka)
+            if (Keyboard.current[Key.F3].wasPressedThisFrame ||
+                (jurekSpawnTimeKey != Key.F2 && Keyboard.current[jurekSpawnTimeKey].wasPressedThisFrame))
+            {
+                FastForwardToJurekSpawn();
+            }
+
+            if (pinQuestKey != Key.F2 && pinQuestKey != Key.F3 && Keyboard.current[pinQuestKey].wasPressedThisFrame)
             {
                 pinQuestTracker = !pinQuestTracker;
             }
@@ -215,6 +268,35 @@ public class DebugOverlay : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Przesuwa czas gry do momentu tuż przed pojawieniem się Jurka (17:01:30),
+    /// a jeśli Jurek już był przywołany, resetuje go, aby sekwencja odegrała się na nowo.
+    /// </summary>
+    public void FastForwardToJurekSpawn()
+    {
+        if (_timeController == null || _customerJurek == null)
+        {
+            ResolveReferences();
+        }
+
+        // Jeśli Jurek już przybył lub uciekł, zresetuj go do stanu startowego
+        if (_customerJurek != null && (_customerJurek.HasArrived || _customerJurek.HasLeft))
+        {
+            _customerJurek.ResetCustomerState();
+        }
+
+        if (_timeController != null)
+        {
+            _timeController.SetTime(17, 1, 30);
+            Debug.Log("<color=#70FF70>[DebugOverlay] [F3] Przesunięto czas gry na 17:01:30! Jurek pojawi się za 3 sekundy (o 17:01:33).</color>");
+        }
+        else if (_customerJurek != null)
+        {
+            _customerJurek.TriggerArrival();
+            Debug.Log("<color=#70FF70>[DebugOverlay] [F3] Brak zegara – wywołano natychmiastowe przyjście Jurka!</color>");
+        }
+    }
+
     private void ResolveReferences()
     {
         if (_gameManager == null) _gameManager = FindAnyObjectByType<GameManager>();
@@ -224,6 +306,7 @@ public class DebugOverlay : MonoBehaviour
         if (_playerHands == null) _playerHands = FindAnyObjectByType<PlayerHands>();
         if (_stoveController == null) _stoveController = FindAnyObjectByType<StoveController>();
         if (_radio == null) _radio = FindAnyObjectByType<RadioInteractable>();
+        if (_customerJurek == null) _customerJurek = FindAnyObjectByType<CustomerJurek>(FindObjectsInactive.Include);
 
         if (_playerMovement != null)
         {
@@ -355,27 +438,39 @@ public class DebugOverlay : MonoBehaviour
         _stylesInitialized = true;
     }
 
+    private const float ReferenceHeight = 1080f;
+
     private void OnGUI()
     {
         InitStyles();
 
-        // 1. Pasek statusu
+        // 1. Skalowanie całego GUI na podstawie wysokości ekranu (Auto UI Scaling)
+        float scale = Mathf.Clamp(Screen.height / ReferenceHeight, 0.65f, 2.5f);
+        Matrix4x4 origMatrix = GUI.matrix;
+        GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
+
+        float scaledWidth = Screen.width / scale;
+        float scaledHeight = Screen.height / scale;
+
+        // 2. Pasek statusu
         if (showCompactHud && !showOverlay)
         {
             DrawCompactHud();
         }
 
-        // 2. Przypięta lista zadań (F2)
+        // 3. Przypięta lista zadań (F2)
         if (pinQuestTracker && !showOverlay)
         {
-            DrawPinnedQuestTracker();
+            DrawPinnedQuestTracker(scaledWidth, scaledHeight);
         }
 
-        // 3. Główny panel
+        // 4. Główny panel
         if (showOverlay)
         {
-            DrawMainOverlayWindow();
+            DrawMainOverlayWindow(scaledWidth, scaledHeight);
         }
+
+        GUI.matrix = origMatrix;
     }
 
     private void DrawCompactHud()
@@ -401,12 +496,12 @@ public class DebugOverlay : MonoBehaviour
         }
     }
 
-    private void DrawMainOverlayWindow()
+    private void DrawMainOverlayWindow(float screenW, float screenH)
     {
-        float width = 860f;
-        float height = 640f;
-        float x = (Screen.width - width) * 0.5f;
-        float y = (Screen.height - height) * 0.5f;
+        float width = Mathf.Min(screenW * 0.90f, 960f);
+        float height = Mathf.Min(screenH * 0.88f, 680f);
+        float x = (screenW - width) * 0.5f;
+        float y = (screenH - height) * 0.5f;
 
         // Solid background and border lines
         Rect fullWindowRect = new Rect(x, y, width, height);
@@ -430,6 +525,7 @@ public class DebugOverlay : MonoBehaviour
         // Zakładki menu
         GUILayout.BeginHorizontal();
         DrawTabButton(DebugTab.Quests, "Zadania");
+        DrawTabButton(DebugTab.NPC, "NPC (Jurek)");
         DrawTabButton(DebugTab.TowelAndStove, "Piec / Recznik");
         DrawTabButton(DebugTab.Inventory, "Ekwipunek");
         DrawTabButton(DebugTab.Teleport, "Teleport");
@@ -448,6 +544,7 @@ public class DebugOverlay : MonoBehaviour
         switch (_currentTab)
         {
             case DebugTab.Quests: DrawQuestsTab(); break;
+            case DebugTab.NPC: DrawNPCTab(); break;
             case DebugTab.TowelAndStove: DrawTowelAndStoveTab(); break;
             case DebugTab.Inventory: DrawInventoryTab(); break;
             case DebugTab.Teleport: DrawTeleportTab(); break;
@@ -464,7 +561,7 @@ public class DebugOverlay : MonoBehaviour
 
         // Pasek dolny
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"FPS: {_currentFps:0.0} | TimeScale: {Time.timeScale:0.0}x | [F2] Przypnij Zadania", _statusLabelStyle);
+        GUILayout.Label($"FPS: {_currentFps:0.0} | TimeScale: {Time.timeScale:0.0}x | [F3] Czas Jurka (17:01:30) | [F4] Zadania", _statusLabelStyle);
         if (GUILayout.Button("[R] Odswiez referencje", _buttonStyle, GUILayout.Width(170), GUILayout.Height(24)))
         {
             ResolveReferences();
@@ -553,6 +650,123 @@ public class DebugOverlay : MonoBehaviour
                 GUILayout.EndHorizontal();
                 GUILayout.Space(4);
             }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 2. ZAKŁADKA NPC (JUREK)
+    // ──────────────────────────────────────────────────────────
+    private void DrawNPCTab()
+    {
+        GUILayout.Label("[ZARZADZANIE KLIENTEM - NPC JUREK]", _subHeaderStyle);
+        GUILayout.Space(6);
+
+        if (_customerJurek == null) ResolveReferences();
+
+        if (_customerJurek == null)
+        {
+            GUILayout.BeginVertical(_panelBoxStyle);
+            GUILayout.Label("[!] Nie znaleziono komponentu CustomerJurek w aktywnej scenie.", _statusLabelStyle);
+            if (GUILayout.Button("[R] Wyszukaj ponownie w scenie", _buttonStyle, GUILayout.Height(30)))
+            {
+                ResolveReferences();
+            }
+            GUILayout.EndVertical();
+            return;
+        }
+
+        // Status Card
+        GUILayout.BeginVertical(_panelBoxStyle);
+        GUILayout.Label($"Klient: <b>Jurek</b>", _headerStyle);
+        GUILayout.Space(2);
+        GUILayout.Label($"Status Przybycia (HasArrived): {(_customerJurek.HasArrived ? "<color=#70FF70>[TAK] Przybyl do salonu</color>" : "<color=#FFC040>[NIE] Czeka na wywolanie</color>")}", _statusLabelStyle);
+        GUILayout.Label($"Status Marszu (IsWalking): {(_customerJurek.IsWalking ? "<color=#70D0FF>[TAK] W ruchu (schody / korytarz)</color>" : "[NIE] Stoi w miejscu")}", _statusLabelStyle);
+        GUILayout.Label($"Status Ucieczki (HasLeft): {(_customerJurek.HasLeft ? "<color=#FF5050>[TAK] Uciekl przed mysza</color>" : "[NIE] Obecny / Brak ucieczki")}", _statusLabelStyle);
+        GUILayout.Label($"Interakcja z graczem (CanInteract): {(_customerJurek.CanInteract ? "<color=#70FF70>[TAK] Gotowy do rozmowy</color>" : "[NIE]")}", _statusLabelStyle);
+        GUILayout.EndVertical();
+
+        GUILayout.Space(8);
+
+        // Sekcja natychmiastowych przywołań
+        GUILayout.Label("Szybkie przywolanie Jurka:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[>] WYWOLAJ PRZYBYCIE (Schody -> Drzwi -> Salon)", _successButtonStyle, GUILayout.Height(36)))
+        {
+            _customerJurek.TriggerArrival();
+        }
+        if (GUILayout.Button("[>>] TELEPORTUJ OD RAZU DO SALONU", _tabActiveStyle, GUILayout.Height(36)))
+        {
+            _customerJurek.ForceSpawnInsideSalon();
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(4);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[!] POSTAW PRZED DRZWIAMI (Szczyt schodow)", _buttonStyle, GUILayout.Height(32)))
+        {
+            _customerJurek.ForceSpawnAtDoor();
+        }
+        if (GUILayout.Button("[X] RESETUJ JURKA (Stan poczatkowy)", _dangerButtonStyle, GUILayout.Height(32)))
+        {
+            _customerJurek.ResetCustomerState();
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+
+        // Drzwi i dzwonek
+        GUILayout.Label("Interakcja z drzwiami i dzwonkiem wejsciowym:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Zadzwon dzwonkiem w drzwiach", _buttonStyle, GUILayout.Height(30)))
+        {
+            _customerJurek.PlayDoorBellManual();
+        }
+        if (GUILayout.Button("Zapukaj do drzwi", _buttonStyle, GUILayout.Height(30)))
+        {
+            _customerJurek.PlayKnockManual();
+        }
+        DoorInteractable door = FindAnyObjectByType<DoorInteractable>();
+        if (door != null)
+        {
+            if (GUILayout.Button(door.IsOpen ? "Zamknij Drzwi" : "Otworz Drzwi", _buttonStyle, GUILayout.Height(30)))
+            {
+                if (door.IsOpen) door.CloseDoor(); else { door.Unlock(); door.OpenDoor(); }
+            }
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+
+        // Dialog i reakcje
+        GUILayout.Label("Dialog i interakcja:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Uruchom powitanie / dialog", _buttonStyle, GUILayout.Height(32)))
+        {
+            _customerJurek.Interact();
+        }
+        if (GUILayout.Button("Wymus paniczna ucieczke (Mysz)", _dangerButtonStyle, GUILayout.Height(32)))
+        {
+            _customerJurek.TriggerMouseScareAndLeave();
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+
+        // Ustawienie godziny w grze (17:01:33)
+        if (_timeController != null)
+        {
+            GUILayout.Label("Synchronizacja czasu gry z przybyciem Jurka (17:01:33):", _subHeaderStyle);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Ustaw 17:01:30 (3s przed wejsciem)", _buttonStyle, GUILayout.Height(30)))
+            {
+                _timeController.SetTime(17, 1, 30);
+            }
+            if (GUILayout.Button("Ustaw 17:01:33 (Dokladny czas wejscia)", _buttonStyle, GUILayout.Height(30)))
+            {
+                _timeController.SetTime(17, 1, 33);
+            }
+            GUILayout.EndHorizontal();
         }
     }
 
@@ -911,13 +1125,21 @@ public class DebugOverlay : MonoBehaviour
         if (GUILayout.Button("2.0x (Szybko)", _buttonStyle)) Time.timeScale = 2.0f;
         if (GUILayout.Button("5.0x (Super Szybko)", _successButtonStyle)) Time.timeScale = 5.0f;
         GUILayout.EndHorizontal();
+
+        GUILayout.Space(12);
+
+        GUILayout.Label("Optymalizacja UI i Skalowania:", _subHeaderStyle);
+        if (GUILayout.Button("[+] Zoptymalizuj Canvasy w scenie (ScaleWithScreenSize 1920x1080)", _buttonStyle, GUILayout.Height(32)))
+        {
+            FixAllSceneCanvasScalers();
+        }
     }
 
-    private void DrawPinnedQuestTracker()
+    private void DrawPinnedQuestTracker(float screenW, float screenH)
     {
         float width = 320f;
-        float height = 340f;
-        float x = Screen.width - width - 15f;
+        float height = Mathf.Min(screenH * 0.45f, 380f);
+        float x = screenW - width - 15f;
         float y = 15f;
 
         Rect trackerRect = new Rect(x, y, width, height);
@@ -925,7 +1147,7 @@ public class DebugOverlay : MonoBehaviour
         GUI.DrawTexture(new Rect(x, y, width, 2), _goldBorderTex);
 
         GUILayout.BeginArea(new Rect(x + 10, y + 10, width - 20, height - 20));
-        GUILayout.Label("[ZADANIA - F2]", _subHeaderStyle);
+        GUILayout.Label("[ZADANIA - F4]", _subHeaderStyle);
         GUILayout.Space(4);
 
         _questScrollPos = GUILayout.BeginScrollView(_questScrollPos);
