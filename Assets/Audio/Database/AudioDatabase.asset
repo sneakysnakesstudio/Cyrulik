@@ -93,12 +93,39 @@ MonoBehaviour:
     minVolumeMultiplier: 0.72
     maxVolumeMultiplier: 0.9
   - groupName: sharpen_good
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 2b98f3ce97b9914429c2cb4f03faa3e3, type: 3}
+    - {fileID: 8300000, guid: 7602ff9ab8dda8e43ace5c0410badbc3, type: 3}
+    - {fileID: 8300000, guid: 8e9ae9e09616ab34eb9c56bc85136152, type: 3}
     volume: 0.75
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95
     maxPitch: 1.05
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: sharpen_perfect
+    clips:
+    - {fileID: 8300000, guid: 2b98f3ce97b9914429c2cb4f03faa3e3, type: 3}
+    - {fileID: 8300000, guid: 7602ff9ab8dda8e43ace5c0410badbc3, type: 3}
+    - {fileID: 8300000, guid: 8e9ae9e09616ab34eb9c56bc85136152, type: 3}
+    volume: 0.95
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 1.18
+    maxPitch: 1.28
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: sharpen_miss
+    clips:
+    - {fileID: 8300000, guid: 70391f9383fc3f6499838a2b8fdd2f89, type: 3}
+    volume: 0.6
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.85
+    maxPitch: 0.95
     randomizeVolume: 1
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
