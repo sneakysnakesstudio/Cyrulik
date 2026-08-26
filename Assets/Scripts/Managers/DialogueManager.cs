@@ -136,6 +136,10 @@ public class DialogueManager : MonoBehaviour
     [TextArea(2, 4)]
     [SerializeField] private string jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
 
+    [Tooltip("Kwestia wypowiadana przez Jurka, gdy w salonie jest za ciemno i brak muzyki (nieprzygotowana atmosfera).")]
+    [TextArea(2, 4)]
+    [SerializeField] private string jurekGloomyComplaint = "It's pitch black and dead silent in here... The atmosphere is way too gloomy! I'm taking my business elsewhere!";
+
     [Tooltip("Kwestia wypowiadana przez Jurka, gdy zauważy mysz w salonie.")]
     [TextArea(2, 4)]
     [SerializeField] private string jurekMouseScareReaction = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
@@ -154,6 +158,14 @@ public class DialogueManager : MonoBehaviour
     public void ShowJurekTimeoutDialogue(Action onComplete = null)
     {
         ShowClientLine("Jurek", jurekTimeoutComplaint, onComplete);
+    }
+
+    /// <summary>
+    /// Wyświetla odmowę Jurka ze względu na zbyt ponurą / ciemną atmosferę.
+    /// </summary>
+    public void ShowJurekGloomyDialogue(Action onComplete = null)
+    {
+        ShowClientLine("Jurek", jurekGloomyComplaint, onComplete);
     }
 
     /// <summary>
@@ -176,6 +188,7 @@ public class DialogueManager : MonoBehaviour
             new ClientDialogueUI.DialogueLine("Jurek", "...")
         };
         jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
+        jurekGloomyComplaint = "It's pitch black and dead silent in here... The atmosphere is way too gloomy! I'm taking my business elsewhere!";
         jurekMouseScareReaction = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
         Debug.Log("[DialogueManager] Zresetowano dialogi Jurka do domyślnych (EN)!");
     }

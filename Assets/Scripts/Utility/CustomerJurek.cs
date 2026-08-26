@@ -112,6 +112,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [Header("Interakcja z graczem")]
     [SerializeField] private string interactionName = "Talk to Jurek";
 
+    [Header("Wymóg Przygotowania Salonu (Atmosfera)")]
+    [Tooltip("Czy Jurek wymaga włączonych świateł i radia przed rozpoczęciem usługi?")]
+    [SerializeField] private bool requireAtmosphere = true;
+    [Tooltip("ID zadania w PreparationStateManager (domyślnie 'proper_atmosphere').")]
+    [SerializeField] private string atmosphereTaskId = "proper_atmosphere";
+    [TextArea(2, 4)]
+    [SerializeField] private string gloomyFailReason = "The client felt the atmosphere was too gloomy and left.";
+
     [Header("3. Trasa: Po wewnętrznych schodkach do Fotela (Górny podest)")]
     [Tooltip("Punkty trasy prowadzące od Waiting Pointu, po wewnętrznych schodkach na podest (dodaj tutaj punkty schodków!).")]
     [SerializeField] private Transform[] toChairWaypoints;
@@ -531,13 +539,13 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             {
                 if (leaveOnTimeout)
                 {
-                    WalkOut();
+                    WalkOut(() => ShowEndScreenWithFade("The client waited too long and left.", false));
                 }
             });
         }
         else if (leaveOnTimeout)
         {
-            WalkOut();
+            WalkOut(() => ShowEndScreenWithFade("The client waited too long and left.", false));
         }
     }
 
@@ -649,12 +657,20 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         {
             DialogueManager.Instance.ShowJurekMouseScareDialogue(() =>
             {
-                WalkOut(onComplete);
+                WalkOut(() =>
+                {
+                    ShowEndScreenWithFade("The client saw a rat in the salon and ran away!", false);
+                    onComplete?.Invoke();
+                });
             });
         }
         else
         {
-            WalkOut(onComplete);
+            WalkOut(() =>
+            {
+                ShowEndScreenWithFade("The client saw a rat in the salon and ran away!", false);
+                onComplete?.Invoke();
+            });
         }
     }
 
@@ -715,6 +731,17 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         Debug.Log("[CustomerJurek] Gracz podszedł i wszedł w interakcję z Jurkiem!");
         onPlayerInteracted?.Invoke();
 
+        // 1. Sprawdź czy salon został odpowiednio przygotowany (lampki + radio)
+        bool atmospherePassed = !requireAtmosphere || (PreparationStateManager.Instance != null && PreparationStateManager.Instance.IsTaskCompleted(atmosphereTaskId));
+
+        if (!atmospherePassed)
+        {
+            Debug.Log("<color=#FF6060>[CustomerJurek] Atmosfera w salonie nieprzygotowana (brak lamp/radia)! Jurek odmawia golenia i wychodzi.</color>");
+            TriggerGloomyAtmosphereFail();
+            return;
+        }
+
+        // 2. Jeśli atmosfera jest gotowa, normalny dialog powitalny
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.StartJurekArrivalDialogue(OnDialogueCompleted);
@@ -722,6 +749,56 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         else
         {
             OnDialogueCompleted();
+        }
+    }
+
+    /// <summary>
+    /// Wywoływane, gdy gracz nie zapalił lamp i radia (fail state ponurej atmosfery).
+    /// </summary>
+    public void TriggerGloomyAtmosphereFail()
+    {
+        if (_hasLeft) return;
+        _hasLeft = true;
+        _movementTween?.Kill();
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.ShowJurekGloomyDialogue(() =>
+            {
+                WalkOut(() =>
+                {
+                    ShowEndScreenWithFade(gloomyFailReason, false);
+                });
+            });
+        }
+        else
+        {
+            WalkOut(() =>
+            {
+                ShowEndScreenWithFade(gloomyFailReason, false);
+            });
+        }
+    }
+
+    private void ShowEndScreenWithFade(string reason, bool isVictory)
+    {
+        if (ScreenFader.Instance != null)
+        {
+            ScreenFader.Instance.FadeOut(0.4f, () =>
+            {
+                if (EndSummaryUI.Instance != null)
+                {
+                    EndSummaryUI.Instance.ShowEndScreen(reason, isVictory);
+                }
+                ScreenFader.Instance.FadeIn(0.3f);
+            });
+        }
+        else
+        {
+            if (EndSummaryUI.Instance != null)
+            {
+                EndSummaryUI.Instance.ShowEndScreen(reason, isVictory);
+            }
         }
     }
 

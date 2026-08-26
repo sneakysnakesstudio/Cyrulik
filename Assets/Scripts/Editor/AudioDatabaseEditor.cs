@@ -45,7 +45,7 @@ public class AudioDatabaseEditor : Editor
         serializedObject.Update();
 
         // 1. Nagłówek i statystyki
-        DrawHeader();
+        DrawDatabaseHeader();
 
         // 2. Wyszukiwarka
         DrawSearchBar();
@@ -110,7 +110,7 @@ public class AudioDatabaseEditor : Editor
         serializedObject.ApplyModifiedProperties();
     }
 
-    private void DrawHeader()
+    private void DrawDatabaseHeader()
     {
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
         EditorGUILayout.BeginHorizontal();

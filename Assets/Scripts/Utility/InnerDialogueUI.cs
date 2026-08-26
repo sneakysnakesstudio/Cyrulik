@@ -147,7 +147,6 @@ public class InnerDialogueUI : MonoBehaviour
     // Cache WaitForSeconds — unikamy new() co klatkę w typewriterze (GC pressure)
     private WaitForSeconds _waitChar;
     private WaitForSeconds _waitContinueGuard;
-    private float _cachedCharDelay = -1f;
 
 #if UNITY_EDITOR
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

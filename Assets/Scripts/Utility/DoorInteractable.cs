@@ -29,6 +29,23 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [Tooltip("Zaznacz tylko na drzwiach/szufladach, które mają być zablokowane na początku.")]
     [SerializeField] private bool lockedAtStart = false;
 
+    [Header("Key Requirement (Wymóg Klucza)")]
+    [Tooltip("Czy te drzwi/szafa wymagają przyniesienia klucza w rękach gracza do odblokowania?")]
+    [SerializeField] private bool requireKey = false;
+
+    [Tooltip("Wymagany ItemId klucza w PickupItem (domyślnie 'wardrobe_key' lub 'key').")]
+    [SerializeField] private string requiredKeyItemId = "wardrobe_key";
+
+    [Tooltip("Czy klucz ma zniknąć z rąk gracza po odblokowaniu zamka?")]
+    [SerializeField] private bool consumeKeyOnUnlock = true;
+
+    [Tooltip("Wewnętrzna myśl gracza, gdy próbuje otworzyć drzwi bez klucza.")]
+    [SerializeField] private string keyMissingMessage = "It's locked. I need to find the key...";
+
+    [Tooltip("Dźwięk odblokowania zamka kluczem (np. 'drawer_open').")]
+    [SerializeField] private string unlockSoundName = "drawer_open";
+    [SerializeField] private AudioClip customUnlockClip;
+
     [Header("First Doors (Tutorial Gate)")]
     [Tooltip("Zaznacz na drzwiach wyjściowych z pokoju — wymaga ubrania się przed wyjściem.")]
     [SerializeField] private bool firstDoors = false;
@@ -39,7 +56,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [Tooltip("Wewnętrzny dialog gracza przy próbie wyjścia bez ubrania.")]
     [SerializeField] private string blockedMessage = "I should get dressed first...";
 
-    [Tooltip("Wywoływane gdy gracz próbuje otworzyć drzwi bez spełnienia warunku firstDoors.")]
+    [Tooltip("Wywoływane gdy gracz próbuje otworzyć drzwi bez spełnienia warunku.")]
     [SerializeField] private UnityEvent<string> OnDoorBlocked;
 
     [Header("References")]
@@ -122,15 +139,43 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private float handleSoundDelay = 0f;
     [SerializeField] private string door_rattle_sound = "door_rattle_sound";
 
-    public string InteractionName => interactionName;
+    public string InteractionName
+    {
+        get
+        {
+            if (requireKey && !_isUnlocked && !_isWardrobeKeyUnlocked)
+            {
+                return IsPlayerHoldingRequiredKey() ? "Unlock with key" : "Locked (Requires key)";
+            }
+
+            if (IsOpen) return "Close";
+            return interactionName;
+        }
+    }
 
     public bool IsOpen { get; private set; }
+
+    private static bool _isWardrobeKeyUnlocked = false;
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        _isWardrobeKeyUnlocked = false;
+    }
+#endif
 
     public bool CanInteract
     {
         get
         {
-            if (!_isUnlocked)
+            // Jeśli wymaga klucza i jest zablokowane (oraz nie odblokowano globalnie):
+            if (requireKey && !_isUnlocked && !_isWardrobeKeyUnlocked)
+            {
+                return IsPlayerHoldingRequiredKey();
+            }
+
+            if (!_isUnlocked && !_isWardrobeKeyUnlocked)
                 return false;
 
             if (firstDoors && !IsRequiredTaskDone())
@@ -162,7 +207,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             doorPivot = transform;
         }
 
-        _isUnlocked = !lockedAtStart;
+        _isUnlocked = !lockedAtStart && (!requireKey || _isWardrobeKeyUnlocked);
 
         SetupAudioSource();
 
@@ -245,6 +290,22 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     public void Interact()
     {
+        // 1. Jeśli drzwi wymagają klucza i są jeszcze zablokowane
+        if (requireKey && !_isUnlocked && !_isWardrobeKeyUnlocked)
+        {
+            if (IsPlayerHoldingRequiredKey())
+            {
+                UnlockWithKey();
+                OpenDoor();
+                return;
+            }
+            else
+            {
+                OnBlockedInteraction();
+                return;
+            }
+        }
+
         if (!CanInteract)
         {
             OnBlockedInteraction();
@@ -258,6 +319,86 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         else
         {
             OpenDoor();
+        }
+    }
+
+    private bool IsPlayerHoldingRequiredKey()
+    {
+        PlayerHands playerHands = FindAnyObjectByType<PlayerHands>();
+        if (playerHands == null || !playerHands.HasItem)
+            return false;
+
+        GameObject held = playerHands.HeldItem;
+        if (held == null)
+            return false;
+
+        PickupItem pickup = held.GetComponentInChildren<PickupItem>();
+        if (pickup == null)
+            pickup = held.GetComponentInParent<PickupItem>();
+
+        string heldId = pickup != null ? pickup.ItemId : held.name;
+        if (!string.IsNullOrEmpty(heldId))
+        {
+            string idLower = heldId.Trim().ToLowerInvariant();
+            string reqLower = string.IsNullOrEmpty(requiredKeyItemId) ? "key" : requiredKeyItemId.Trim().ToLowerInvariant();
+
+            if (idLower == reqLower || idLower == "key" || idLower == "wardrobe_key" || idLower == "klucz" || idLower.Contains("key") || idLower.Contains("klucz"))
+            {
+                return true;
+            }
+        }
+
+        string objLower = held.name.ToLowerInvariant();
+        if (objLower.Contains("key") || objLower.Contains("klucz"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void UnlockWithKey()
+    {
+        _isWardrobeKeyUnlocked = true;
+        _isUnlocked = true;
+        Debug.Log($"[DoorInteractable] '{gameObject.name}' odblokowane kluczem! (Wszystkie drzwi szafy odblokowane)");
+
+        // Odblokuj automatycznie wszystkie inne drzwi z requireKey na scenie
+        DoorInteractable[] allDoors = FindObjectsByType<DoorInteractable>(FindObjectsSortMode.None);
+        foreach (var door in allDoors)
+        {
+            if (door != null && door.requireKey)
+            {
+                door.Unlock();
+            }
+        }
+
+        // Odblokuj też ewentualny WardrobeInteractable
+        WardrobeInteractable[] allWardrobes = FindObjectsByType<WardrobeInteractable>(FindObjectsSortMode.None);
+        foreach (var wardrobe in allWardrobes)
+        {
+            if (wardrobe != null)
+            {
+                wardrobe.UnlockDirect();
+            }
+        }
+
+        if (consumeKeyOnUnlock)
+        {
+            PlayerHands playerHands = FindAnyObjectByType<PlayerHands>();
+            if (playerHands != null)
+            {
+                playerHands.DestroyHeldItem();
+            }
+        }
+
+        if (customUnlockClip != null)
+        {
+            PlayDirectClip(customUnlockClip);
+        }
+        else if (!string.IsNullOrEmpty(unlockSoundName) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(unlockSoundName);
         }
     }
 
@@ -298,7 +439,15 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     private string GetBlockedDialogueMessage()
     {
-        // 1. Drzwi z wymogiem ubrania się (First Doors)
+        // 1. Wymóg klucza
+        if (requireKey && !_isUnlocked)
+        {
+            string msg = !string.IsNullOrEmpty(keyMissingMessage) ? keyMissingMessage : "It's locked. I need to find the key...";
+            OnDoorBlocked?.Invoke(msg);
+            return msg;
+        }
+
+        // 2. Drzwi z wymogiem ubrania się (First Doors)
         if (firstDoors && !IsRequiredTaskDone())
         {
             string msg = !string.IsNullOrEmpty(blockedMessage) ? blockedMessage : "I should get dressed first...";
@@ -306,7 +455,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             return msg;
         }
 
-        // 2. Drzwi zablokowane na klucz / zamknięte
+        // 3. Drzwi zablokowane na klucz / zamknięte
         if (!_isUnlocked)
         {
             string msg = !string.IsNullOrEmpty(blockedMessage) ? blockedMessage : "It's locked...";

@@ -263,8 +263,8 @@ public static class RazorStropBuilder
         razorRect.anchoredPosition = new Vector2(-150f, -220f);
         razorRect.sizeDelta = new Vector2(340f, 190f);
         Image razorImg = razorGo.GetComponent<Image>();
-        Sprite razorSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_1ostrze_drewno.png")
-                          ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_wskaznik_v3_orzech.png");
+        Sprite razorSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_wskaznik_glowna.png")
+                          ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_1ostrze_drewno.png");
         if (razorSprite != null) razorImg.sprite = razorSprite;
         razorImg.preserveAspect = true;
         razorImg.raycastTarget = false;
@@ -424,7 +424,7 @@ public static class RazorStropBuilder
         tmpInst.alignment = TextAlignmentOptions.Center;
         tmpInst.fontSize = 24f;
         tmpInst.color = Color.white;
-        tmpInst.text = "PRESS [SPACE] TO START";
+        tmpInst.text = "PRESS [SPACE] OR CLICK TO START";
 
         // 8. Podpięcie referencji i angielskich tekstów do RazorMinigame
         SerializedObject so = new SerializedObject(minigame);
@@ -441,7 +441,6 @@ public static class RazorStropBuilder
         so.FindProperty("bottomAnchor").objectReferenceValue = botRect;
         so.FindProperty("topAnchor").objectReferenceValue = topRect;
         so.FindProperty("zoneGood").objectReferenceValue = null;
-        so.FindProperty("zonePerfect").objectReferenceValue = null;
 
         // Automatyczne podpięcie gracza i kamery
         SerializedProperty moveProp = so.FindProperty("playerMovement");
@@ -473,11 +472,10 @@ public static class RazorStropBuilder
         }
 
         // Ustawienie wszystkich promptów na język angielski
-        SetSerializedString(so, "promptStartMinigame", "PRESS [SPACE] TO START");
-        SetSerializedString(so, "promptHoldToSharpen", "PRESS [SPACE] TO STROKE  |  CLICK [LMB] IN ZONE");
-        SetSerializedString(so, "promptStrokeInFlight", "CLICK [LMB] IN ZONE (GOOD / PERFECT)!");
+        SetSerializedString(so, "promptStartMinigame", "PRESS [SPACE] OR CLICK TO START");
+        SetSerializedString(so, "promptHoldToSharpen", "HOLD [LMB] & MOVE UP  |  PRESS [E] IN GOOD ZONE");
+        SetSerializedString(so, "promptStrokeInFlight", "PRESS [E] / [INTERACT] IN GOOD ZONE!");
         SetSerializedString(so, "promptReturning", "FLIPPING BLADE...");
-        SetSerializedString(so, "textPerfect", "PERFECT!");
         SetSerializedString(so, "textGood", "GOOD!");
         SetSerializedString(so, "textTooEarly", "TOO EARLY!");
         SetSerializedString(so, "textTooLate", "TOO LATE!");
