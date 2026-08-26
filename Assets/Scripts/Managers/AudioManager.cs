@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class AudioManager : MonoBehaviour
 {
@@ -551,14 +552,54 @@ public class AudioManager : MonoBehaviour
 
     #endregion
 
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         _musicFadeTween?.Kill();
         _ambientFadeTween?.Kill();
     }
 
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Reset radio ducking and pause states on scene reload
+        _isRadioPlaying = false;
+        AudioListener.pause = false;
+
+        // Restore AudioListener volume from PlayerPrefs or default
+        if (PlayerPrefs.HasKey("MasterVolume"))
+        {
+            AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume", 1f);
+        }
+        else
+        {
+            AudioListener.volume = 1f;
+        }
+
+        // Validate audio sources
+        if (musicSource == null) SetupMusicSource();
+        if (ambientSource == null) SetupAmbientSource();
+        if (_sourcePool == null || _sourcePool.Count == 0) CreateAudioPool();
+
+        // Restart background music and ambient on reload
+        if (playMusicOnStart && mainThemeClip != null)
+        {
+            PlayMusic(mainThemeClip, musicFadeDuration, loopMusic);
+        }
+
+        if (playAmbientOnStart && ambientClip != null)
+        {
+            PlayAmbient(ambientClip, ambientFadeDuration, loopAmbient);
+        }
+    }
+
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         _musicFadeTween?.Kill();
         _ambientFadeTween?.Kill();
     }

@@ -6,9 +6,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(CanvasGroup))]
-public class RazorMinigame : MonoBehaviour
+public class RazorMinigame : MonoBehaviour, IInteractable
 {
+    public string InteractionName => "Sharpen Razor";
+    public void Interact() => StartMinigame();
     // ──────────────────────────────────────────────────────────
     // UI REFERENCES & CANVAS
     // ──────────────────────────────────────────────────────────
@@ -80,12 +81,12 @@ public class RazorMinigame : MonoBehaviour
     [Tooltip("Top apex anchor (fallback).")]
     [SerializeField] private RectTransform topAnchor;
 
-    [Header("360° Spin Flip Animation (In Place)")]
-    [Tooltip("Duration of the 360-degree spin in place when returned to bottom (seconds).")]
-    [SerializeField] private float spinDuration = 0.35f;
+    [Header("Gentle Wrist Flip on Return (In Place)")]
+    [Tooltip("Small angle flip/tilt upon returning to the bottom (degrees, default: 18°).")]
+    [SerializeField] private float returnFlipAngle = 18f;
 
-    [Tooltip("Easing curve for the 360-degree spin animation.")]
-    [SerializeField] private Ease spinEase = Ease.OutCubic;
+    [Tooltip("Duration of the gentle flip/tilt after returning (seconds).")]
+    [SerializeField] private float flipDuration = 0.25f;
 
     [Header("Hit Zones (Transforms)")]
     [Tooltip("Transform / Panel of the GOOD hit zone.")]
@@ -115,38 +116,49 @@ public class RazorMinigame : MonoBehaviour
     // TIMINGS & MOVEMENT (SECONDS)
     // ──────────────────────────────────────────────────────────
 
-    [Header("Stroke Timings (Seconds)")]
-    [Tooltip("Full travel time from bottom to top in attempt 1 while holding stroke (default: 2.2s).")]
-    [SerializeField] private float initialTravelTime = 2.2f;
+    [Header("Stroke Timings & Speedup (Seconds)")]
+    [Tooltip("Full travel time from bottom to top in attempt 1 while holding stroke (default: 2.0s).")]
+    [SerializeField] private float initialTravelTime = 2.0f;
 
-    [Tooltip("Time reduction per consecutive attempt (makes stroke faster each pass, default: 0.15s).")]
-    [SerializeField] private float timeReductionPerAttempt = 0.15f;
+    [Tooltip("Noticeable time reduction per consecutive attempt (makes stroke faster each pass, default: 0.35s).")]
+    [SerializeField] private float timeReductionPerAttempt = 0.35f;
 
-    [Tooltip("Minimum stroke travel time cap (default: 1.2s).")]
-    [SerializeField] private float minTravelTime = 1.2f;
+    [Tooltip("Minimum stroke travel time cap (default: 0.8s).")]
+    [SerializeField] private float minTravelTime = 0.8f;
 
-    [Tooltip("Duration to return blade downwards to bottom after stroke (default: 0.5s).")]
-    [SerializeField] private float returnDuration = 0.5f;
+    [Tooltip("Duration to return blade downwards to bottom after stroke (default: 0.4s).")]
+    [SerializeField] private float returnDuration = 0.4f;
+
+    [Header("In-Stroke Acceleration (Realistic Pull)")]
+    [Tooltip("Acceleration curve exponent for the single stroke motion (1.0 = linear, 1.75 = starts slower at bottom and accelerates faster and faster up the strop).")]
+    [SerializeField] private float strokeAccelerationExponent = 1.75f;
+
+    [Header("Dynamic Blade Lean & Strop Engagement")]
+    [Tooltip("Angle to smoothly lean/rotate the razor into the leather strop during the stroke (degrees, default: 6°).")]
+    [SerializeField] private float strokeLeanAngle = 6.0f;
+
+    [Tooltip("Subtle breathing sway of the blade along the leather (degrees, default: 0.8°).")]
+    [SerializeField] private float subtleSwayAngle = 0.8f;
 
     // ──────────────────────────────────────────────────────────
-    // SHARPNESS & RULES
+    // SHARPNESS & GOAL (FILL TO 100%)
     // ──────────────────────────────────────────────────────────
 
-    [Header("Sharpness & Attempts")]
+    [Header("Sharpness & Goal")]
     [Tooltip("Initial sharpness percentage (0..100%).")]
     [Range(0f, 100f)] [SerializeField] private float initialSharpness = 0f;
 
-    [Tooltip("Sharpness percentage threshold required for success (default: 80%).")]
-    [Range(0f, 100f)] [SerializeField] private float sharpThreshold = 80f;
-
-    [Tooltip("Total attempts / passes available (default: 4).")]
-    [SerializeField] private int totalAttempts = 4;
+    [Tooltip("Sharpness percentage threshold required for success (default: 100%).")]
+    [Range(10f, 100f)] [SerializeField] private float sharpThreshold = 100f;
 
     [Tooltip("Sharpness gained per GOOD hit (default: 25%).")]
     [SerializeField] private float gainGood = 25f;
 
-    [Tooltip("Sharpness penalty on MISS (default: -10%).")]
-    [SerializeField] private float penaltyMiss = 10f;
+    [Tooltip("Sharpness penalty on MISS (default: -5%).")]
+    [SerializeField] private float penaltyMiss = 5f;
+
+    [Tooltip("Reference attempts for speed scaling.")]
+    [SerializeField] private int totalAttempts = 4;
 
     [Tooltip("Delay before closing minigame after completion (seconds).")]
     [SerializeField] private float endDelay = 1.0f;
@@ -259,7 +271,10 @@ public class RazorMinigame : MonoBehaviour
         if (Instance == null) Instance = this;
         else if (Instance != this) Destroy(gameObject);
 
-        if (minigameCanvasGroup == null) minigameCanvasGroup = GetComponent<CanvasGroup>();
+        if (minigameCanvasGroup == null)
+        {
+            minigameCanvasGroup = GetComponent<CanvasGroup>() ?? GetComponentInChildren<CanvasGroup>(true);
+        }
 
         HideUIImmediate();
     }
@@ -452,10 +467,9 @@ public class RazorMinigame : MonoBehaviour
             return;
         }
 
-        // 2. Advance stroke progress
+        // 2. Advance stroke progress with realistic in-stroke acceleration (starts slower, builds momentum and accelerates up the leather)
         _flightTimer += Time.deltaTime;
         float duration = CalculateCurrentTravelDuration();
-        float progressDelta = Time.deltaTime / duration;
 
         // Physical mouse drag up support
         if (Mouse.current != null)
@@ -463,19 +477,24 @@ public class RazorMinigame : MonoBehaviour
             float mouseDeltaY = Mouse.current.delta.y.ReadValue();
             if (mouseDeltaY > 0f)
             {
-                progressDelta += (mouseDeltaY * 0.0012f);
+                _flightTimer += (mouseDeltaY * 0.0015f);
             }
         }
 
-        _strokeProgress += progressDelta;
+        float normalizedTime = Mathf.Clamp01(_flightTimer / duration);
+        _strokeProgress = Mathf.Pow(normalizedTime, strokeAccelerationExponent);
         _strokeProgress = Mathf.Clamp01(_strokeProgress);
 
-        // 3. Move along waypoints path with friction micro-wobble
+        // 3. Move smoothly along waypoints path with natural leather engagement tilt
         if (razorIndicator != null)
         {
             razorIndicator.anchoredPosition = EvaluatePathPosition(_strokeProgress);
-            float frictionWobble = Mathf.Sin(Time.time * 50f) * 1.6f;
-            razorIndicator.localRotation = Quaternion.Euler(0f, 0f, _baseZRotation + frictionWobble);
+
+            // Natural pressure lean into the leather strop (peaks smoothly in the middle / good zone)
+            float leatherEngagementLean = Mathf.Sin(_strokeProgress * Mathf.PI) * strokeLeanAngle;
+            float gentleSway = Mathf.Sin(Time.time * 6f) * subtleSwayAngle;
+
+            razorIndicator.localRotation = Quaternion.Euler(0f, 0f, _baseZRotation + leatherEngagementLean + gentleSway);
             razorIndicator.localScale = Vector3.one;
         }
 
@@ -493,7 +512,7 @@ public class RazorMinigame : MonoBehaviour
         }
 
         // 6. Overshot top without pressing Interact -> Miss
-        if (_strokeProgress >= 1f)
+        if (normalizedTime >= 1f || _strokeProgress >= 1f)
         {
             HandleReachedTopMiss();
         }
@@ -672,31 +691,33 @@ public class RazorMinigame : MonoBehaviour
         _attemptsDone++;
         UpdateAttemptsText();
 
-        if (_attemptsDone >= totalAttempts || _sharpness >= 100f)
+        if (_sharpness >= sharpThreshold)
         {
             _state = State.Finished;
             StartCoroutine(EndMinigameRoutine());
         }
         else
         {
-            // 360° spin in place without changing position
+            // Subtle, realistic wrist flip / tilt in place
             if (razorIndicator != null)
             {
+                razorIndicator.DOKill();
                 razorIndicator.anchoredPosition = GetStartWaypoint();
                 razorIndicator.localScale = Vector3.one;
                 razorIndicator.localRotation = Quaternion.Euler(0f, 0f, _baseZRotation);
 
-                razorIndicator.DORotate(new Vector3(0f, 0f, _baseZRotation - 360f), spinDuration, RotateMode.FastBeyond360)
-                    .SetEase(spinEase)
-                    .SetLink(razorIndicator.gameObject, LinkBehaviour.KillOnDestroy)
-                    .OnComplete(() =>
-                    {
-                        razorIndicator.localRotation = Quaternion.Euler(0f, 0f, _baseZRotation);
-                        FlashRazorReadyGleam();
-                        _state = State.ReadyForStroke;
-                        _strokeProgress = 0f;
-                        SetInstructionPrompt(promptHoldToSharpen);
-                    });
+                Sequence flipSeq = DOTween.Sequence();
+                flipSeq.Append(razorIndicator.DORotate(new Vector3(0f, 0f, _baseZRotation + returnFlipAngle), flipDuration * 0.5f).SetEase(Ease.OutQuad));
+                flipSeq.Append(razorIndicator.DORotate(new Vector3(0f, 0f, _baseZRotation), flipDuration * 0.5f).SetEase(Ease.InOutQuad));
+                flipSeq.SetLink(razorIndicator.gameObject, LinkBehaviour.KillOnDestroy);
+                flipSeq.OnComplete(() =>
+                {
+                    razorIndicator.localRotation = Quaternion.Euler(0f, 0f, _baseZRotation);
+                    FlashRazorReadyGleam();
+                    _state = State.ReadyForStroke;
+                    _strokeProgress = 0f;
+                    SetInstructionPrompt(promptHoldToSharpen);
+                });
             }
             else
             {
@@ -718,9 +739,6 @@ public class RazorMinigame : MonoBehaviour
             razorImg.color = new Color(2.5f, 2.5f, 2.5f, 1f);
             razorImg.DOColor(Color.white, 0.35f).SetEase(Ease.OutQuad).SetLink(razorImg.gameObject, LinkBehaviour.KillOnDestroy);
         }
-
-        razorIndicator.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.25f, vibrato: 8, elasticity: 1f)
-            .SetLink(razorIndicator.gameObject, LinkBehaviour.KillOnDestroy);
 
         if (ParticleManager.Instance != null)
         {
@@ -947,8 +965,7 @@ public class RazorMinigame : MonoBehaviour
     {
         if (attemptsText != null)
         {
-            int currentPass = Mathf.Min(_attemptsDone + 1, totalAttempts);
-            attemptsText.text = $"PASS: {currentPass} / {totalAttempts}";
+            attemptsText.text = $"SHARPNESS: {Mathf.RoundToInt(_sharpness)}%";
         }
     }
 
@@ -956,6 +973,7 @@ public class RazorMinigame : MonoBehaviour
     {
         float ratio = Mathf.Clamp01(_sharpness / 100f);
 
+        // 1. Smooth fill of the gradient bar
         if (sharpnessFillImage != null)
         {
             _fillTween?.Kill();
@@ -971,17 +989,19 @@ public class RazorMinigame : MonoBehaviour
             }
         }
 
+        // 2. Percentage Text (if assigned)
         if (sharpnessPercentageText != null)
         {
             sharpnessPercentageText.text = $"{Mathf.RoundToInt(_sharpness)}%";
         }
 
-        if (sharpnessTargetMarker != null && sharpnessTargetMarker.parent is RectTransform parentRt)
+        // 3. Hide target needle marker for clean progress bar
+        if (sharpnessTargetMarker != null && sharpnessTargetMarker.gameObject.activeSelf)
         {
-            float targetRatio = Mathf.Clamp01(sharpThreshold / 100f);
-            float targetY = (targetRatio - 0.5f) * parentRt.rect.height;
-            sharpnessTargetMarker.anchoredPosition = new Vector2(sharpnessTargetMarker.anchoredPosition.x, targetY);
+            sharpnessTargetMarker.gameObject.SetActive(false);
         }
+
+        UpdateAttemptsText();
     }
 
     private void ShowFeedback(string text, Color? color = null, bool isPunch = false)

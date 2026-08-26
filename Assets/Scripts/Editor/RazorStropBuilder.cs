@@ -108,7 +108,9 @@ public static class RazorStropBuilder
         boxCol.center = new Vector3(0f, 0f, 0.04f);
         boxCol.size = new Vector3(0.18f, 0.95f, 0.12f);
 
-        // 9. Komponenty fizyki i cząsteczek
+        // 9. Komponenty fizyki, interakcji i cząsteczek
+        RazorStropInteractable interactable = stropRoot.AddComponent<RazorStropInteractable>();
+
         HangingStrapSway sway = stropRoot.AddComponent<HangingStrapSway>();
         var pivotField = typeof(HangingStrapSway).GetField("pivotTransform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (pivotField != null) pivotField.SetValue(sway, pivotGo.transform);
@@ -120,7 +122,7 @@ public static class RazorStropBuilder
         Selection.activeGameObject = stropRoot;
         EditorGUIUtility.PingObject(stropRoot);
 
-        Debug.Log("[Cyrulik] Gotowy wiszący pas (Razor Strop) został wygenerowany w scenie!");
+        Debug.Log("[Cyrulik] Gotowy wiszący pas (Razor Strop) z interakcją został wygenerowany w scenie!");
     }
 
     [MenuItem("Tools/Cyrulik/3. Build & Enhance Razor Minigame UI (From Scratch)", false, 3)]
@@ -539,12 +541,51 @@ public static class RazorStropBuilder
         SetSerializedString(so, "textBladeSharp", "RAZOR SHARPENED!");
         SetSerializedString(so, "textBladeDull", "RAZOR IS TOO DULL!");
 
+        // 9. Automatyczne podpięcie interakcji do wiszącego paska 3D w scenie
+        GameObject hangingStropGo = GameObject.Find("RazorStrop_Hanging");
+        if (hangingStropGo != null)
+        {
+            if (hangingStropGo.GetComponent<RazorStropInteractable>() == null)
+            {
+                hangingStropGo.AddComponent<RazorStropInteractable>();
+            }
+            BoxCollider bc = hangingStropGo.GetComponent<BoxCollider>();
+            if (bc == null) bc = hangingStropGo.AddComponent<BoxCollider>();
+            bc.center = new Vector3(0f, -0.4f, 0.04f);
+            bc.size = new Vector3(0.35f, 1.2f, 0.35f);
+            EditorUtility.SetDirty(hangingStropGo);
+        }
+
         so.ApplyModifiedProperties();
 
         EditorUtility.SetDirty(minigame);
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(minigame.gameObject.scene);
 
-        Debug.Log("[Cyrulik] Pełne UI Minigry Ostrzenia Brzytwy zostało pomyślnie zbudowane od podstaw w stylu ryciny z przewodnika!");
+        Debug.Log("[Cyrulik] Full Razor Stropping Minigame UI & 3D Strop Interaction configured successfully!");
+    }
+
+    [MenuItem("Tools/Cyrulik/4. Setup 3D Razor Strop Interaction in Scene", false, 4)]
+    public static void Setup3DStropInteraction()
+    {
+        GameObject hangingStropGo = GameObject.Find("RazorStrop_Hanging");
+        if (hangingStropGo != null)
+        {
+            if (hangingStropGo.GetComponent<RazorStropInteractable>() == null)
+            {
+                hangingStropGo.AddComponent<RazorStropInteractable>();
+            }
+            BoxCollider bc = hangingStropGo.GetComponent<BoxCollider>();
+            if (bc == null) bc = hangingStropGo.AddComponent<BoxCollider>();
+            bc.center = new Vector3(0f, -0.4f, 0.04f);
+            bc.size = new Vector3(0.35f, 1.2f, 0.35f);
+            EditorUtility.SetDirty(hangingStropGo);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(hangingStropGo.scene);
+            Debug.Log("[Cyrulik] Successfully attached RazorStropInteractable to 3D Strop: " + hangingStropGo.name);
+        }
+        else
+        {
+            Debug.LogWarning("[Cyrulik] 'RazorStrop_Hanging' not found in scene. Creating or finding strop...");
+        }
     }
 
     private static void SetSerializedString(SerializedObject so, string propName, string value)

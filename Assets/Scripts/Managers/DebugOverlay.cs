@@ -157,6 +157,10 @@ public class DebugOverlay : MonoBehaviour
     private GUIStyle _questCardPendingStyle;
     private Vector2 _scrollPos;
     private Vector2 _questScrollPos;
+    private Vector2 _dialogueScrollPos;
+    private string _customSpeakerName = "Jurek";
+    private string _customClientLine = "Good day, I would like a quick haircut and shave.";
+    private string _customThoughtText = "Another morning in the shop. Need to get dressed and prepare before opening.";
     private bool _stylesInitialized = false;
 
 #if UNITY_EDITOR
@@ -1085,35 +1089,238 @@ public class DebugOverlay : MonoBehaviour
     }
 
     // ──────────────────────────────────────────────────────────
-    // 8. ZAKŁADKA DIALOGÓW
+    // ──────────────────────────────────────────────────────────
+    // 8. ZAKŁADKA DIALOGÓW I ROZMÓW (DEV TOOLS)
     // ──────────────────────────────────────────────────────────
     private void DrawDialoguesTab()
     {
-        GUILayout.Label("[SYSTEM DIALOGOW I MYSLI]", _subHeaderStyle);
+        GUILayout.Label("[DEV TOOLS - BAZA WSZYSTKICH ROZMÓW I DIALOGÓW]", _subHeaderStyle);
         GUILayout.Space(6);
 
+        // Pasek statusu i pomijania
+        GUILayout.BeginVertical(_panelBoxStyle);
+        bool clientActive = (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive) ||
+                            (DialogueManager.Instance != null && DialogueManager.Instance.IsAnyDialogueActive);
+        bool thoughtActive = InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive;
+
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("[>>] Pomin aktywny dialog", _dangerButtonStyle, GUILayout.Height(32)))
+        GUILayout.Label($"Status UI: Klient = {(clientActive ? "<color=#70FF70>[AKTYWNY]</color>" : "[Brak]")} | Myśl = {(thoughtActive ? "<color=#70FF70>[AKTYWNY]</color>" : "[Brak]")}", _statusLabelStyle);
+
+        if (GUILayout.Button("[>>] Zamknij / Pomiń aktywny dialog", _dangerButtonStyle, GUILayout.Width(240), GUILayout.Height(28)))
         {
-            if (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive)
+            if (InnerDialogueUI.Instance != null) InnerDialogueUI.Instance.HideAllInstant();
+            if (ClientDialogueUI.Instance != null) ClientDialogueUI.Instance.HideAllInstant();
+        }
+        GUILayout.EndHorizontal();
+        GUILayout.EndVertical();
+
+        GUILayout.Space(8);
+
+        _dialogueScrollPos = GUILayout.BeginScrollView(_dialogueScrollPos, GUILayout.ExpandHeight(true));
+
+        // ══════════════════════════════════════════════════════════
+        // 1. DIALOGI Z KLIENTAMI / NPC (ClientDialogueUI)
+        // ══════════════════════════════════════════════════════════
+        GUILayout.Label("── 1. ROZMOWY Z KLIENTAMI / NPC (ClientDialogueUI) ──", _headerStyle);
+        GUILayout.Space(4);
+
+        GUILayout.BeginVertical(_panelBoxStyle);
+        GUILayout.Label("Jurek - Pierwszy Klient (First Customer):", _subHeaderStyle);
+        GUILayout.Space(4);
+
+        if (GUILayout.Button("[▶] Odtwórz: Pełna Rozmowa Powitalna (5 kwestii [E])", _successButtonStyle, GUILayout.Height(34)))
+        {
+            if (DialogueManager.Instance != null)
             {
-                InnerDialogueUI.Instance.HideAllInstant();
+                DialogueManager.Instance.StartJurekArrivalDialogue();
             }
-            if (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive)
+            else if (ClientDialogueUI.Instance != null)
             {
-                ClientDialogueUI.Instance.HideAllInstant();
+                ClientDialogueUI.Instance.StartDialogue(new List<ClientDialogueUI.DialogueLine>()
+                {
+                    new ClientDialogueUI.DialogueLine("Jurek", "Good day, I'd like a shave..."),
+                    new ClientDialogueUI.DialogueLine("Barber", "Right this way, please!"),
+                    new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
+                    new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
+                    new ClientDialogueUI.DialogueLine("Jurek", "...")
+                });
             }
+        }
+
+        GUILayout.Space(4);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Jurek: Timeout (Zniecierpliwienie)", _buttonStyle, GUILayout.Height(30)))
+        {
+            if (DialogueManager.Instance != null) DialogueManager.Instance.ShowJurekTimeoutDialogue();
+            else if (ClientDialogueUI.Instance != null) ClientDialogueUI.Instance.ShowLine("Jurek", "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!");
+        }
+        if (GUILayout.Button("[▶] Jurek: Ponura atmosfera (Gloomy)", _buttonStyle, GUILayout.Height(30)))
+        {
+            if (DialogueManager.Instance != null) DialogueManager.Instance.ShowJurekGloomyDialogue();
+            else if (ClientDialogueUI.Instance != null) ClientDialogueUI.Instance.ShowLine("Jurek", "It's pitch black and dead silent in here... The atmosphere is way too gloomy! I'm taking my business elsewhere!");
+        }
+        if (GUILayout.Button("[▶] Jurek: Strach przed myszą (Rat Scare)", _dangerButtonStyle, GUILayout.Height(30)))
+        {
+            if (DialogueManager.Instance != null) DialogueManager.Instance.ShowJurekMouseScareDialogue();
+            else if (ClientDialogueUI.Instance != null) ClientDialogueUI.Instance.ShowLine("Jurek", "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!");
         }
         GUILayout.EndHorizontal();
 
         GUILayout.Space(8);
-        GUILayout.Label("Testuj monolog wewnetrzny:", _statusLabelStyle);
-        if (GUILayout.Button("Test: \"The razor is sharp enough now.\"", _buttonStyle, GUILayout.Height(30)))
+        GUILayout.Label("Niestandardowa kwestia klienta (Custom Client Line):", _statusLabelStyle);
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("Imię:", GUILayout.Width(35));
+        _customSpeakerName = GUILayout.TextField(_customSpeakerName, GUILayout.Width(90));
+        GUILayout.Label("Tekst:", GUILayout.Width(40));
+        _customClientLine = GUILayout.TextField(_customClientLine);
+        if (GUILayout.Button("[▶ Odtwórz]", _successButtonStyle, GUILayout.Width(110)))
         {
-            if (InnerDialogueUI.Instance != null)
+            if (DialogueManager.Instance != null)
             {
-                InnerDialogueUI.Instance.ShowMessage("The razor is sharp enough now. Time to get ready.");
+                DialogueManager.Instance.ShowClientLine(_customSpeakerName, _customClientLine);
             }
+            else if (ClientDialogueUI.Instance != null)
+            {
+                ClientDialogueUI.Instance.ShowLine(_customSpeakerName, _customClientLine);
+            }
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.EndVertical();
+
+        GUILayout.Space(12);
+
+        // ══════════════════════════════════════════════════════════
+        // 2. MYŚLI WEWNĘTRZNE FRYZJERA (InnerDialogueUI)
+        // ══════════════════════════════════════════════════════════
+        GUILayout.Label("── 2. MYŚLI WEWNĘTRZNE I MONOLOGI FRYZJERA (InnerDialogueUI) ──", _headerStyle);
+        GUILayout.Space(4);
+
+        GUILayout.BeginVertical(_panelBoxStyle);
+
+        // Kategoria A: Poranek & Szafa & Ubieranie
+        GUILayout.Label("Szafa, Ubranie i Poranek:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Poranek w salonie", _buttonStyle))
+            ShowThoughtDirect("Another morning in the shop. Need to get dressed and prepare before opening.");
+        if (GUILayout.Button("[▶] Ubranie: 'Time to get to work.'", _buttonStyle))
+            ShowThoughtDirect("Time to get to work.");
+        if (GUILayout.Button("[▶] 'I'm already dressed.'", _buttonStyle))
+            ShowThoughtDirect("I'm already dressed and ready for work.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Szafa: 'It's locked. I need the key...'", _buttonStyle))
+            ShowThoughtDirect("It's locked. I need to find the wardrobe key...");
+        if (GUILayout.Button("[▶] Drzwi: 'I should get dressed first...'", _buttonStyle))
+            ShowThoughtDirect("I should get dressed first before opening up...");
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        // Kategoria B: Ostrzenie Brzytwy
+        GUILayout.Label("Ostrzenie Brzytwy (Razor):", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] 'The razor is sharp enough now.'", _successButtonStyle))
+            ShowThoughtDirect("The razor is sharp enough now. Time to get ready.");
+        if (GUILayout.Button("[▶] 'The blade is still too dull...'", _buttonStyle))
+            ShowThoughtDirect("The blade is still too dull to shave properly.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        // Kategoria C: Piec, Ogień, Woda i Ręczniki
+        GUILayout.Label("Piec, Gorąca Woda i Ręczniki:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Piec: 'The stove needs fire...'", _buttonStyle))
+            ShowThoughtDirect("The stove needs fire to heat up water for hot towels.");
+        if (GUILayout.Button("[▶] Piec: 'Fire is burning nicely.'", _buttonStyle))
+            ShowThoughtDirect("Fire is burning nicely. The room will warm up soon.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Woda: 'Water is boiling hot.'", _buttonStyle))
+            ShowThoughtDirect("Water is boiling hot. Perfect for customer towels.");
+        if (GUILayout.Button("[▶] Woda: 'I need to heat up water first.'", _buttonStyle))
+            ShowThoughtDirect("I need to heat up some water first.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Ręczniki: 'Hot towels are ready.'", _buttonStyle))
+            ShowThoughtDirect("Hot towels are ready for shaving.");
+        if (GUILayout.Button("[▶] Ręczniki: 'Towels must be soaked first.'", _buttonStyle))
+            ShowThoughtDirect("Towels must be soaked in hot water first.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        // Kategoria D: Drzwi Główne & Otwarcie Salonu
+        GUILayout.Label("Drzwi Wejściowe i Otwarcie Salonu:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] 'I can't open yet. Preparations aren't done.'", _buttonStyle))
+            ShowThoughtDirect("I can't open the shop yet. The preparations aren't finished.");
+        if (GUILayout.Button("[▶] 'It's locked. I need the front door key...'", _buttonStyle))
+            ShowThoughtDirect("It's locked. I need to find the front door key...");
+        if (GUILayout.Button("[▶] 'The shop is ready. Let's unlock!'", _successButtonStyle))
+            ShowThoughtDirect("The shop is ready. Let's unlock the front door and welcome our first client.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        // Kategoria E: Quest z Myszą (Mouse Quest)
+        GUILayout.Label("Zadanie z Myszą (Mouse Trap Quest):", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Trzask: 'Coś trzasnęło w pułapce...'", _buttonStyle))
+            ShowThoughtDirect("Coś trzasnęło w pułapce... Lepiej wyrzucę tę mysz do kosza w głównym pokoju.");
+        if (GUILayout.Button("[▶] Ucieczka: 'O cholera, mysz! Klient to zobaczył...'", _dangerButtonStyle))
+            ShowThoughtDirect("O cholera, mysz! Klient to zobaczył...");
+        if (GUILayout.Button("[▶] 'Got the little pest. Now shop is clean.'", _successButtonStyle))
+            ShowThoughtDirect("Got the little pest. Now the shop is clean.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        // Kategoria F: Radio & Klimat
+        GUILayout.Label("Radio i Klimat:", _subHeaderStyle);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("[▶] Radio Włączone: 'Some good music...'", _buttonStyle))
+            ShowThoughtDirect("Some good music on the radio will make the customers feel at home.");
+        if (GUILayout.Button("[▶] Radio Wyłączone: 'The radio is quiet now.'", _buttonStyle))
+            ShowThoughtDirect("The radio is quiet now.");
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+
+        // Własna myśl fryzjera
+        GUILayout.Label("Własna myśl wewnętrzna (Custom Thought Bubble):", _statusLabelStyle);
+        GUILayout.BeginHorizontal();
+        _customThoughtText = GUILayout.TextField(_customThoughtText);
+        if (GUILayout.Button("[▶ Wyświetl Myśl]", _successButtonStyle, GUILayout.Width(150)))
+        {
+            ShowThoughtDirect(_customThoughtText);
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.EndVertical();
+
+        GUILayout.EndScrollView();
+    }
+
+    private void ShowThoughtDirect(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.ShowThought(text);
+        }
+        else if (InnerDialogueUI.Instance != null)
+        {
+            InnerDialogueUI.Instance.ShowMessage(text);
+        }
+        else
+        {
+            Debug.LogWarning($"[DebugOverlay] Brak aktywnego DialogueManager/InnerDialogueUI dla myśli: \"{text}\"");
         }
     }
 
