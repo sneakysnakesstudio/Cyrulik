@@ -230,7 +230,7 @@ MonoBehaviour:
   - groupName: wadrobe_open_sound
     clips:
     - {fileID: 8300000, guid: 9601b0d23671945479d23e3f312e7473, type: 3}
-    volume: 0.183
+    volume: 0.514
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95
