@@ -76,7 +76,7 @@ public static class EndSummaryUIBuilder
         titleTmp.fontSize = 76f;
         titleTmp.fontStyle = FontStyles.Bold;
         titleTmp.characterSpacing = 4f;
-        titleTmp.enableWordWrapping = false;
+        titleTmp.textWrappingMode = TextWrappingModes.NoWrap;
         titleTmp.alignment = TextAlignmentOptions.Left;
         titleTmp.color = new Color(0.92f, 0.12f, 0.12f, 1f);
 
@@ -93,7 +93,7 @@ public static class EndSummaryUIBuilder
         var reasonTmp = reasonGo.GetComponent<TextMeshProUGUI>();
         reasonTmp.text = "The client felt the atmosphere was too gloomy and left.";
         reasonTmp.fontSize = 24f;
-        reasonTmp.enableWordWrapping = true;
+        reasonTmp.textWrappingMode = TextWrappingModes.Normal;
         reasonTmp.alignment = TextAlignmentOptions.Left;
         reasonTmp.color = new Color(0.88f, 0.88f, 0.88f, 1f);
 

@@ -364,7 +364,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         Debug.Log($"[DoorInteractable] '{gameObject.name}' odblokowane kluczem! (Wszystkie drzwi szafy odblokowane)");
 
         // Odblokuj automatycznie wszystkie inne drzwi z requireKey na scenie
-        DoorInteractable[] allDoors = FindObjectsByType<DoorInteractable>(FindObjectsSortMode.None);
+        DoorInteractable[] allDoors = FindObjectsByType<DoorInteractable>(FindObjectsInactive.Exclude);
         foreach (var door in allDoors)
         {
             if (door != null && door.requireKey)
@@ -374,7 +374,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         }
 
         // Odblokuj też ewentualny WardrobeInteractable
-        WardrobeInteractable[] allWardrobes = FindObjectsByType<WardrobeInteractable>(FindObjectsSortMode.None);
+        WardrobeInteractable[] allWardrobes = FindObjectsByType<WardrobeInteractable>(FindObjectsInactive.Exclude);
         foreach (var wardrobe in allWardrobes)
         {
             if (wardrobe != null)

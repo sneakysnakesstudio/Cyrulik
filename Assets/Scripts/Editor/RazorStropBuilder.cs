@@ -180,7 +180,7 @@ public static class RazorStropBuilder
         Transform canvasTransform = canvas.transform;
         CanvasGroup canvasGroup = canvas.GetComponent<CanvasGroup>() ?? canvas.gameObject.AddComponent<CanvasGroup>();
 
-        // 2. Tło (delikatna ciemna winieta, brak ciężkiej ramki)
+        // 2. Tło minigry (klimatyczny warsztat cyrulika z delikatnym przyciemnieniem)
         Transform bgTransform = canvasTransform.Find("Minigame_razor_Background");
         GameObject bgGo = bgTransform != null ? bgTransform.gameObject : null;
         if (bgGo == null)
@@ -194,8 +194,18 @@ public static class RazorStropBuilder
         bgRect.sizeDelta = Vector2.zero;
         bgRect.anchoredPosition = Vector2.zero;
         Image bgImg = bgGo.GetComponent<Image>();
-        bgImg.sprite = null;
-        bgImg.color = new Color(0.02f, 0.02f, 0.04f, 0.45f);
+        Sprite bgSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/minigame_background_main.jpg")
+                       ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/minigame_bg_opcja1_warsztat.jpg");
+        if (bgSprite != null)
+        {
+            bgImg.sprite = bgSprite;
+            bgImg.color = new Color(0.80f, 0.80f, 0.80f, 1f);
+        }
+        else
+        {
+            bgImg.sprite = null;
+            bgImg.color = new Color(0.02f, 0.02f, 0.04f, 0.65f);
+        }
         bgImg.raycastTarget = false;
         bgGo.transform.SetAsFirstSibling();
         EditorUtility.SetDirty(bgGo);
@@ -239,7 +249,7 @@ public static class RazorStropBuilder
             botAnchorT = botGo.transform;
         }
         RectTransform botRect = botAnchorT.GetComponent<RectTransform>();
-        botRect.anchoredPosition = new Vector2(-160f, -230f);
+        botRect.anchoredPosition = new Vector2(45.98469f, -114.9189f);
 
         Transform topAnchorT = canvasTransform.Find("TopAnchor");
         if (topAnchorT == null)
@@ -249,7 +259,42 @@ public static class RazorStropBuilder
             topAnchorT = topGo.transform;
         }
         RectTransform topRect = topAnchorT.GetComponent<RectTransform>();
-        topRect.anchoredPosition = new Vector2(240f, 170f);
+        topRect.anchoredPosition = new Vector2(478f, 377f);
+
+        // Punkty nawigacyjne trasy (PathWaypoints w hierarchii dla wygodnej edycji)
+        Transform waypointsRoot = canvasTransform.Find("PathWaypoints");
+        if (waypointsRoot == null)
+        {
+            GameObject wpRootGo = new GameObject("PathWaypoints", typeof(RectTransform));
+            wpRootGo.transform.SetParent(canvasTransform, false);
+            waypointsRoot = wpRootGo.transform;
+        }
+
+        Vector2[] defaultWps = new Vector2[5]
+        {
+            new Vector2(45.98469f, -114.9189f),
+            new Vector2(153.98f, 8.08f),
+            new Vector2(261.99f, 131.08f),
+            new Vector2(369.99f, 254.08f),
+            new Vector2(478.00f, 377.00f)
+        };
+
+        RectTransform[] wpTransforms = new RectTransform[5];
+        for (int i = 0; i < 5; i++)
+        {
+            string wpName = $"Waypoint_{i + 1}";
+            Transform wpT = waypointsRoot.Find(wpName);
+            if (wpT == null)
+            {
+                GameObject wpGo = new GameObject(wpName, typeof(RectTransform));
+                wpGo.transform.SetParent(waypointsRoot, false);
+                wpT = wpGo.transform;
+            }
+            RectTransform wpRect = wpT.GetComponent<RectTransform>();
+            if (wpRect.anchoredPosition == Vector2.zero) wpRect.anchoredPosition = defaultWps[i];
+            wpTransforms[i] = wpRect;
+            EditorUtility.SetDirty(wpT.gameObject);
+        }
 
         // 4. Brzytwa na pasie (RazorImage)
         Transform razorTransform = canvasTransform.Find("RazorImage");
@@ -260,8 +305,9 @@ public static class RazorStropBuilder
             razorGo.transform.SetParent(canvasTransform, false);
         }
         RectTransform razorRect = razorGo.GetComponent<RectTransform>();
-        razorRect.anchoredPosition = new Vector2(-150f, -220f);
-        razorRect.sizeDelta = new Vector2(340f, 190f);
+        razorRect.anchoredPosition = new Vector2(45.98469f, -114.9189f);
+        razorRect.sizeDelta = new Vector2(338.251f, 340.511f);
+        razorRect.localRotation = Quaternion.Euler(0f, 0f, -73.61f);
         Image razorImg = razorGo.GetComponent<Image>();
         Sprite razorSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_wskaznik_glowna.png")
                           ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Razorminigame_art/brzytwa_1ostrze_drewno.png");
@@ -441,6 +487,17 @@ public static class RazorStropBuilder
         so.FindProperty("bottomAnchor").objectReferenceValue = botRect;
         so.FindProperty("topAnchor").objectReferenceValue = topRect;
         so.FindProperty("zoneGood").objectReferenceValue = null;
+
+        // Podpięcie 5 transformów waypointów
+        SerializedProperty wpProp = so.FindProperty("waypointTransforms");
+        if (wpProp != null)
+        {
+            wpProp.arraySize = wpTransforms.Length;
+            for (int i = 0; i < wpTransforms.Length; i++)
+            {
+                wpProp.GetArrayElementAtIndex(i).objectReferenceValue = wpTransforms[i];
+            }
+        }
 
         // Automatyczne podpięcie gracza i kamery
         SerializedProperty moveProp = so.FindProperty("playerMovement");

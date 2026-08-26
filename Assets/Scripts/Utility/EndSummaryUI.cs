@@ -390,7 +390,7 @@ public class EndSummaryUI : MonoBehaviour
         mainTitleText.fontSize = 76f;
         mainTitleText.fontStyle = FontStyles.Bold;
         mainTitleText.characterSpacing = 4f;
-        mainTitleText.enableWordWrapping = false;
+        mainTitleText.textWrappingMode = TextWrappingModes.NoWrap;
         mainTitleText.alignment = TextAlignmentOptions.Left;
         mainTitleText.color = failureTitleColor;
 
@@ -407,7 +407,7 @@ public class EndSummaryUI : MonoBehaviour
         reasonDescriptionText = reasonGo.GetComponent<TextMeshProUGUI>();
         reasonDescriptionText.text = "The client felt the atmosphere was too gloomy and left.";
         reasonDescriptionText.fontSize = 24f;
-        reasonDescriptionText.enableWordWrapping = true;
+        reasonDescriptionText.textWrappingMode = TextWrappingModes.Normal;
         reasonDescriptionText.alignment = TextAlignmentOptions.Left;
         reasonDescriptionText.color = subtitleColor;
 
