@@ -10,10 +10,12 @@ public class AudioManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private AudioDatabaseSO database;
     [SerializeField] private AudioSource sfxSource;
+    [SerializeField] private UnityEngine.Audio.AudioMixerGroup sfxMixerGroup;
 
     [Header("Background Music (Main Theme)")]
     [Tooltip("Dedykowany AudioSource dla muzyki w tle (jeśli pusty, skrypt stworzy go automatycznie).")]
     [SerializeField] private AudioSource musicSource;
+    [SerializeField] private UnityEngine.Audio.AudioMixerGroup musicMixerGroup;
     [Tooltip("Główny motyw muzyczny / utwór lecący w tle (Main Theme).")]
     [SerializeField] private AudioClip mainThemeClip;
     [Range(0f, 1f)]
@@ -26,6 +28,7 @@ public class AudioManager : MonoBehaviour
     [Header("Ambient Sound")]
     [Tooltip("Dedykowany AudioSource dla ambientu (jeśli pusty, skrypt stworzy go automatycznie).")]
     [SerializeField] private AudioSource ambientSource;
+    [SerializeField] private UnityEngine.Audio.AudioMixerGroup ambientMixerGroup;
     [Tooltip("Dźwięk otoczenia w tle (np. szum pokoju, wiatr, wentylator).")]
     [SerializeField] private AudioClip ambientClip;
     [Range(0f, 1f)]
@@ -79,6 +82,7 @@ public class AudioManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
+        SetupSFXSource();
         SetupMusicSource();
         SetupAmbientSource();
         CreateAudioPool();
@@ -97,34 +101,92 @@ public class AudioManager : MonoBehaviour
         }
     }
 
+    private void SetupSFXSource()
+    {
+        // Sprawdź czy sfxSource nie koliduje z innymi źródłami lub nie należy do innego obiektu w scenie
+        if (sfxSource == null || sfxSource == musicSource || sfxSource == ambientSource ||
+            (sfxSource.gameObject != gameObject && sfxSource.transform.parent != transform))
+        {
+            Transform existing = transform.Find("SFX Source 1");
+            if (existing != null && existing.TryGetComponent<AudioSource>(out var existingSrc))
+            {
+                sfxSource = existingSrc;
+            }
+            else
+            {
+                GameObject sfxObj = new GameObject("SFX Source 1");
+                sfxObj.transform.SetParent(transform);
+                sfxSource = sfxObj.AddComponent<AudioSource>();
+            }
+        }
+
+        sfxSource.playOnAwake = false;
+        sfxSource.loop = false;
+        sfxSource.spatialBlend = 0f;
+        sfxSource.volume = 1f;
+
+        if (sfxMixerGroup != null)
+        {
+            sfxSource.outputAudioMixerGroup = sfxMixerGroup;
+        }
+    }
+
     private void SetupMusicSource()
     {
-        if (musicSource == null)
+        if (musicSource == null || musicSource == sfxSource || musicSource == ambientSource ||
+            (musicSource.gameObject != gameObject && musicSource.transform.parent != transform))
         {
-            GameObject musicObj = new GameObject("Music Source");
-            musicObj.transform.SetParent(transform);
-            musicSource = musicObj.AddComponent<AudioSource>();
+            Transform existing = transform.Find("Music Source");
+            if (existing != null && existing.TryGetComponent<AudioSource>(out var existingSrc))
+            {
+                musicSource = existingSrc;
+            }
+            else
+            {
+                GameObject musicObj = new GameObject("Music Source");
+                musicObj.transform.SetParent(transform);
+                musicSource = musicObj.AddComponent<AudioSource>();
+            }
         }
 
         musicSource.playOnAwake = false;
         musicSource.loop = loopMusic;
         musicSource.spatialBlend = 0f; // Dźwięk 2D dla muzyki w tle
         musicSource.volume = 0f;
+
+        if (musicMixerGroup != null)
+        {
+            musicSource.outputAudioMixerGroup = musicMixerGroup;
+        }
     }
 
     private void SetupAmbientSource()
     {
-        if (ambientSource == null)
+        if (ambientSource == null || ambientSource == sfxSource || ambientSource == musicSource ||
+            (ambientSource.gameObject != gameObject && ambientSource.transform.parent != transform))
         {
-            GameObject ambientObj = new GameObject("Ambient Source");
-            ambientObj.transform.SetParent(transform);
-            ambientSource = ambientObj.AddComponent<AudioSource>();
+            Transform existing = transform.Find("Ambient Source");
+            if (existing != null && existing.TryGetComponent<AudioSource>(out var existingSrc))
+            {
+                ambientSource = existingSrc;
+            }
+            else
+            {
+                GameObject ambientObj = new GameObject("Ambient Source");
+                ambientObj.transform.SetParent(transform);
+                ambientSource = ambientObj.AddComponent<AudioSource>();
+            }
         }
 
         ambientSource.playOnAwake = false;
         ambientSource.loop = loopAmbient;
         ambientSource.spatialBlend = 0f; // Dźwięk 2D dla tła otoczenia
         ambientSource.volume = 0f;
+
+        if (ambientMixerGroup != null)
+        {
+            ambientSource.outputAudioMixerGroup = ambientMixerGroup;
+        }
     }
 
     #region Music (Main Theme) Controls
@@ -451,12 +513,19 @@ public class AudioManager : MonoBehaviour
     private void CreateAudioPool()
     {
         if (sfxSource == null)
-            return;
+        {
+            SetupSFXSource();
+        }
 
         _sourcePool.Clear();
-        _sourcePool.Add(sfxSource);
+        if (sfxSource != null)
+        {
+            sfxSource.volume = 1f;
+            _sourcePool.Add(sfxSource);
+        }
 
-        for (int i = 1; i < initialPoolSize; i++)
+        int currentCount = _sourcePool.Count;
+        for (int i = currentCount; i < initialPoolSize; i++)
         {
             CreatePooledSource();
         }
@@ -476,25 +545,33 @@ public class AudioManager : MonoBehaviour
 
     private void CopyAudioSourceSettings(AudioSource from, AudioSource to)
     {
-        if (from == null || to == null)
+        if (to == null)
             return;
 
-        to.outputAudioMixerGroup = from.outputAudioMixerGroup;
-        to.mute = from.mute;
-        to.bypassEffects = from.bypassEffects;
-        to.bypassListenerEffects = from.bypassListenerEffects;
-        to.bypassReverbZones = from.bypassReverbZones;
-        to.priority = from.priority;
-        to.volume = from.volume;
+        if (from != null)
+        {
+            to.outputAudioMixerGroup = from.outputAudioMixerGroup != null ? from.outputAudioMixerGroup : sfxMixerGroup;
+            to.mute = from.mute;
+            to.bypassEffects = from.bypassEffects;
+            to.bypassListenerEffects = from.bypassListenerEffects;
+            to.bypassReverbZones = from.bypassReverbZones;
+            to.priority = from.priority;
+            to.panStereo = from.panStereo;
+            to.spatialBlend = 0f; // Dźwięki systemowe 2D
+            to.reverbZoneMix = from.reverbZoneMix;
+            to.dopplerLevel = from.dopplerLevel;
+            to.spread = from.spread;
+            to.rolloffMode = from.rolloffMode;
+            to.minDistance = from.minDistance;
+            to.maxDistance = from.maxDistance;
+        }
+        else if (sfxMixerGroup != null)
+        {
+            to.outputAudioMixerGroup = sfxMixerGroup;
+        }
+
+        to.volume = 1f; // BAZOWA GŁOŚNOŚĆ ZAWSZE 1.0! PlayOneShot skaluje głośność bazową
         to.pitch = 1f;
-        to.panStereo = from.panStereo;
-        to.spatialBlend = 0f; // Dźwięki systemowe 2D
-        to.reverbZoneMix = from.reverbZoneMix;
-        to.dopplerLevel = from.dopplerLevel;
-        to.spread = from.spread;
-        to.rolloffMode = from.rolloffMode;
-        to.minDistance = from.minDistance;
-        to.maxDistance = from.maxDistance;
         to.playOnAwake = false;
         to.loop = false;
     }
@@ -521,12 +598,6 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
-        if (sfxSource == null)
-        {
-            Debug.LogWarning("AudioManager: SFX AudioSource is not assigned!", this);
-            return;
-        }
-
         AudioClipData data = database.Get(groupName);
 
         if (data == null)
@@ -543,7 +614,18 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
+        if (_sourcePool == null || _sourcePool.Count == 0)
+        {
+            CreateAudioPool();
+        }
+
         AudioSource source = GetAvailableSource();
+        if (source == null)
+        {
+            Debug.LogWarning("AudioManager: Failed to obtain an AudioSource from pool!", this);
+            return;
+        }
+
         source.pitch = data.GetRandomPitch();
         float volume = data.GetRandomVolume();
 
@@ -571,7 +653,11 @@ public class AudioManager : MonoBehaviour
         AudioListener.pause = false;
 
         // Restore AudioListener volume from PlayerPrefs or default
-        if (PlayerPrefs.HasKey("MasterVolume"))
+        if (PlayerPrefs.HasKey("MasterVolume_Pref"))
+        {
+            AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume_Pref", 1f);
+        }
+        else if (PlayerPrefs.HasKey("MasterVolume"))
         {
             AudioListener.volume = PlayerPrefs.GetFloat("MasterVolume", 1f);
         }
@@ -581,8 +667,9 @@ public class AudioManager : MonoBehaviour
         }
 
         // Validate audio sources
-        if (musicSource == null) SetupMusicSource();
-        if (ambientSource == null) SetupAmbientSource();
+        SetupSFXSource();
+        SetupMusicSource();
+        SetupAmbientSource();
         if (_sourcePool == null || _sourcePool.Count == 0) CreateAudioPool();
 
         // Restart background music and ambient on reload

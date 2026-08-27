@@ -176,9 +176,14 @@ public class InnerDialogueUI : MonoBehaviour
         if (dialogueCanvas == null)
             dialogueCanvas = GetComponentInParent<Canvas>(true);
 
-        // Jeśli na samym DialogueCanvas jest CanvasGroup, wymuś alpha = 1, bo ten komponent blokuje cały Canvas
         if (dialogueCanvas != null)
         {
+            dialogueCanvas.overrideSorting = true;
+            if (dialogueCanvas.sortingOrder < 40)
+            {
+                dialogueCanvas.sortingOrder = 40;
+            }
+
             CanvasGroup rootCg = dialogueCanvas.GetComponent<CanvasGroup>();
             if (rootCg != null)
             {

@@ -53,6 +53,11 @@ public class PickupItem : MonoBehaviour, IInteractable
 
     private void Awake()
     {
+        if (gameObject.isStatic)
+        {
+            Debug.LogWarning($"[PickupItem] Obiekt '{name}' jest oznaczony jako STATIC! Przedmioty do podnoszenia NIE mogą być Static, ponieważ Unity piecze ich meshe w Static Batching i nie pozwala ich przenosić.", this);
+        }
+
         if (_playerHands == null)
         {
             _playerHands = FindAnyObjectByType<PlayerHands>();
@@ -67,6 +72,16 @@ public class PickupItem : MonoBehaviour, IInteractable
             }
         }
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (gameObject.isStatic)
+        {
+            Debug.LogWarning($"[PickupItem] Obiekt '{name}' jest oznaczony jako STATIC w Inspectorze! Odznacz pole 'Static' na samej górze Inspectora dla tego obiektu.", this);
+        }
+    }
+#endif
 
     public void Interact()
     {

@@ -72,6 +72,16 @@ public class Crosshair : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.overrideSorting = true;
+            if (canvas.sortingOrder < 30)
+            {
+                canvas.sortingOrder = 30;
+            }
+        }
+
         if (crosshairImage == null)
         {
             Debug.LogError(

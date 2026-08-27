@@ -23,7 +23,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 67b16d95cf467dd469c9a27ac4ec2b1a, type: 3}
     - {fileID: 8300000, guid: fc22480479e449349b7db024c768da6f, type: 3}
     - {fileID: 8300000, guid: ff68341861b16434496035326eade3be, type: 3}
-    volume: 0.37
+    volume: 1
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.94
@@ -82,7 +82,7 @@ MonoBehaviour:
   - groupName: fridge_hum
     clips:
     - {fileID: 8300000, guid: 03a7489af4fd1504185e72f5d42675b1, type: 3}
-    volume: 0.194
+    volume: 0.149
     preventImmediateRepeat: 1
     randomizePitch: 0
     minPitch: 0.95
@@ -163,7 +163,7 @@ MonoBehaviour:
     clips:
     - {fileID: 8300000, guid: a2ea3c44d6ef3b5469f739b1051dce7e, type: 3}
     - {fileID: 8300000, guid: 3aad0376a8dc42e409ad392390cb919b, type: 3}
-    volume: 0.484
+    volume: 0.558
     preventImmediateRepeat: 1
     randomizePitch: 0
     minPitch: 0.95
@@ -175,8 +175,8 @@ MonoBehaviour:
     clips:
     - {fileID: 8300000, guid: b6aec371d8fee99468fef92b0b49490e, type: 3}
     - {fileID: 8300000, guid: aae74724912a12e4f9628a06050906b6, type: 3}
-    volume: 0.382
-    preventImmediateRepeat: 1
+    volume: 0.396
+    preventImmediateRepeat: 0
     randomizePitch: 0
     minPitch: 0.95
     maxPitch: 1.05
@@ -230,7 +230,7 @@ MonoBehaviour:
   - groupName: wadrobe_open_sound
     clips:
     - {fileID: 8300000, guid: 9601b0d23671945479d23e3f312e7473, type: 3}
-    volume: 0.514
+    volume: 1
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95
@@ -241,7 +241,7 @@ MonoBehaviour:
   - groupName: wadrobe_close_sound
     clips:
     - {fileID: 8300000, guid: 89f595c85fdf8a643992f5bf558763f4, type: 3}
-    volume: 0.183
+    volume: 1
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95

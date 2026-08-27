@@ -100,6 +100,15 @@ public class PauseMenu : MonoBehaviour
             }
         }
 
+        if (pauseCanvas != null)
+        {
+            pauseCanvas.overrideSorting = true;
+            if (pauseCanvas.sortingOrder < 50)
+            {
+                pauseCanvas.sortingOrder = 50;
+            }
+        }
+
         if (pauseCanvasGroup == null)
         {
             pauseCanvasGroup = GetComponent<CanvasGroup>();

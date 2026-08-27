@@ -57,6 +57,20 @@ AudioMixerGroupController:
   m_Mute: 0
   m_Solo: 0
   m_BypassEffects: 0
+--- !u!244 &-1625449089695610851
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 5b8e50cb850b17e4aa95d8cf0c2c56c0
+  m_EffectName: Attenuation
+  m_MixLevel: f7dc599fc3738f04a929e48dbc823fdb
+  m_Parameters: []
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0
 --- !u!241 &24100000
 AudioMixerController:
   m_ObjectHideFlags: 0
@@ -79,6 +93,7 @@ AudioMixerController:
     - e9fe6e1ecc482b74bb2ee38c3fcd3d82
     - 00fc12722e62a68428b27da71d3db3fd
     - 41bc2786f1b3dca4eb92260c18247366
+    - bddc9c9835d12bd4c8fae05aa2da2b57
     name: View
   m_CurrentViewIndex: 0
   m_TargetSnapshot: {fileID: 24500006}
@@ -95,6 +110,7 @@ AudioMixerGroupController:
   - {fileID: -3165627076611663596}
   - {fileID: -6906922275057618393}
   - {fileID: -2377574332026006483}
+  - {fileID: 7485917448099721750}
   m_Volume: 60c51e758a35ccf4ebb4f83174507093
   m_Pitch: 3b383ebc00f025c4085b71c321c486a8
   m_Send: 00000000000000000000000000000000
@@ -128,8 +144,11 @@ AudioMixerSnapshotController:
   m_AudioMixer: {fileID: 24100000}
   m_SnapshotID: 3d7a03000fee8464bb7d6f7e5099bc8d
   m_FloatValues:
-    a6b3a772cd9932c4bb7002aaa5334bbb: -18.8
-    315a3a5ea4905354680befc798b41524: -26.9
+    a6b3a772cd9932c4bb7002aaa5334bbb: -9.993162
+    60c51e758a35ccf4ebb4f83174507093: 0.13552453
+    e72999ed40c965844b2bf6bde2ada20e: -24.162655
+    315a3a5ea4905354680befc798b41524: -15.819179
+    a7756e5e46b079a4ab35a9e4c252f4cc: -43.331482
   m_TransitionOverrides: {}
 --- !u!244 &1007173475881328868
 AudioMixerEffectController:
@@ -173,3 +192,22 @@ AudioMixerEffectController:
   m_SendTarget: {fileID: 0}
   m_EnableWetMix: 0
   m_Bypass: 0
+--- !u!243 &7485917448099721750
+AudioMixerGroupController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Rain
+  m_AudioMixer: {fileID: 24100000}
+  m_GroupID: bddc9c9835d12bd4c8fae05aa2da2b57
+  m_Children: []
+  m_Volume: a7756e5e46b079a4ab35a9e4c252f4cc
+  m_Pitch: 91291d2e8ce40de4694aa7a012626bda
+  m_Send: 00000000000000000000000000000000
+  m_Effects:
+  - {fileID: -1625449089695610851}
+  m_UserColorIndex: 0
+  m_Mute: 0
+  m_Solo: 0
+  m_BypassEffects: 0
