@@ -58,8 +58,7 @@ public static class CanvasLayerManager
         GameObject renderGo = GameObject.Find("Render");
         if (renderGo == null)
         {
-            // Może być dzieckiem wyłączonego obiektu
-            var allRawImages = Object.FindObjectsByType<RawImage>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var allRawImages = Object.FindObjectsByType<RawImage>(FindObjectsInactive.Include);
             foreach (var raw in allRawImages)
             {
                 if (raw.gameObject.name == "Render" || (raw.texture != null && raw.texture.name.Contains("RenderingTexture")))

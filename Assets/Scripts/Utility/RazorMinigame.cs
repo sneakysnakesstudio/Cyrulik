@@ -159,6 +159,7 @@ public class RazorMinigame : MonoBehaviour, IInteractable
 
     [Tooltip("Reference attempts for speed scaling.")]
     [SerializeField] private int totalAttempts = 4;
+    public int TotalAttempts => totalAttempts;
 
     [Tooltip("Delay before closing minigame after completion (seconds).")]
     [SerializeField] private float endDelay = 1.0f;

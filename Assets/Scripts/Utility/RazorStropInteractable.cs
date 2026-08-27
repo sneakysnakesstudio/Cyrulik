@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// 3D World Interactable component for the Barber Razor Strop.
@@ -17,6 +17,7 @@ public class RazorStropInteractable : MonoBehaviour, IInteractable
     [Header("Requirements (Optional)")]
     [Tooltip("Require player to hold a razor blade in hands to interact?")]
     [SerializeField] private bool requireBladeInHands = false;
+    public bool RequireBladeInHands => requireBladeInHands;
 
     [Header("Audio & Juice")]
     [SerializeField] private string interactSound = "card_flip";

@@ -137,8 +137,10 @@ public class EndSummaryUI : MonoBehaviour
                 return true;
         }
 
+#if ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.R))
             return true;
+#endif
 
         return false;
     }
@@ -148,8 +150,10 @@ public class EndSummaryUI : MonoBehaviour
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             return true;
 
+#if ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.Escape))
             return true;
+#endif
 
         return false;
     }
