@@ -112,7 +112,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
 
     private void RefreshReferences()
     {
-        _activeVolume = FindFirstObjectByType<Volume>();
+        _activeVolume = FindAnyObjectByType<Volume>();
         if (_activeVolume != null && _activeVolume.profile != null)
         {
             _activeProfile = _activeVolume.profile;
@@ -393,7 +393,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
 
     private static VolumeProfile EnsureVolumeAndGetProfile()
     {
-        Volume volume = FindFirstObjectByType<Volume>();
+        Volume volume = FindAnyObjectByType<Volume>();
         if (volume == null)
         {
             GameObject volumeGo = new GameObject("Global Post-Process Volume", typeof(Volume));
@@ -426,7 +426,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
 
     private static void EnsureCamerasPostProcessing()
     {
-        Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
+        Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include);
         foreach (var cam in cameras)
         {
             var camData = cam.GetComponent<UniversalAdditionalCameraData>();
@@ -446,7 +446,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
 
     private static void AddRuntimeSwitcherToScene()
     {
-        var existing = FindFirstObjectByType<CyrulikPostProcessingRuntimeSwitcher>();
+        var existing = FindAnyObjectByType<CyrulikPostProcessingRuntimeSwitcher>();
         if (existing != null)
         {
             Selection.activeGameObject = existing.gameObject;
@@ -454,7 +454,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
             return;
         }
 
-        Volume volume = FindFirstObjectByType<Volume>();
+        Volume volume = FindAnyObjectByType<Volume>();
         GameObject targetGo = volume != null ? volume.gameObject : new GameObject("PostProcessing_Manager");
         var switcher = targetGo.AddComponent<CyrulikPostProcessingRuntimeSwitcher>();
         Undo.RegisterCreatedObjectUndo(switcher, "Add PP Runtime Switcher");

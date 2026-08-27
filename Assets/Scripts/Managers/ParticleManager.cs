@@ -380,19 +380,26 @@ public class ParticleManager : MonoBehaviour
         }
         else if (effectId.Contains("dust") || effectId.Contains("lamp"))
         {
-            main.duration = 4f;
+            main.duration = 5f;
             main.loop = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(2.5f, 4.5f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.02f, 0.08f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.05f);
-            emission.rateOverTime = 6;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(4.0f, 7.0f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.005f, 0.025f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.006f, 0.022f); // Maleńkie, realistyczne pyłki kurzu
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
+            emission.rateOverTime = 12; // Gęstsza chmura drobnych pyłków
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(0.5f, 0.5f, 0.5f);
+            shape.scale = new Vector3(0.9f, 1.2f, 0.9f); // Objętość stożka światła pod lampą
 
             velocityOverLifetime.enabled = true;
-            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
-            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(0.05f, 0.12f);
-            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(-0.015f, 0.015f);
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(-0.005f, 0.02f); // Powolny taniec i dryf w powietrzu
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(-0.015f, 0.015f);
+
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.035f;
+            noise.frequency = 0.4f;
+            noise.scrollSpeed = 0.15f;
         }
         else // Domyślne: "interactive_glint" / "sparkles"
         {

@@ -35,6 +35,13 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Dystans w metrach między krokami podczas sprintu.")]
     [SerializeField] private float stepDistanceSprint = 1.4f;
 
+    [Header("Safety / Anti-Void")]
+    [Tooltip("Minimalna wysokość Y, poniżej której gracz jest automatycznie cofany do bezpiecznej pozycji.")]
+    [SerializeField] private float voidKillY = -4f;
+
+    private Vector3 _lastSafeGroundedPosition;
+    private bool _hasSafePosition = false;
+
     private CharacterController _characterController;
 
     private Vector2 _moveInput;
@@ -58,6 +65,9 @@ public class PlayerMovement : MonoBehaviour
     {
         _characterController =
             GetComponent<CharacterController>();
+
+        _lastSafeGroundedPosition = transform.position;
+        _hasSafePosition = true;
     }
 
     private void OnEnable()
@@ -98,6 +108,39 @@ public class PlayerMovement : MonoBehaviour
         HandleGravity();
         HandleMovement();
         CheckForInteractable();
+        CheckVoidAndSafety();
+    }
+
+    private void CheckVoidAndSafety()
+    {
+        if (_characterController != null && _characterController.isGrounded && transform.position.y > (voidKillY + 1f))
+        {
+            _lastSafeGroundedPosition = transform.position;
+            _hasSafePosition = true;
+        }
+
+        if (transform.position.y < voidKillY || float.IsNaN(transform.position.x) || float.IsInfinity(transform.position.x))
+        {
+            RecoverPlayerToSafePosition();
+        }
+    }
+
+    public void RecoverPlayerToSafePosition()
+    {
+        if (_characterController != null)
+        {
+            _characterController.enabled = false;
+        }
+
+        transform.position = _hasSafePosition ? (_lastSafeGroundedPosition + Vector3.up * 0.1f) : new Vector3(0f, 1f, 0f);
+        _verticalVelocity = 0f;
+
+        if (_characterController != null)
+        {
+            _characterController.enabled = true;
+        }
+
+        Debug.LogWarning("[PlayerMovement] Wykryto wypadnięcie poza mapę! Gracz został bezpiecznie przywrócony na podłogę.");
     }
 
     private void StoreMovementInput(

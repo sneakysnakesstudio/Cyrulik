@@ -196,9 +196,11 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     private Tween _motionTween;
     private Tween _handleTween;
-
     private Vector3 _handleRestRotation;
     private Vector3 _handlePressedRotation;
+
+    private Collider[] _doorColliders;
+    private Coroutine _restoreCollisionCoroutine;
 
     private void Awake()
     {
@@ -206,6 +208,8 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         {
             doorPivot = transform;
         }
+
+        _doorColliders = doorPivot.GetComponentsInChildren<Collider>(true);
 
         _isUnlocked = !lockedAtStart && (!requireKey || _isWardrobeKeyUnlocked);
 
@@ -501,6 +505,9 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     private void StartOpenMotion()
     {
+        SafeNudgePlayerAway();
+        SetDoorCollisionWithPlayerIgnored(true);
+
         PlaySound(openDoorClip, openSoundName, openSoundDelay, "door_open");
 
         if (motionMode == MotionMode.Rotate)
@@ -508,6 +515,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             _motionTween = doorPivot
                 .DOLocalRotate(_openRotation, openDuration)
                 .SetEase(openEase)
+                .OnComplete(OnMotionComplete)
                 .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
         }
         else
@@ -515,6 +523,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             _motionTween = doorPivot
                 .DOLocalMove(_openPosition, openDuration)
                 .SetEase(openEase)
+                .OnComplete(OnMotionComplete)
                 .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
@@ -666,6 +675,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         _motionTween?.Kill();
 
         IsOpen = false;
+        SetDoorCollisionWithPlayerIgnored(true);
 
         PlaySound(closeDoorClip, closeSoundName, closeSoundDelay, "door_close");
 
@@ -674,6 +684,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             _motionTween = doorPivot
                 .DOLocalRotate(_closedRotation, openDuration)
                 .SetEase(closeEase)
+                .OnComplete(OnMotionComplete)
                 .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
         }
         else
@@ -681,10 +692,105 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
             _motionTween = doorPivot
                 .DOLocalMove(_closedPosition, openDuration)
                 .SetEase(closeEase)
+                .OnComplete(OnMotionComplete)
                 .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         OnDoorStateChanged?.Invoke(false);
+    }
+
+    private void OnMotionComplete()
+    {
+        if (_restoreCollisionCoroutine != null)
+            StopCoroutine(_restoreCollisionCoroutine);
+
+        if (gameObject.activeInHierarchy)
+        {
+            _restoreCollisionCoroutine = StartCoroutine(RestoreCollisionWhenClearRoutine());
+        }
+        else
+        {
+            SetDoorCollisionWithPlayerIgnored(false);
+        }
+    }
+
+    private System.Collections.IEnumerator RestoreCollisionWhenClearRoutine()
+    {
+        // Odczekaj chwilę, aby upewnić się, że obrót jest sfinalizowany
+        yield return new WaitForSeconds(0.05f);
+
+        CharacterController playerCC = FindAnyObjectByType<CharacterController>();
+        if (playerCC == null)
+        {
+            SetDoorCollisionWithPlayerIgnored(false);
+            yield break;
+        }
+
+        // Czekamy dopóki gracz stoi bezpośrednio wewnątrz skrzydła drzwi, aby go nie wyrzuciło
+        int safetyTimeout = 50; // max 1 sekunda
+        while (safetyTimeout > 0 && IsPlayerOverlappingDoor(playerCC))
+        {
+            safetyTimeout--;
+            yield return new WaitForSeconds(0.02f);
+        }
+
+        SetDoorCollisionWithPlayerIgnored(false);
+    }
+
+    private bool IsPlayerOverlappingDoor(CharacterController playerCC)
+    {
+        if (playerCC == null || _doorColliders == null) return false;
+
+        Bounds playerBounds = playerCC.bounds;
+        foreach (var col in _doorColliders)
+        {
+            if (col != null && col.enabled && col.bounds.Intersects(playerBounds))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void SetDoorCollisionWithPlayerIgnored(bool ignore)
+    {
+        if (_doorColliders == null || _doorColliders.Length == 0)
+        {
+            _doorColliders = doorPivot != null ? doorPivot.GetComponentsInChildren<Collider>(true) : GetComponentsInChildren<Collider>(true);
+        }
+
+        CharacterController playerCC = FindAnyObjectByType<CharacterController>();
+        if (playerCC != null)
+        {
+            foreach (var col in _doorColliders)
+            {
+                if (col != null && col.enabled && playerCC.enabled)
+                {
+                    Physics.IgnoreCollision(col, playerCC, ignore);
+                }
+            }
+        }
+    }
+
+    private void SafeNudgePlayerAway()
+    {
+        CharacterController playerCC = FindAnyObjectByType<CharacterController>();
+        if (playerCC == null || !playerCC.enabled) return;
+
+        Vector3 doorPos = doorPivot != null ? doorPivot.position : transform.position;
+        Vector3 playerPos = playerCC.transform.position;
+
+        // Różnica w płaszczyźnie poziomej
+        Vector3 toPlayer = playerPos - doorPos;
+        toPlayer.y = 0f;
+
+        float dist = toPlayer.magnitude;
+        if (dist < 1.15f && dist > 0.001f)
+        {
+            // Delikatne odsunięcie gracza o 0.35m od zawiasu/skrzydła
+            Vector3 pushDir = toPlayer.normalized;
+            playerCC.Move(pushDir * 0.35f);
+        }
     }
 
     private void OnDisable()
@@ -693,6 +799,12 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
         _motionTween = null;
         _handleTween?.Kill();
         _handleTween = null;
+        if (_restoreCollisionCoroutine != null)
+        {
+            StopCoroutine(_restoreCollisionCoroutine);
+            _restoreCollisionCoroutine = null;
+        }
+        SetDoorCollisionWithPlayerIgnored(false);
     }
 
     private void OnDestroy()

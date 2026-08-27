@@ -24,8 +24,12 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
 
     [Header("Particle Dust Effects (Optional)")]
     [Tooltip("Czy włączać drobinki kurzu / poświatę (dust motes) w świetle lampy po jej włączeniu?")]
-    [SerializeField] private bool spawnDustParticles = false;
+    [SerializeField] private bool spawnDustParticles = true;
     [SerializeField] private string dustParticleEffectId = "lamp_dust";
+    [Tooltip("Lokalne przesunięcie pozycji cząsteczek pod źródłem światła (np. Y = -0.4 m pod żarówką).")]
+    [SerializeField] private Vector3 dustLocalOffset = new Vector3(0f, -0.4f, 0f);
+    [Tooltip("Mnożnik skali efektu cząsteczek kurzu.")]
+    [SerializeField] private float dustScaleMultiplier = 1.0f;
 
     [Header("Normal Animation")]
     [SerializeField] private float turnOnDuration = 0.1f;
@@ -48,6 +52,24 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     [Range(0f, 1f)]
     private float maxFlickerIntensity = 0.6f;
 
+    [Header("Dying Bulb Pulse (Pulsowanie dogorywającej żarówki)")]
+    [Tooltip("Czy światło po włączeniu ma ciągle delikatnie pulsować/falować, jakby żarówka była stara lub niedomagała?")]
+    [SerializeField] private bool pulseBulb = false;
+
+    [Tooltip("Szybkość pulsowania (częstotliwość mrugania/falowania).")]
+    [SerializeField] private float pulseSpeed = 3.5f;
+
+    [Tooltip("Minimalna jasność jako ułamek domyślnej intensywności (np. 0.75 = spadek do 75% jasności).")]
+    [Range(0.1f, 1f)]
+    [SerializeField] private float minPulseMultiplier = 0.75f;
+
+    [Tooltip("Maksymalna jasność jako ułamek domyślnej intensywności (np. 1.02 = skok do 102% jasności).")]
+    [Range(0.5f, 1.5f)]
+    [SerializeField] private float maxPulseMultiplier = 1.02f;
+
+    [Tooltip("Czy dodawać sporadyczne mikro-iskrzenia / mrugnięcia żarówki?")]
+    [SerializeField] private bool randomJitter = true;
+
     public string InteractionName => interactionName;
     public bool IsOn => _isOn;
 
@@ -63,6 +85,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     }
 
     private bool _isOn;
+    private float _pulseSeed;
 
     private float[] _defaultIntensities;
 
@@ -71,6 +94,8 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
 
     private void Awake()
     {
+        _pulseSeed = UnityEngine.Random.Range(0f, 1000f);
+
         if (targetLights == null || targetLights.Length == 0)
         {
             Debug.LogWarning(
@@ -107,6 +132,33 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
             SetLightMultiplier(0f);
             SetLightsEnabled(false);
         }
+    }
+
+    private void Update()
+    {
+        if (_isOn && pulseBulb && _flickerSequence == null && _lightTween == null)
+        {
+            UpdateBulbPulse();
+        }
+    }
+
+    private void UpdateBulbPulse()
+    {
+        if (targetLights == null || _defaultIntensities == null) return;
+
+        float time = Time.time * pulseSpeed;
+        float noise = Mathf.PerlinNoise(time, _pulseSeed);
+        float sine = (Mathf.Sin(time * 1.5f) + 1f) * 0.5f;
+
+        float combined = Mathf.Lerp(noise, sine, 0.35f);
+
+        if (randomJitter && UnityEngine.Random.value < 0.06f)
+        {
+            combined *= UnityEngine.Random.Range(0.65f, 0.95f);
+        }
+
+        float finalMultiplier = Mathf.Lerp(minPulseMultiplier, maxPulseMultiplier, combined);
+        SetLightMultiplier(finalMultiplier);
     }
 
     public void Interact()
@@ -158,7 +210,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
             {
                 if (light != null)
                 {
-                    ParticleManager.Instance.AttachLoopingEffect(dustParticleEffectId, light.transform, Vector3.zero, $"lamp_dust_{light.GetEntityId()}");
+                    ParticleManager.Instance.AttachLoopingEffect(dustParticleEffectId, light.transform, dustLocalOffset, $"lamp_dust_{light.GetEntityId()}", null, dustScaleMultiplier);
                 }
             }
         }
