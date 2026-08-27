@@ -158,10 +158,7 @@ public class ClientDialogueUI : MonoBehaviour
         if (dialogueCanvas != null)
         {
             dialogueCanvas.overrideSorting = true;
-            if (dialogueCanvas.sortingOrder < 40)
-            {
-                dialogueCanvas.sortingOrder = 40;
-            }
+            dialogueCanvas.sortingOrder = CanvasLayerManager.LAYER_DIALOGUES;
 
             CanvasGroup rootCg = dialogueCanvas.GetComponent<CanvasGroup>();
             if (rootCg != null)

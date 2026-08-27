@@ -276,6 +276,13 @@ public class RazorMinigame : MonoBehaviour, IInteractable
             minigameCanvasGroup = GetComponent<CanvasGroup>() ?? GetComponentInChildren<CanvasGroup>(true);
         }
 
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = CanvasLayerManager.LAYER_MINIGAME;
+        }
+
         HideUIImmediate();
     }
 

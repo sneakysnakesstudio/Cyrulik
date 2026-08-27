@@ -76,10 +76,7 @@ public class Crosshair : MonoBehaviour
         if (canvas != null)
         {
             canvas.overrideSorting = true;
-            if (canvas.sortingOrder < 30)
-            {
-                canvas.sortingOrder = 30;
-            }
+            canvas.sortingOrder = CanvasLayerManager.LAYER_CROSSHAIR_HUD;
         }
 
         if (crosshairImage == null)
