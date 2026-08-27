@@ -1,0 +1,110 @@
+[
+  {
+    "name": "01_spectrum_classic_hsv_5tier",
+    "description": "Classic 5-tier rainbow HSV spectrum (100%, 75%, 50%, 25%, 0% grayscale) with specular highlights and deep shadow roll-off.",
+    "files": [
+      "01_spectrum_classic_hsv_5tier_32x160.png",
+      "01_spectrum_classic_hsv_5tier_HD_64x320.png",
+      "01_spectrum_classic_hsv_5tier_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "02_oklch_perceptual_uniform",
+    "description": "Perceptually uniform color spectrum using modern Oklch color space. Eliminates harsh yellow spikes and dark blue banding in standard RGB.",
+    "files": [
+      "02_oklch_perceptual_uniform_32x160.png",
+      "02_oklch_perceptual_uniform_HD_64x320.png",
+      "02_oklch_perceptual_uniform_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "03_cyberpunk_neon_pulse",
+    "description": "Vibrant synthwave & cyberpunk palette (Acid Magenta, Neon Violet, Cyber Cyan, Lime Green, Electric Yellow).",
+    "files": [
+      "03_cyberpunk_neon_pulse_32x160.png",
+      "03_cyberpunk_neon_pulse_HD_64x320.png",
+      "03_cyberpunk_neon_pulse_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "04_cinematic_teal_and_orange",
+    "description": "Industry-standard Hollywood blockbuster color grade. Rich warm amber/orange skin highlights with deep complementary teal/cyan shadows.",
+    "files": [
+      "04_cinematic_teal_and_orange_32x160.png",
+      "04_cinematic_teal_and_orange_HD_64x320.png",
+      "04_cinematic_teal_and_orange_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "05_anime_ghibli_pastel",
+    "description": "Soft studio anime / cel-shaded palette with delicate pastel tones, gentle sky blues, blush pinks, and lush grassy greens.",
+    "files": [
+      "05_anime_ghibli_pastel_32x160.png",
+      "05_anime_ghibli_pastel_HD_64x320.png",
+      "05_anime_ghibli_pastel_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "06_thermal_heatmap_infrared",
+    "description": "High-contrast scientific and stylized thermal vision LUT (White core -> Yellow -> Red -> Magenta -> Cobalt Blue -> Dark Abyss).",
+    "files": [
+      "06_thermal_heatmap_infrared_32x160.png",
+      "06_thermal_heatmap_infrared_HD_64x320.png",
+      "06_thermal_heatmap_infrared_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "07_golden_hour_twilight",
+    "description": "Warm sunset to twilight horizon. Radiant peach, fiery amber, rose gold, deep plum, and nightfall navy.",
+    "files": [
+      "07_golden_hour_twilight_32x160.png",
+      "07_golden_hour_twilight_HD_64x320.png",
+      "07_golden_hour_twilight_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "08_fantasy_arcane_emerald",
+    "description": "Mystic fantasy / gemstone palette with glowing turquoise, imperial gold, deep forest emerald, and arcane amethyst.",
+    "files": [
+      "08_fantasy_arcane_emerald_32x160.png",
+      "08_fantasy_arcane_emerald_HD_64x320.png",
+      "08_fantasy_arcane_emerald_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "09_grimdark_industrial_mech",
+    "description": "Tactical gritty sci-fi mood. Weathered rust orange, oxidized brass, industrial steel cyan, and charcoal soot.",
+    "files": [
+      "09_grimdark_industrial_mech_32x160.png",
+      "09_grimdark_industrial_mech_HD_64x320.png",
+      "09_grimdark_industrial_mech_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "10_vaporwave_retro_80s",
+    "description": "Nostalgic retro aesthetic with candy pink, pastel lavender, neon sky cyan, and soft apricot.",
+    "files": [
+      "10_vaporwave_retro_80s_32x160.png",
+      "10_vaporwave_retro_80s_HD_64x320.png",
+      "10_vaporwave_retro_80s_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "11_classic_2tier_render_lut",
+    "description": "2-tier classic shader map (Top block: 100% Hue spectrum with specular & shadow, Bottom block: Pure Grayscale).",
+    "files": [
+      "11_classic_2tier_render_lut_32x64.png",
+      "11_classic_2tier_render_lut_HD_64x128.png",
+      "11_classic_2tier_render_lut_2D_continuous_128x128.png"
+    ]
+  },
+  {
+    "name": "12_compact_3tier_diffuse_lut",
+    "description": "3-tier diffuse shading map (High Saturation, Medium Saturation, Subtle Saturation) with direct base-to-shadow falloff.",
+    "files": [
+      "12_compact_3tier_diffuse_lut_32x96.png",
+      "12_compact_3tier_diffuse_lut_HD_64x192.png",
+      "12_compact_3tier_diffuse_lut_2D_continuous_128x128.png"
+    ]
+  }
+]

@@ -80,6 +80,19 @@ public static class EndSummaryUIBuilder
         titleTmp.alignment = TextAlignmentOptions.Left;
         titleTmp.color = new Color(0.92f, 0.12f, 0.12f, 1f);
 
+        // 3.5. KRESKA POD NAPISEM (Separator Line)
+        GameObject lineGo = new GameObject("Separator_Line", typeof(RectTransform), typeof(Image));
+        lineGo.transform.SetParent(leftContainerGo.transform, false);
+        var lineRect = lineGo.GetComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0f, 1f);
+        lineRect.anchorMax = new Vector2(0f, 1f);
+        lineRect.pivot = new Vector2(0f, 1f);
+        lineRect.anchoredPosition = new Vector2(0f, -85f);
+        lineRect.sizeDelta = new Vector2(850f, 4f);
+
+        var lineImg = lineGo.GetComponent<Image>();
+        lineImg.color = new Color(0.88f, 0.88f, 0.88f, 0.8f);
+
         // 4. Podtytuł z powodem (English)
         GameObject reasonGo = new GameObject("Reason_Text", typeof(RectTransform), typeof(TextMeshProUGUI));
         reasonGo.transform.SetParent(leftContainerGo.transform, false);
@@ -87,7 +100,7 @@ public static class EndSummaryUIBuilder
         rRect.anchorMin = new Vector2(0f, 1f);
         rRect.anchorMax = new Vector2(0f, 1f);
         rRect.pivot = new Vector2(0f, 1f);
-        rRect.anchoredPosition = new Vector2(0f, -95f);
+        rRect.anchoredPosition = new Vector2(0f, -110f);
         rRect.sizeDelta = new Vector2(850f, 50f);
 
         var reasonTmp = reasonGo.GetComponent<TextMeshProUGUI>();
@@ -97,14 +110,14 @@ public static class EndSummaryUIBuilder
         reasonTmp.alignment = TextAlignmentOptions.Left;
         reasonTmp.color = new Color(0.88f, 0.88f, 0.88f, 1f);
 
-        // 5. Pasek z przyciskami [ RESTART ] obok [ QUIT ]
+        // 5. Pasek z przyciskami [ TRY AGAIN ] obok [ EXIT ]
         GameObject btnBarGo = new GameObject("Buttons_Bar", typeof(RectTransform), typeof(HorizontalLayoutGroup));
         btnBarGo.transform.SetParent(leftContainerGo.transform, false);
         var bBarRect = btnBarGo.GetComponent<RectTransform>();
         bBarRect.anchorMin = new Vector2(0f, 1f);
         bBarRect.anchorMax = new Vector2(0f, 1f);
         bBarRect.pivot = new Vector2(0f, 1f);
-        bBarRect.anchoredPosition = new Vector2(0f, -170f);
+        bBarRect.anchoredPosition = new Vector2(0f, -190f);
         bBarRect.sizeDelta = new Vector2(520f, 54f);
 
         var hlg = btnBarGo.GetComponent<HorizontalLayoutGroup>();
@@ -115,8 +128,8 @@ public static class EndSummaryUIBuilder
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
-        Button restartBtn = CreateButton(btnBarGo.transform, "Restart_Button", "RESTART  [SPACE]", new Color(0.85f, 0.65f, 0.22f, 1f));
-        Button quitBtn = CreateButton(btnBarGo.transform, "Quit_Button", "QUIT  [ESC]", new Color(0.35f, 0.35f, 0.38f, 1f));
+        Button restartBtn = CreateButton(btnBarGo.transform, "TryAgain_Button", "TRY AGAIN  [SPACE]", new Color(0.85f, 0.65f, 0.22f, 1f));
+        Button quitBtn = CreateButton(btnBarGo.transform, "Exit_Button", "EXIT  [ESC]", new Color(0.35f, 0.35f, 0.38f, 1f));
 
         // Serializacja pól w EndSummaryUI
         SerializedObject so = new SerializedObject(summaryUI);

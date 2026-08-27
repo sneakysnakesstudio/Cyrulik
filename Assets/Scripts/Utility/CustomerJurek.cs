@@ -242,6 +242,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             if (usePatienceTimer)
             {
                 _patienceRemaining -= Time.deltaTime;
+                if (PatienceMeterUI.Instance != null)
+                {
+                    PatienceMeterUI.Instance.UpdateProgress(_patienceRemaining, patienceDuration);
+                }
+
                 if (_patienceRemaining <= 0f)
                 {
                     TriggerPatienceTimeout();
@@ -518,6 +523,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _isWaitingForPlayer = true;
         _patienceRemaining = patienceDuration;
 
+        if (usePatienceTimer && PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.Show(patienceDuration, "Jurek");
+        }
+
         Debug.Log($"[CustomerJurek] Jurek oczekuje na gracza przez {patienceDuration:0} sekund. Podejdź i naciśnij [E]!");
     }
 
@@ -530,6 +540,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         _isWaitingForPlayer = false;
         Debug.Log("[CustomerJurek] Upłynął czas cierpliwości Jurka (brak interakcji gracza w wyznaczonym czasie)!");
+
+        if (PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.TriggerTimeout();
+        }
 
         onPatienceTimeout?.Invoke();
 
@@ -717,6 +732,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         _isWaitingForPlayer = false;
         _hasInteractedWithPlayer = true;
+
+        if (PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.Hide(true);
+        }
 
         if (playerTransform != null)
         {
@@ -966,6 +986,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _hasInteractedWithPlayer = false;
         _hasReachedChair = false;
         _patienceRemaining = patienceDuration;
+
+        if (PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.HideInstant();
+        }
 
         SetWalkingAnimation(false);
 
