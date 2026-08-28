@@ -849,6 +849,18 @@ public class RazorMinigame : MonoBehaviour, IInteractable
         yield return new WaitUntil(() => fadeFinished);
 
         PreparationStateManager.Instance?.SetTaskState("razor_sharpened", isSharp);
+        if (isSharp)
+        {
+            var hands = FindAnyObjectByType<PlayerHands>();
+            if (hands != null && hands.HasItem)
+            {
+                if (hands.HeldItem != null && hands.HeldItem.TryGetComponent<PickupItem>(out var pickup))
+                {
+                    pickup.ItemId = "razor_sharpened";
+                    pickup.InteractionName = "Sharpened razor";
+                }
+            }
+        }
         OnMinigameCompleted?.Invoke(_sharpness);
 
         _isCompleted = isSharp;

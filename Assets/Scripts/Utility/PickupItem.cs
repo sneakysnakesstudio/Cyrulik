@@ -1,13 +1,17 @@
 using UnityEngine;
 
-public class PickupItem : MonoBehaviour, IInteractable, ILookAtHandler
+public class PickupItem : MonoBehaviour, IConditionalInteractable, ILookAtHandler
 {
     [Header("Item Info")]
-    [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade', 'dead_mouse', 'pot').")]
+    [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade', 'dead_mouse', 'pot', 'razor').")]
     [SerializeField] private string itemId = "cheese";
 
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Pick up";
+
+    [Header("Wymagania Specjalne (np. Brzytwa)")]
+    [Tooltip("Czy ten przedmiot wymaga wcześniejszego podania ciepłego ręcznika Jurkowi (np. brzytwa)?")]
+    [SerializeField] private bool requireTowelGivenFirst = false;
 
     [Header("Inner Thought / Inspect Mode (Myśli bohatera)")]
     [Tooltip("Myśl wewnętrzna wyświetlana w chmurce przy zbadaniu lub podniesieniu tego przedmiotu.")]
@@ -61,7 +65,34 @@ public class PickupItem : MonoBehaviour, IInteractable, ILookAtHandler
     [SerializeField] private PlayerHands _playerHands;
 
     public string ItemId { get => itemId; set => itemId = value; }
-    public string InteractionName { get => interactionName; set => interactionName = value; }
+
+    public bool CanInteract
+    {
+        get
+        {
+            if (IsRazorItem() || requireTowelGivenFirst)
+            {
+                if (!IsTowelGiven())
+                    return false;
+            }
+            return true;
+        }
+    }
+
+    public string InteractionName
+    {
+        get
+        {
+            if ((IsRazorItem() || requireTowelGivenFirst) && !IsTowelGiven())
+            {
+                return $"{interactionName} (Apply hot towel to client first)";
+            }
+            return interactionName;
+        }
+        set => interactionName = value;
+    }
+
+    public string BlockedMessage => "I need to prepare and apply the hot towel to Jurek before taking the razor.";
 
     public string ThoughtText
     {
@@ -86,6 +117,12 @@ public class PickupItem : MonoBehaviour, IInteractable, ILookAtHandler
         if (gameObject.isStatic)
         {
             Debug.LogWarning($"[PickupItem] Obiekt '{name}' jest oznaczony jako STATIC! Przedmioty do podnoszenia NIE mogą być Static, ponieważ Unity piecze ich meshe w Static Batching i nie pozwala ich przenosić.", this);
+        }
+
+        // Auto-fix ID dla brzytwy jeśli w scenie oznaczono jako cheese
+        if ((name.ToLowerInvariant().Contains("razor") || interactionName.ToLowerInvariant().Contains("razor")) && itemId == "cheese")
+        {
+            itemId = "razor";
         }
 
         if (_playerHands == null)
@@ -143,6 +180,16 @@ public class PickupItem : MonoBehaviour, IInteractable, ILookAtHandler
 
     public void Interact()
     {
+        // Blokada podniesienia brzytwy przed podaniem ręcznika Jurkowi
+        if ((IsRazorItem() || requireTowelGivenFirst) && !IsTowelGiven())
+        {
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.ShowThought("I shouldn't take the razor yet. I need to prepare and apply the hot towel to the customer first.");
+            }
+            return;
+        }
+
         // 1. Zawsze wywołaj myśl jeśli jest ustawiona
         TriggerThought();
 
@@ -167,5 +214,26 @@ public class PickupItem : MonoBehaviour, IInteractable, ILookAtHandler
         }
 
         _playerHands.TryHold(gameObject);
+    }
+
+    private bool IsRazorItem()
+    {
+        string id = itemId != null ? itemId.ToLowerInvariant() : "";
+        string n = name.ToLowerInvariant();
+        string iname = interactionName != null ? interactionName.ToLowerInvariant() : "";
+        return id.Contains("razor") || id.Contains("blade") || n.Contains("razor") || n.Contains("blade") || iname.Contains("razor");
+    }
+
+    private bool IsTowelGiven()
+    {
+        if (CustomerJurek.Instance != null && CustomerJurek.Instance.HasReceivedTowel)
+            return true;
+
+        if (PreparationStateManager.Instance != null)
+        {
+            return PreparationStateManager.Instance.IsTaskCompleted("clean_towel") || PreparationStateManager.Instance.IsTaskCompleted("towel_prepared");
+        }
+
+        return false;
     }
 }

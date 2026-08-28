@@ -241,7 +241,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
             if (_isSeated && _hasReceivedWater && _hasReceivedTowel && !_isShavingDone)
             {
-                return IsPlayerHoldingRazor() ? "Shave Jurek" : "Talk to Jurek";
+                if (IsPlayerHoldingSharpenedRazor())
+                    return "Shave Jurek";
+                if (IsPlayerHoldingRazor())
+                    return "Shave Jurek (Sharpen razor on strop first)";
+                return "Talk to Jurek";
             }
 
             return interactionName;
@@ -306,13 +310,13 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
     [Header("Pojawienie się po przejściu przez zasłony (Curtain Trigger)")]
     [Tooltip("Czas w sekundach od przejścia gracza przez zasłony do pojawienia się i przyjścia Jurka.")]
-    [SerializeField] private float curtainArrivalDelay = 30.0f;
+    [SerializeField] private float curtainArrivalDelay = 20.0f;
 
     private Coroutine _curtainArrivalCoroutine;
 
     /// <summary>
     /// Wywoływane gdy gracz przechodzi przez zasłony w salonie.
-    /// Po 30 sekundach włącza model Jurka i rozpoczyna jego sekwencję przyjścia.
+    /// Po 20 sekundach włącza model Jurka i rozpoczyna jego sekwencję przyjścia.
     /// </summary>
     public void OnPlayerPassedCurtain()
     {
@@ -327,7 +331,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         yield return new WaitForSeconds(delay);
         _curtainArrivalCoroutine = null;
 
-        Debug.Log("<color=#70FF70>[CustomerJurek] 30 sekund minęło! Jurek pojawia się na zewnątrz i wyrusza do salonu!</color>");
+        Debug.Log("<color=#70FF70>[CustomerJurek] 20 sekund minęło! Jurek pojawia się na zewnątrz i wyrusza do salonu!</color>");
         SetVisualsActive(true);
         TriggerArrival();
     }
@@ -419,8 +423,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        // 2. Oczekiwanie na gracza w salonie (tylko w Waiting Point przed podejściem do fotela!)
-        if (!_isSeated && !_hasReachedChair && _isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
+        // 2. Odliczanie cierpliwości (Patience Timer) gdy Jurek czeka na interakcję gracza
+        if (_isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
         {
             if (usePatienceTimer)
             {
@@ -437,8 +441,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 }
             }
 
-            // Płynne śledzenie gracza wzrokiem TYLKO na stojąco przy Waiting Point
-            if (lookAtPlayerWhileWaiting && playerTransform != null)
+            // Płynne śledzenie gracza wzrokiem WYŁĄCZNIE na stojąco w Waiting Point (przed podejściem do fotela)
+            if (!_isSeated && !_hasReachedChair && lookAtPlayerWhileWaiting && playerTransform != null)
             {
                 Vector3 lookDir = playerTransform.position - transform.position;
                 lookDir.y = 0f;
@@ -1006,9 +1010,16 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
         else if (_isSeated && _hasReceivedWater && _hasReceivedTowel && !_isShavingDone)
         {
-            if (IsPlayerHoldingRazor())
+            if (IsPlayerHoldingSharpenedRazor())
             {
                 StartShavingSequence();
+            }
+            else if (IsPlayerHoldingRazor())
+            {
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.ShowThought("This razor is too dull. I need to sharpen it on the leather strop first.");
+                }
             }
             else
             {
@@ -1111,6 +1122,30 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         {
             EndSummaryUI.Instance.ShowEndScreen("Thank you for playing!", true);
         }
+    }
+
+    private bool IsPlayerHoldingSharpenedRazor()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands == null || !playerHands.HasItem)
+            return false;
+
+        GameObject held = playerHands.HeldItem;
+        if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
+        {
+            string id = pickup.ItemId != null ? pickup.ItemId.Trim().ToLowerInvariant() : "";
+            if (id == "razor_sharpened" || id == "sharp_razor")
+                return true;
+        }
+
+        if (PreparationStateManager.Instance != null && PreparationStateManager.Instance.IsTaskCompleted("razor_sharpened"))
+        {
+            return IsPlayerHoldingRazor();
+        }
+
+        return false;
     }
 
     private bool IsPlayerHoldingRazor()
