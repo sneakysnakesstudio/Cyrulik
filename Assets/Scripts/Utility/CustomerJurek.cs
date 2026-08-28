@@ -132,14 +132,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Transform chairSpot;
     [SerializeField] private float chairWalkDuration = 4.5f;
 
-    [Header("Dokładne koordynaty siedzenia na fotelu")]
-    [Tooltip("Używaj precyzyjnych współrzędnych pozycji i obrotu siedzenia Jurka.")]
-    [SerializeField] private bool useExplicitSittingCoordinates = true;
-    [SerializeField] private Vector3 explicitSittingPosition = new Vector3(-1.556814f, 0.397f, 4.958035f);
-    [SerializeField] private Vector3 explicitSittingEulerAngles = new Vector3(0f, -90f, 0f);
-    [SerializeField] private Vector3 explicitSittingScale = new Vector3(1.3f, 1.3f, 1.6f);
-
-    [Header("Punkt Siedzenia na Fotelu (Sitting Point - Alternatywa)")]
+    [Header("Punkt Siedzenia na Fotelu (Sitting Point)")]
     [Tooltip("Dedykowany punkt fotela / krzesełka (SittingTransformPoint), na który Jurek siada po nalaniu / otrzymaniu wody.")]
     [SerializeField] private Transform sittingTransformPoint;
 
@@ -876,7 +869,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             PatienceMeterUI.Instance.Hide(true);
         }
 
-        if (playerTransform != null)
+        if (!_isSeated && playerTransform != null)
         {
             Vector3 lookDir = playerTransform.position - transform.position;
             lookDir.y = 0f;
@@ -951,9 +944,6 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         _hasReceivedWater = true;
         Debug.Log("[CustomerJurek] Jurek otrzymał szklankę wody i jest gotowy na golenie!");
-
-        // Upewnij się, że Jurek jest idealnie posadzony na SittingTransformPoint
-        SnapToChairSittingPosition();
 
         if (DialogueManager.Instance != null)
         {
@@ -1056,26 +1046,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         transform.DOKill();
         SetWalkingAnimation(false);
 
-        if (useExplicitSittingCoordinates)
-        {
-            transform.localPosition = explicitSittingPosition;
-            transform.localRotation = Quaternion.Euler(explicitSittingEulerAngles);
-            if (explicitSittingScale != Vector3.zero)
-            {
-                transform.localScale = explicitSittingScale;
-            }
-        }
-        else
-        {
-            FixSittingAnchor();
-
-            Transform targetAnchor = sittingTransformPoint != null ? sittingTransformPoint : chairSpot;
-            if (targetAnchor != null)
-            {
-                transform.position = targetAnchor.position + targetAnchor.TransformDirection(sittingPositionOffset);
-                transform.rotation = targetAnchor.rotation * Quaternion.Euler(sittingRotationOffset);
-            }
-        }
+        transform.position = new Vector3(-1.556814f, 0.397f, 4.958035f);
+        transform.rotation = Quaternion.Euler(0f, -90f, 0f);
+        transform.localScale = new Vector3(1.3f, 1.3f, 1.6f);
 
         SetSittingAnimation(true);
     }
