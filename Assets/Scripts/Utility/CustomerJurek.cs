@@ -1262,6 +1262,42 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     }
 
     /// <summary>
+    /// Debug: Natychmiast sadza Jurka na fotelu ze statusem otrzymanej wody (gotowy do golenia, z pominięciem całej sekwencji).
+    /// </summary>
+    [ContextMenu("Debug: Force Seated With Water (Ready For Shaving)")]
+    public void ForceSeatedWithWater()
+    {
+        _movementTween?.Kill();
+        _hasArrived = true;
+        _hasLeft = false;
+        _isWalking = false;
+        _isWaitingForPlayer = false;
+        _hasInteractedWithPlayer = true;
+        _hasReachedChair = true;
+        _askedForWater = true;
+        _isSeated = true;
+        _hasReceivedWater = true;
+
+        EnsureVisualsActive();
+
+        if (PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.HideInstant();
+        }
+
+        SnapToChairSittingPosition();
+
+        if (frontDoor != null)
+        {
+            frontDoor.Unlock();
+        }
+
+        onReadyForShaving?.Invoke();
+
+        Debug.Log("<color=#70FF70>[CustomerJurek DEBUG] Jurek natychmiast posadzony na fotelu ze szklanką wody (Gotowy do golenia)!</color>");
+    }
+
+    /// <summary>
     /// Resetuje stan Jurka do stanu początkowego (przydatne do wielokrotnych testów w DebugOverlay).
     /// </summary>
     public void ResetCustomerState()

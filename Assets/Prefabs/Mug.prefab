@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5753791579148288570}
   - component: {fileID: 3590594719993399871}
   - component: {fileID: 2827112569633356908}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Mug
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -125,11 +125,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 65992084ff7598d46b2b776cd747ffa8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickupItem
-  itemId: Empty glass
+  itemId: glass
   interactionName: Empty mug
-  inHandPosition: {x: 0, y: 0, z: 0}
-  inHandRotation: {x: 0, y: 0, z: 0}
-  inHandScale: {x: 1, y: 1, z: 1}
+  inHandPosition: {x: 0, y: 0, z: 0.4}
+  inHandRotation: {x: 0, y: 90, z: -90}
+  inHandScale: {x: 3, y: 3, z: 3}
   freezeInPlaceAtStart: 1
   customPickupSound: 
   customPickupClip: {fileID: 0}

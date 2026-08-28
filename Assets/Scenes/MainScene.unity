@@ -62240,6 +62240,67 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1001 &688683576
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.9747
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.096
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 7.1292
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.5104175
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.5104176
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.48936084
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.4893608
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 87.587
+      objectReference: {fileID: 0}
+    - target: {fileID: 4435750712100655951, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_Name
+      value: Mug_2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4435750712100655951, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
 --- !u!1 &709936204
 GameObject:
   m_ObjectHideFlags: 0
@@ -74632,7 +74693,7 @@ MonoBehaviour:
   spawnPosition1: {fileID: 1157973204}
   spawnPosition2: {fileID: 1573543464}
   spawnPosition3: {fileID: 68141990}
-  selectedSpawnPosition: 1
+  selectedSpawnPosition: 2
   autoSpawnJurekOnStart: 0
   autoSpawnJurekDelay: 0.5
 --- !u!4 &959419717
@@ -97696,6 +97757,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1519873352}
   m_CullTransparentMesh: 1
+--- !u!1 &1533956733 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -8006009767450596044, guid: b83d93d9d9808b348b373abe9d386b1e, type: 3}
+  m_PrefabInstance: {fileID: 488915166}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1534563394
 GameObject:
   m_ObjectHideFlags: 0
@@ -99653,6 +99719,8 @@ MonoBehaviour:
   blockedShakeStrength: 8
   blockedShakeVibrato: 12
   blockedColorReturnDuration: 0.15
+  errorSoundGroup: error_sound
+  customErrorClip: {fileID: 8300000, guid: 783e918c450a64e43a9588ce611f6a2e, type: 3}
   colorFadeDuration: 1.01
   textFadeInDuration: 1.4
   textFadeOutDuration: 0.37
@@ -104276,6 +104344,10 @@ PrefabInstance:
     - target: {fileID: 388437917372639548, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 87.587
+      objectReference: {fileID: 0}
+    - target: {fileID: 2827112569633356908, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: itemId
+      value: glass
       objectReference: {fileID: 0}
     - target: {fileID: 4435750712100655951, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
       propertyPath: m_Name
@@ -146993,13 +147065,25 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2827112569633356908, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: inHandPosition.z
+      value: 0.05
+      objectReference: {fileID: 0}
+    - target: {fileID: 2827112569633356908, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: inHandRotation.x
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: 2827112569633356908, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: inHandRotation.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: 2827112569633356908, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
+      propertyPath: inHandRotation.z
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4435750712100655951, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
       propertyPath: m_Name
       value: Mug
-      objectReference: {fileID: 0}
-    - target: {fileID: 4435750712100655951, guid: 845b936741c3dd043a14187eb58ae976, type: 3}
-      propertyPath: m_Layer
-      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -162892,12 +162976,13 @@ MonoBehaviour:
   promptNeedItem: Sink (Requires an empty glass or pot)
   soundPourWater: water_pour
   soundPourGlass: pouing_water_inGlass
+  customGlassClip: {fileID: 8300000, guid: 514b6a07a236213478d1167c93ca0351, type: 3}
   customWaterClip: {fileID: 8300000, guid: 514b6a07a236213478d1167c93ca0351, type: 3}
-  customGlassClip: {fileID: 0}
   audioSource: {fileID: 900126418}
-  waterStreamVisual: {fileID: 0}
-  waterParticleSystem: {fileID: 637777681}
+  waterParticlePoint: {fileID: 1559718221}
   faucetNozzlePoint: {fileID: 1559718221}
+  waterParticleSystem: {fileID: 637777681}
+  waterStreamVisual: {fileID: 1533956733}
   potWaterStreamDuration: 1
   playerHands: {fileID: 361643063}
   playerMovement: {fileID: 361643060}
@@ -163825,3 +163910,4 @@ SceneRoots:
   - {fileID: 358937787}
   - {fileID: 6437848146955684155}
   - {fileID: 2065280502}
+  - {fileID: 688683576}

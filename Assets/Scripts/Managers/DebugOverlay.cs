@@ -708,6 +708,13 @@ public class DebugOverlay : MonoBehaviour
 
         GUILayout.Space(4);
 
+        if (GUILayout.Button("[★] POSADZ NA FOTELU Z WODA (Gotowy do golenia - Skip calej sekwencji)", _successButtonStyle, GUILayout.Height(38)))
+        {
+            _customerJurek.ForceSeatedWithWater();
+        }
+
+        GUILayout.Space(4);
+
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("[!] POSTAW PRZED DRZWIAMI (Szczyt schodow)", _buttonStyle, GUILayout.Height(32)))
         {

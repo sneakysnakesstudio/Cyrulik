@@ -46,6 +46,11 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private int blockedShakeVibrato = 12;
     [SerializeField] private float blockedColorReturnDuration = 0.15f;
 
+    [Header("Blocked Audio")]
+    [Tooltip("Nazwa dźwięku błędu w AudioManager (domyślnie 'error_sound').")]
+    [SerializeField] private string errorSoundGroup = "error_sound";
+    [SerializeField] private AudioClip customErrorClip;
+
     [Header("Fade")]
     [SerializeField] private float colorFadeDuration = 0.15f;
     [SerializeField] private float textFadeInDuration = 0.2f;
@@ -391,6 +396,9 @@ public class Crosshair : MonoBehaviour
         if (!_hasInteractable)
             return;
 
+        // Odtwarzanie dźwięku błędu z AudioManager (lub custom clip)
+        PlayErrorSound();
+
         _pulseTween?.Kill();
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
@@ -465,6 +473,23 @@ public class Crosshair : MonoBehaviour
 
         _blockedTween =
             blockedSequence;
+    }
+
+    private void PlayErrorSound()
+    {
+        // 1. Zawsze odtwarzaj przez AudioManager (zgodnie z bazą AudioDatabaseSO i jej ustawieniami Pitch/Volume)
+        if (AudioManager.Instance != null)
+        {
+            string soundName = !string.IsNullOrEmpty(errorSoundGroup) ? errorSoundGroup : "error_sound";
+            AudioManager.Instance.Play(soundName);
+            return;
+        }
+
+        // 2. Fallback gdyby AudioManager nie istniał
+        if (customErrorClip != null)
+        {
+            AudioSource.PlayClipAtPoint(customErrorClip, Camera.main != null ? Camera.main.transform.position : transform.position);
+        }
     }
 
     private Color GetCurrentInteractionColor()

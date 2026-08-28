@@ -316,6 +316,17 @@ MonoBehaviour:
     randomizeVolume: 1
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: error_sound
+    clips:
+    - {fileID: 8300000, guid: 783e918c450a64e43a9588ce611f6a2e, type: 3}
+    volume: 0.259
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.52
+    maxPitch: 0.96
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
   otherSounds:
   - groupName: task_complete
     clips:

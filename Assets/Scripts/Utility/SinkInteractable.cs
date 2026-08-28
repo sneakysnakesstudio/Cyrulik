@@ -38,21 +38,28 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private string soundPourWater = "water_pour";
 
     [Tooltip("Nazwa dźwięku nalewania wody do szklanki w AudioManager.")]
-    [SerializeField] private string soundPourGlass = "pouing_water_inGlass";
+    [SerializeField] private string soundPourGlass = "pouring_glass_Sound";
 
-    [SerializeField] private AudioClip customWaterClip;
+    [Tooltip("Dedykowany klip dźwiękowy nalewania wody do szklanki (np. pouring_glass_Sound.ogg).")]
     [SerializeField] private AudioClip customGlassClip;
+
+    [Tooltip("Dedykowany klip dźwiękowy nalewania wody do garnka.")]
+    [SerializeField] private AudioClip customWaterClip;
+    
     [SerializeField] private AudioSource audioSource;
 
-    [Header("Wizualia i Cząsteczki")]
-    [Tooltip("Opcjonalny obiekt strumienia wody z kranu.")]
-    [SerializeField] private GameObject waterStreamVisual;
+    [Header("Wizualia i Cząsteczki Wody")]
+    [Tooltip("Punkt Transformacji (Transform Point), z którego ma lecieć strumień wody.")]
+    [SerializeField] private Transform waterParticlePoint;
 
-    [Tooltip("Opcjonalny system cząsteczek wody (jeśli puste, skrypt znajdzie lub wygeneruje automatycznie).")]
+    [Tooltip("Punkt wylotu z kranu (opcjonalny alias dla waterParticlePoint).")]
+    [SerializeField] private Transform faucetNozzlePoint;
+
+    [Tooltip("Dedykowany system cząsteczek wody (jeśli puste, skrypt stworzy go automatycznie na waterParticlePoint).")]
     [SerializeField] private ParticleSystem waterParticleSystem;
 
-    [Tooltip("Opcjonalny punkt wylotu wody z kranu do zespawnowania cząsteczek.")]
-    [SerializeField] private Transform faucetNozzlePoint;
+    [Tooltip("Opcjonalny obiekt strumienia wody z kranu.")]
+    [SerializeField] private GameObject waterStreamVisual;
 
     [SerializeField] private float potWaterStreamDuration = 1.0f;
 
@@ -103,17 +110,6 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         }
     }
 
-    private void Awake()
-    {
-        EnsurePlayerReferences();
-
-        if (waterStreamVisual != null)
-        {
-            waterStreamVisual.SetActive(false);
-        }
-
-        EnsureWaterParticles();
-    }
 
     private void OnDisable()
     {
@@ -308,6 +304,50 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         Debug.Log($"[Sink] Garnek został napełniony wodą! (ItemId: '{filledPotItemId}')");
     }
 
+    private void Awake()
+    {
+        EnsurePlayerReferences();
+        EnsureAudioSource();
+
+        if (waterStreamVisual != null)
+        {
+            waterStreamVisual.SetActive(false);
+        }
+
+        EnsureWaterParticles();
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (customGlassClip == null)
+        {
+            customGlassClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sounds/Water/pouring_glass_Sound.ogg");
+        }
+    }
+#endif
+
+    private void EnsureAudioSource()
+    {
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (audioSource != null)
+        {
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 1.0f; // Dźwięk przestrzenny 3D przy zlewie
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
+            audioSource.minDistance = 1.0f;
+            audioSource.maxDistance = 15.0f;
+        }
+    }
+
     private void StartWaterEffect()
     {
         if (waterStreamVisual != null)
@@ -334,21 +374,34 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         {
             waterParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
         }
+
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
     }
 
     private void EnsureWaterParticles()
     {
-        if (waterParticleSystem != null) return;
+        Transform spawnParent = waterParticlePoint != null 
+            ? waterParticlePoint 
+            : (faucetNozzlePoint != null ? faucetNozzlePoint : (waterStreamVisual != null ? waterStreamVisual.transform : transform));
 
-        if (waterStreamVisual != null)
+        if (waterParticleSystem != null)
         {
-            waterParticleSystem = waterStreamVisual.GetComponentInChildren<ParticleSystem>();
-            if (waterParticleSystem != null) return;
+            if (waterParticlePoint != null && waterParticleSystem.transform.parent != waterParticlePoint)
+            {
+                waterParticleSystem.transform.SetParent(waterParticlePoint, false);
+                waterParticleSystem.transform.localPosition = Vector3.zero;
+            }
+            return;
         }
 
-        Transform spawnParent = faucetNozzlePoint != null 
-            ? faucetNozzlePoint 
-            : (waterStreamVisual != null ? waterStreamVisual.transform : transform);
+        if (spawnParent != null)
+        {
+            waterParticleSystem = spawnParent.GetComponentInChildren<ParticleSystem>();
+            if (waterParticleSystem != null) return;
+        }
 
         GameObject psGo = new GameObject("Sink_WaterParticles_Auto");
         psGo.transform.SetParent(spawnParent, false);
@@ -359,20 +412,21 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         var main = waterParticleSystem.main;
         main.duration = 1f;
         main.loop = true;
-        main.startLifetime = 0.35f;
-        main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 2.5f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.035f);
-        main.startColor = new Color(0.75f, 0.9f, 1f, 0.75f);
-        main.gravityModifier = 1.2f;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.45f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(2.0f, 3.5f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.04f);
+        main.startColor = new Color(0.75f, 0.92f, 1f, 0.85f);
+        main.gravityModifier = 1.8f;
         main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
 
         var emission = waterParticleSystem.emission;
-        emission.rateOverTime = 65f;
+        emission.rateOverTime = 80f;
 
         var shape = waterParticleSystem.shape;
         shape.shapeType = ParticleSystemShapeType.Cone;
-        shape.angle = 4f;
-        shape.radius = 0.015f;
+        shape.angle = 3f;
+        shape.radius = 0.012f;
 
         var renderer = psGo.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
@@ -384,7 +438,7 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         if (particleShader != null)
         {
             Material mat = new Material(particleShader);
-            mat.color = new Color(0.8f, 0.92f, 1f, 0.8f);
+            mat.color = new Color(0.8f, 0.95f, 1f, 0.85f);
             renderer.material = mat;
         }
 
@@ -393,6 +447,8 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
 
     private void PlayWaterSound()
     {
+        EnsureAudioSource();
+
         if (customWaterClip != null)
         {
             if (audioSource != null)
@@ -410,22 +466,51 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
 
     private void PlayGlassPourSound()
     {
+        EnsureAudioSource();
+
+        // 1. Bezpośredni klip audio (np. pouring_glass_Sound.ogg)
         if (customGlassClip != null)
         {
             if (audioSource != null)
-                audioSource.PlayOneShot(customGlassClip);
+            {
+                audioSource.clip = customGlassClip;
+                audioSource.loop = true;
+                audioSource.volume = 1f;
+                audioSource.Play();
+            }
             else
+            {
                 AudioSource.PlayClipAtPoint(customGlassClip, transform.position);
+            }
             return;
         }
 
-        if (!string.IsNullOrEmpty(soundPourGlass) && AudioManager.Instance != null)
+        // 2. Szukanie w AudioManagerze
+        string[] soundNames = new string[] { soundPourGlass, "pouring_glass_Sound", "pouing_water_inGlass", "water_pour" };
+        if (AudioManager.Instance != null)
         {
-            AudioManager.Instance.Play(soundPourGlass);
+            foreach (var sName in soundNames)
+            {
+                if (!string.IsNullOrEmpty(sName))
+                {
+                    AudioManager.Instance.Play(sName);
+                    return;
+                }
+            }
         }
-        else
+
+        // 3. Fallback
+        PlayWaterSound();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Transform p = waterParticlePoint != null ? waterParticlePoint : faucetNozzlePoint;
+        if (p != null)
         {
-            PlayWaterSound();
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(p.position, 0.035f);
+            Gizmos.DrawRay(p.position, Vector3.down * 0.4f);
         }
     }
 
