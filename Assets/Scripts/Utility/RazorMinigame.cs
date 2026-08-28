@@ -706,7 +706,7 @@ public class RazorMinigame : MonoBehaviour, IInteractable
         }
         else
         {
-            // Subtle, realistic wrist flip / tilt in place
+            // Pełny obrót o 360 stopni (FastBeyond360) przy każdym powrocie
             if (razorIndicator != null)
             {
                 razorIndicator.DOKill();
@@ -715,8 +715,9 @@ public class RazorMinigame : MonoBehaviour, IInteractable
                 razorIndicator.localRotation = Quaternion.Euler(0f, 0f, _baseZRotation);
 
                 Sequence flipSeq = DOTween.Sequence();
-                flipSeq.Append(razorIndicator.DORotate(new Vector3(0f, 0f, _baseZRotation + returnFlipAngle), flipDuration * 0.5f).SetEase(Ease.OutQuad));
-                flipSeq.Append(razorIndicator.DORotate(new Vector3(0f, 0f, _baseZRotation), flipDuration * 0.5f).SetEase(Ease.InOutQuad));
+                // OBRÓT O 360 STOPNI:
+                flipSeq.Append(razorIndicator.DORotate(new Vector3(0f, 0f, _baseZRotation - 360f), flipDuration, RotateMode.FastBeyond360).SetEase(Ease.InOutBack));
+                
                 flipSeq.SetLink(razorIndicator.gameObject, LinkBehaviour.KillOnDestroy);
                 flipSeq.OnComplete(() =>
                 {
@@ -1076,8 +1077,12 @@ public class RazorMinigame : MonoBehaviour, IInteractable
 
     private bool IsPlayerHoldingRazor()
     {
-        if (playerHands == null) return true;
-        return true;
+        if (playerHands == null) return true; // Fallback, jeśli ręce nie są podpięte
+        if (!playerHands.HasItem) return false;
+
+        string itemName = playerHands.HeldItem.name.ToLowerInvariant();
+        // Sprawdzamy czy nazwa przedmiotu zawiera kluczowe słowa
+        return itemName.Contains("razor") || itemName.Contains("brzytwa") || itemName.Contains("ostrze");
     }
 
     private void KillAllTweens()

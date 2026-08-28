@@ -25,6 +25,9 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
     [Tooltip("Czas nalewania wody do szklanki w sekundach.")]
     [SerializeField] private float glassPourDuration = 5.0f;
 
+    [Tooltip("Czas nalewania wody do garnka w sekundach.")]
+    [SerializeField] private float potPourDuration = 2.5f;
+
     [Header("Interaction Prompts (English)")]
     [SerializeField] private string promptFillPot = "Fill pot with water";
     [SerializeField] private string promptFillGlass = "Pour water into glass";
@@ -131,7 +134,7 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         }
         else if (IsHoldingEmptyPot())
         {
-            FillHeldPotWithWater();
+            StartPouringWaterIntoPot();
         }
     }
 
@@ -147,8 +150,8 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
     {
         _isPouring = true;
 
-        // Blokada ruchu gracza i kamery
-        SetPlayerLocked(true);
+        // Pełna blokada ruchu gracza i obrotu kamery (tak jak było wcześniej przy szklance)
+        SetPlayerLocked(true, lockCamera: true, lockBobbing: true);
 
         // 1. Włącz strumień wody i cząsteczki
         StartWaterEffect();
@@ -162,7 +165,7 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
             CustomerJurek.Instance.OnPlayerPouringWater();
         }
 
-        Debug.Log($"[Sink] Rozpoczęto nalewanie wody do szklanki ({glassPourDuration}s)... Gracz zablokowany.");
+        Debug.Log($"[Sink] Rozpoczęto nalewanie wody do szklanki ({glassPourDuration}s)... Gracz i kamera zablokowane.");
 
         // 4. Czekaj określony czas (5 sekund)
         yield return new WaitForSeconds(glassPourDuration);
@@ -190,7 +193,72 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         _isPouring = false;
         _pourCoroutine = null;
 
-        Debug.Log($"[Sink] Szklanka została napełniona wodą! (ItemId: '{filledGlassItemId}') - Gracz odblokowany.");
+        Debug.Log($"[Sink] Szklanka została napełniona wodą! (ItemId: '{filledGlassItemId}') - Gracz i kamera odblokowane.");
+    }
+
+    private void StartPouringWaterIntoPot()
+    {
+        if (_pourCoroutine != null)
+            StopCoroutine(_pourCoroutine);
+
+        _pourCoroutine = StartCoroutine(PourPotRoutine());
+    }
+
+    private IEnumerator PourPotRoutine()
+    {
+        _isPouring = true;
+
+        // Dla garnka: blokada chodzenia WSAD, ale obrót kamery i head bobbing mogą zostać aktywne
+        SetPlayerLocked(true, lockCamera: false, lockBobbing: false);
+
+        // 1. Włącz strumień wody i cząsteczki
+        StartWaterEffect();
+
+        // 2. Odtwórz dźwięk nalewania wody do garnka
+        PlayWaterSound();
+
+        // 3. Reakcja Jurka
+        if (CustomerJurek.Instance != null)
+        {
+            CustomerJurek.Instance.OnPlayerPouringWater();
+        }
+
+        Debug.Log($"[Sink] Rozpoczęto nalewanie wody do garnka ({potPourDuration}s)... Ruch gracza zablokowany (kamera aktywna).");
+
+        // 4. Czekaj określony czas nalewania
+        yield return new WaitForSeconds(potPourDuration);
+
+        // 5. Napełnij garnek wodą
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands != null && playerHands.HasItem)
+        {
+            GameObject held = playerHands.HeldItem;
+            if (held != null)
+            {
+                if (held.TryGetComponent<PotItem>(out var potItem))
+                {
+                    potItem.SetWater(true);
+                }
+                else if (held.TryGetComponent<PickupItem>(out var pickup))
+                {
+                    pickup.ItemId = filledPotItemId;
+                    pickup.InteractionName = "Pot with water";
+                }
+            }
+        }
+
+        // 6. Wyłącz strumień i cząsteczki
+        StopWaterEffect();
+
+        // 7. Odblokowanie ruchu gracza
+        SetPlayerLocked(false);
+
+        _isPouring = false;
+        _pourCoroutine = null;
+
+        Debug.Log($"[Sink] Garnek został napełniony wodą! (ItemId: '{filledPotItemId}') - Gracz odblokowany.");
     }
 
     private void EnsurePlayerReferences()
@@ -208,7 +276,7 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
             headBobbing = FindAnyObjectByType<HeadBobbing>();
     }
 
-    private void SetPlayerLocked(bool lockState)
+    private void SetPlayerLocked(bool lockState, bool lockCamera = true, bool lockBobbing = true)
     {
         if (!lockPlayerWhilePouring) return;
 
@@ -216,7 +284,7 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
 
         if (lockState)
         {
-            if (InputModeManager.Instance != null)
+            if (lockCamera && InputModeManager.Instance != null)
             {
                 InputModeManager.Instance.SwitchToUI(unlockCursor: false);
             }
@@ -226,12 +294,12 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
                 playerMovement.enabled = false;
             }
 
-            if (cinemachineBrain != null)
+            if (lockCamera && cinemachineBrain != null)
             {
                 cinemachineBrain.enabled = false;
             }
 
-            if (headBobbing != null)
+            if (lockBobbing && headBobbing != null)
             {
                 headBobbing.enabled = false;
             }
@@ -264,44 +332,6 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
-    }
-
-    private void FillHeldPotWithWater()
-    {
-        if (playerHands == null)
-            playerHands = FindAnyObjectByType<PlayerHands>();
-
-        if (playerHands == null || !playerHands.HasItem)
-            return;
-
-        GameObject held = playerHands.HeldItem;
-        if (held == null) return;
-
-        // 1. Zaktualizuj komponent PotItem jeśli istnieje
-        if (held.TryGetComponent<PotItem>(out var potItem))
-        {
-            potItem.SetWater(true);
-        }
-        else if (held.TryGetComponent<PickupItem>(out var pickup))
-        {
-            pickup.ItemId = filledPotItemId;
-            pickup.InteractionName = "Pot with water";
-        }
-
-        // 2. Dźwięk nalewania wody
-        PlayWaterSound();
-
-        // 3. Efekt strumienia wody z kranu i cząsteczek
-        StartWaterEffect();
-        CancelInvoke(nameof(StopWaterEffect));
-        Invoke(nameof(StopWaterEffect), potWaterStreamDuration);
-
-        if (CustomerJurek.Instance != null)
-        {
-            CustomerJurek.Instance.OnPlayerPouringWater();
-        }
-
-        Debug.Log($"[Sink] Garnek został napełniony wodą! (ItemId: '{filledPotItemId}')");
     }
 
     private void Awake()

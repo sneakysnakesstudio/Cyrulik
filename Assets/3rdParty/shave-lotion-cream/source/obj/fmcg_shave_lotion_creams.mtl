@@ -1,0 +1,26 @@
+# Blender 4.2.1 LTS MTL File: 'fmcg_shave_lotion_creams.blend'
+# www.blender.org
+
+newmtl green_transparent
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.green_transparent.base_color.srgb.<UDIM>.png
+map_Ns C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.green_transparent.roughness.linear.<UDIM>.png
+map_refl C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.green_transparent.metallic.linear.<UDIM>.png
+map_d C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.green_transparent.opacity.linear.<UDIM>.png
+map_Bump -bm 1.000000 C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.green_transparent.normal_ogl.linear.<UDIM>.png
+
+newmtl white_green
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.white_green.base_color.srgb.1001.png
+map_Ns C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.transparent_green.roughness.linear.1001.png
+map_refl C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.transparent_green.metallic.linear.1001.png
+map_Bump -bm 1.000000 C:/Users/aminb/Downloads/zagruskadagi blender fay;l/cgt_fmcg_shave_lotion_creams_001/cgt_fmcg_shave_lotion_creams_001.white_green.normal_ogl.linear.1001.png

@@ -51,6 +51,15 @@ public class PlayerHands : MonoBehaviour
 
     [SerializeField] private AudioSource audioSource;
 
+    [Header("Inner Thoughts on Pickup (Myśli bohatera)")]
+    [Tooltip("Czy wyświetlać myśl wewnętrzną przy pierwszym podniesieniu brzytwy/żyletki?")]
+    [SerializeField] private bool enableRazorFirstPickupThought = true;
+
+    [Tooltip("Treść myśli bohatera przy pierwszym podniesieniu nienaostrzonej brzytwy.")]
+    [SerializeField] private string razorFirstPickupThought = "It's dull. I need to sharpen it first.";
+
+    private bool _hasShownRazorFirstPickupThought = false;
+
     private GameObject _heldItem;
     private Rigidbody _heldRigidbody;
     private Collider[] _heldColliders;
@@ -217,6 +226,25 @@ public class PlayerHands : MonoBehaviour
 
         // Dźwięk podniesienia przedmiotu
         PlayPickupSound(pickup);
+
+        // Myśl bohatera przy pierwszym podniesieniu brzytwy
+        if (enableRazorFirstPickupThought && !_hasShownRazorFirstPickupThought)
+        {
+            string id = currentItemId != null ? currentItemId.ToLowerInvariant() : "";
+            string n = item.name.ToLowerInvariant();
+            if (id == "razor" || id == "razor_blade" || id == "blade" || n.Contains("razor") || n.Contains("brzytwa") || n.Contains("blade") || n.Contains("zyletka"))
+            {
+                bool isSharpened = PreparationStateManager.Instance != null && PreparationStateManager.Instance.IsTaskCompleted("razor_sharpened");
+                if (!isSharpened)
+                {
+                    _hasShownRazorFirstPickupThought = true;
+                    if (DialogueManager.Instance != null)
+                    {
+                        DialogueManager.Instance.ShowThought(razorFirstPickupThought);
+                    }
+                }
+            }
+        }
 
         return true;
     }

@@ -277,12 +277,14 @@ public class PlayerMovement : MonoBehaviour
         if (foundInteractable == _currentInteractable)
             return;
 
-        _currentInteractable =
-            foundInteractable;
+        _currentInteractable = foundInteractable;
 
-        OnInteractableChanged?.Invoke(
-            _currentInteractable
-        );
+        OnInteractableChanged?.Invoke(_currentInteractable);
+
+        if (_currentInteractable is ILookAtHandler lookAtHandler)
+        {
+            lookAtHandler.OnLookAt();
+        }
     }
 
     private void HandleInteraction(

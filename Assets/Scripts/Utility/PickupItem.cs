@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PickupItem : MonoBehaviour, IInteractable
+public class PickupItem : MonoBehaviour, IInteractable, ILookAtHandler
 {
     [Header("Item Info")]
     [Tooltip("ID przedmiotu (np. 'cheese', 'towel', 'wood', 'razor_blade', 'dead_mouse', 'pot').")]
@@ -8,6 +8,27 @@ public class PickupItem : MonoBehaviour, IInteractable
 
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Pick up";
+
+    [Header("Inner Thought / Inspect Mode (Myśli bohatera)")]
+    [Tooltip("Myśl wewnętrzna wyświetlana w chmurce przy zbadaniu lub podniesieniu tego przedmiotu.")]
+    [SerializeField] private string thoughtText = "";
+
+    [Tooltip("Stare pole dla kompatybilności wstecznej.")]
+    [SerializeField, HideInInspector] private string firstPickupThought = "";
+
+    [Tooltip("Jeśli zaznaczone, interakcja TYLKO wyświetli myśl w chmurce i NIE podniesie przedmiotu do rąk (obiekt zostaje na swoim miejscu).")]
+    [SerializeField] private bool onlyShowThoughtDoNotPickup = false;
+
+    [Tooltip("Jeśli zaznaczone, myśl wyświetli się automatycznie, gdy tylko gracz SPOJRZY na ten obiekt celownikiem (bez konieczności klikania).")]
+    [SerializeField] private bool triggerThoughtOnLookAt = false;
+
+    [Tooltip("Czy ta myśl ma się wyświetlić tylko raz w trakcie całej gry?")]
+    [SerializeField] private bool showThoughtOnlyOnce = true;
+
+    [Tooltip("Opcjonalny dźwięk przy zbadaniu przedmiotu (nazwa w AudioManager).")]
+    [SerializeField] private string inspectSound = "";
+
+    private bool _hasShownPickupThought = false;
 
     [Header("In-Hand Transform (Optional)")]
     [Tooltip("Lokalna pozycja w ręku.")]
@@ -42,9 +63,18 @@ public class PickupItem : MonoBehaviour, IInteractable
     public string ItemId { get => itemId; set => itemId = value; }
     public string InteractionName { get => interactionName; set => interactionName = value; }
 
-    public Vector3 InHandPosition => inHandPosition;
-    public Vector3 InHandRotation => inHandRotation;
-    public Vector3 InHandScale => inHandScale == Vector3.zero ? Vector3.one : inHandScale;
+    public string ThoughtText
+    {
+        get => !string.IsNullOrEmpty(thoughtText) ? thoughtText : firstPickupThought;
+        set => thoughtText = value;
+    }
+
+    public bool OnlyShowThoughtDoNotPickup { get => onlyShowThoughtDoNotPickup; set => onlyShowThoughtDoNotPickup = value; }
+    public bool TriggerThoughtOnLookAt { get => triggerThoughtOnLookAt; set => triggerThoughtOnLookAt = value; }
+
+    public Vector3 InHandPosition { get => inHandPosition; set => inHandPosition = value; }
+    public Vector3 InHandRotation { get => inHandRotation; set => inHandRotation = value; }
+    public Vector3 InHandScale { get => inHandScale == Vector3.zero ? Vector3.one : inHandScale; set => inHandScale = value; }
 
     public string CustomPickupSound => customPickupSound;
     public AudioClip CustomPickupClip => customPickupClip;
@@ -83,8 +113,46 @@ public class PickupItem : MonoBehaviour, IInteractable
     }
 #endif
 
+    public void OnLookAt()
+    {
+        if (triggerThoughtOnLookAt)
+        {
+            TriggerThought();
+        }
+    }
+
+    public void TriggerThought()
+    {
+        string text = ThoughtText;
+        if (string.IsNullOrEmpty(text)) return;
+
+        if (_hasShownPickupThought && showThoughtOnlyOnce) return;
+
+        _hasShownPickupThought = true;
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.ShowThought(text);
+        }
+
+        if (!string.IsNullOrEmpty(inspectSound) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(inspectSound);
+        }
+    }
+
     public void Interact()
     {
+        // 1. Zawsze wywołaj myśl jeśli jest ustawiona
+        TriggerThought();
+
+        // 2. Jeśli zaznaczono 'onlyShowThoughtDoNotPickup', to NIE podnoś przedmiotu do rąk
+        if (onlyShowThoughtDoNotPickup)
+        {
+            return;
+        }
+
+        // 3. W przeciwnym razie podnieś do rąk gracza
         if (_playerHands == null)
         {
             _playerHands = FindAnyObjectByType<PlayerHands>();

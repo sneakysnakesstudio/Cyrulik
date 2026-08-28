@@ -37,6 +37,29 @@ public class CurtainSway : MonoBehaviour
     [Tooltip("Siła dodatkowego podmuchu przy przejściu gracza.")]
     [SerializeField] private float playerPushForce = 0.12f;
 
+    [Header("Dźwięk Pierwszego Przejścia (First Pass Sound)")]
+    [Tooltip("Nazwa grupy dźwiękowej w AudioManagerze / AudioDatabaseSO (np. somethig_1).")]
+    [SerializeField] private string audioGroupName = "somethig_1";
+
+    [Tooltip("Opcjonalny bezpośredni AudioClip (służy jako fallback jeśli brak AudioManagera).")]
+    [SerializeField] private AudioClip firstPassAudioClip;
+
+    [Tooltip("Głośność dźwięku pierwszego przejścia (dla bezpośredniego AudioClip).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float soundVolume = 1f;
+
+    [Tooltip("Czy dźwięk ma się odpalić tylko jeden raz (przy pierwszym przejściu)?")]
+    [SerializeField] private bool playOnlyOnce = true;
+
+    [Tooltip("Dystans wyzwolenia dźwięku (w metrach).")]
+    [SerializeField] private float soundTriggerDistance = 1.6f;
+
+    [Tooltip("Czy ignorować różnicę wysokości Y przy sprawdzaniu odległości gracza (zalecane)?")]
+    [SerializeField] private bool ignoreHeightForTrigger = true;
+
+    [Tooltip("Opcjonalny komponent AudioSource. Jeśli nie przypisany, skrypt użyje istniejącego na obiekcie lub doda nowy automatycznie.")]
+    [SerializeField] private AudioSource customAudioSource;
+
     private MeshFilter _meshFilter;
     private Mesh _originalMesh;
     private Mesh _clonedMesh;
@@ -50,6 +73,7 @@ public class CurtainSway : MonoBehaviour
 
     private float _playerImpulse = 0f;
     private Transform _playerTransform;
+    private bool _hasPlayedFirstPassSound = false;
 
     private void Start()
     {
@@ -94,10 +118,24 @@ public class CurtainSway : MonoBehaviour
         newBounds.Expand(new Vector3(waveAmplitudeX * 2f, 0f, waveAmplitudeZ * 2f + playerPushForce));
         _clonedMesh.bounds = newBounds;
 
+        AcquirePlayerReference();
+    }
+
+    private void AcquirePlayerReference()
+    {
+        if (_playerTransform != null) return;
+
         CharacterController playerCC = FindAnyObjectByType<CharacterController>();
         if (playerCC != null)
         {
             _playerTransform = playerCC.transform;
+            return;
+        }
+
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            _playerTransform = playerObj.transform;
         }
     }
 
@@ -111,25 +149,95 @@ public class CurtainSway : MonoBehaviour
 
     private void CheckPlayerInteraction()
     {
-        if (!reactToPlayer) return;
+        bool hasAudio = !string.IsNullOrWhiteSpace(audioGroupName) || firstPassAudioClip != null;
+        if (!reactToPlayer && (!hasAudio || (_hasPlayedFirstPassSound && playOnlyOnce)))
+            return;
 
         if (_playerTransform == null)
         {
-            CharacterController playerCC = FindAnyObjectByType<CharacterController>();
-            if (playerCC != null) _playerTransform = playerCC.transform;
+            AcquirePlayerReference();
         }
 
         if (_playerTransform != null)
         {
-            float dist = (_playerTransform.position - transform.position).sqrMagnitude;
-            if (dist < playerTriggerDistance * playerTriggerDistance)
+            Vector3 playerPos = _playerTransform.position;
+            Vector3 curtainPos = transform.position;
+
+            float distSqr;
+            if (ignoreHeightForTrigger)
             {
-                _playerImpulse = Mathf.Lerp(_playerImpulse, playerPushForce, Time.deltaTime * 5f);
+                float dx = playerPos.x - curtainPos.x;
+                float dz = playerPos.z - curtainPos.z;
+                distSqr = dx * dx + dz * dz;
             }
             else
             {
-                _playerImpulse = Mathf.Lerp(_playerImpulse, 0f, Time.deltaTime * 2f);
+                distSqr = (playerPos - curtainPos).sqrMagnitude;
             }
+
+            // 1. Podmuch wiatru przy zbliżeniu gracza
+            if (reactToPlayer)
+            {
+                if (distSqr < playerTriggerDistance * playerTriggerDistance)
+                {
+                    _playerImpulse = Mathf.Lerp(_playerImpulse, playerPushForce, Time.deltaTime * 5f);
+                }
+                else
+                {
+                    _playerImpulse = Mathf.Lerp(_playerImpulse, 0f, Time.deltaTime * 2f);
+                }
+            }
+
+            // 2. Dźwięk przejścia przez zasłonę (np. somethig_1)
+            if (hasAudio && (!_hasPlayedFirstPassSound || !playOnlyOnce))
+            {
+                float triggerDist = soundTriggerDistance > 0f ? soundTriggerDistance : playerTriggerDistance;
+                if (distSqr < triggerDist * triggerDist)
+                {
+                    PlayFirstPassSound();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Odtwarza dźwięk przejścia przez zasłonę (z AudioManager lub bezpośredniego AudioClip).
+    /// </summary>
+    public void PlayFirstPassSound()
+    {
+        if (playOnlyOnce)
+        {
+            _hasPlayedFirstPassSound = true;
+        }
+
+        // 1. Główny sposób: pobranie i odtworzenie z AudioManager
+        if (!string.IsNullOrWhiteSpace(audioGroupName) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(audioGroupName);
+            Debug.Log($"[CurtainSway] Odtworzono dźwięk '{audioGroupName}' z AudioManager.", this);
+            return;
+        }
+
+        // 2. Fallback: bezpośredni AudioClip
+        if (firstPassAudioClip != null)
+        {
+            if (customAudioSource == null)
+            {
+                customAudioSource = GetComponent<AudioSource>();
+                if (customAudioSource == null)
+                {
+                    customAudioSource = gameObject.AddComponent<AudioSource>();
+                    customAudioSource.playOnAwake = false;
+                    customAudioSource.spatialBlend = 0f; // Dźwięk 2D, aby gracz dobrze go usłyszał przy wejściu do salonu
+                }
+            }
+
+            customAudioSource.PlayOneShot(firstPassAudioClip, soundVolume);
+            Debug.Log($"[CurtainSway] Odtworzono bezpośredni dźwięk przejścia przez zasłonę: {firstPassAudioClip.name}", this);
+        }
+        else if (AudioManager.Instance == null && !string.IsNullOrWhiteSpace(audioGroupName))
+        {
+            Debug.LogWarning($"[CurtainSway] Nie można odtworzyć '{audioGroupName}', ponieważ AudioManager.Instance jest null!", this);
         }
     }
 

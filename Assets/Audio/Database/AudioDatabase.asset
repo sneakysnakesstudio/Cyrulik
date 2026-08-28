@@ -158,6 +158,17 @@ MonoBehaviour:
     randomizeVolume: 1
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: card_flip
+    clips:
+    - {fileID: 8300000, guid: c3d6cbc7012f1744cbf95f0527654add, type: 3}
+    volume: 1
+    preventImmediateRepeat: 1
+    randomizePitch: 0
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 0
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
   furnitureSounds:
   - groupName: fridge_open_sound
     clips:
@@ -361,6 +372,17 @@ MonoBehaviour:
     minPitch: 0.95
     maxPitch: 1.05
     randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: somethig_1
+    clips:
+    - {fileID: 8300000, guid: 2c97b6cc52e008c4cb1f0053f973346c, type: 3}
+    volume: 0.076
+    preventImmediateRepeat: 1
+    randomizePitch: 1
+    minPitch: 0.61
+    maxPitch: 1.05
+    randomizeVolume: 0
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
   audioGroups: []

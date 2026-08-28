@@ -132,7 +132,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Transform chairSpot;
     [SerializeField] private float chairWalkDuration = 4.5f;
 
-    [Header("Punkt Siedzenia na Fotelu (Sitting Point)")]
+    [Header("Dokładne koordynaty siedzenia na fotelu")]
+    [Tooltip("Używaj precyzyjnych współrzędnych pozycji i obrotu siedzenia Jurka.")]
+    [SerializeField] private bool useExplicitSittingCoordinates = true;
+    [SerializeField] private Vector3 explicitSittingPosition = new Vector3(-1.556814f, 0.397f, 4.958035f);
+    [SerializeField] private Vector3 explicitSittingEulerAngles = new Vector3(0f, -90f, 0f);
+    [SerializeField] private Vector3 explicitSittingScale = new Vector3(1.3f, 1.3f, 1.6f);
+
+    [Header("Punkt Siedzenia na Fotelu (Sitting Point - Alternatywa)")]
     [Tooltip("Dedykowany punkt fotela / krzesełka (SittingTransformPoint), na który Jurek siada po nalaniu / otrzymaniu wody.")]
     [SerializeField] private Transform sittingTransformPoint;
 
@@ -283,10 +290,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         // OPTYMALIZACJA: Cachuj hash i typ parametru animatora — brak foreach animator.parameters w Update
         CacheAnimatorParameters();
+
+        FixSittingAnchor();
     }
 
     private void Start()
     {
+        FixSittingAnchor();
+
         // Ponowne sprawdzenie ignorowania kolizji w Start, gdyby gracz zainicjalizował się po Awake
         IgnoreCollisionWithPlayer();
     }
@@ -997,26 +1008,42 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     /// </summary>
     public void OnPlayerPouringWater()
     {
-        if (_askedForWater && !_isSeated)
+        Debug.Log("[CustomerJurek] Gracz nalewa wodę. Jurek natychmiast siada na fotelu!");
+        _isSeated = true;
+        _isWaitingForPlayer = false;
+        _hasInteractedWithPlayer = true;
+
+        if (PatienceMeterUI.Instance != null)
         {
-            Debug.Log("[CustomerJurek] Gracz odwrócił się nalać wody. Jurek w tym czasie siada na fotel!");
-            _isSeated = true;
-            _isWaitingForPlayer = false;
-            _hasInteractedWithPlayer = true;
+            PatienceMeterUI.Instance.Hide(true);
+        }
 
-            if (PatienceMeterUI.Instance != null)
-            {
-                PatienceMeterUI.Instance.Hide(true);
-            }
+        // Przesunięcie i prawidłowy obrót na fotelu
+        SnapToChairSittingPosition();
+        
+        // Opcjonalnie dźwięk szurania krzesłem
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play("chair_move");
+        }
+    }
 
-            // Przesunięcie i obrót na fotelu z uwzględnieniem offsetu
-            SnapToChairSittingPosition();
-            
-            // Opcjonalnie dźwięk szurania krzesłem
-            if (AudioManager.Instance != null)
+    private void FixSittingAnchor()
+    {
+        if (sittingTransformPoint != null)
+        {
+            string n = sittingTransformPoint.name.ToLowerInvariant();
+            if (n.Contains("onion") || n.Contains("cebula") || n.Contains("food") || (!n.Contains("chair") && !n.Contains("fotel") && !n.Contains("seat")))
             {
-                AudioManager.Instance.Play("chair_move");
+                if (chairSpot != null)
+                {
+                    sittingTransformPoint = chairSpot;
+                }
             }
+        }
+        else if (chairSpot != null)
+        {
+            sittingTransformPoint = chairSpot;
         }
     }
 
@@ -1026,11 +1053,29 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [ContextMenu("Snap To Chair Sitting Position")]
     public void SnapToChairSittingPosition()
     {
-        Transform targetAnchor = sittingTransformPoint != null ? sittingTransformPoint : chairSpot;
-        if (targetAnchor != null)
+        transform.DOKill();
+        SetWalkingAnimation(false);
+
+        if (useExplicitSittingCoordinates)
         {
-            transform.position = targetAnchor.position + targetAnchor.TransformDirection(sittingPositionOffset);
-            transform.rotation = targetAnchor.rotation * Quaternion.Euler(sittingRotationOffset);
+            transform.position = explicitSittingPosition;
+            transform.rotation = Quaternion.Euler(explicitSittingEulerAngles);
+            if (explicitSittingScale != Vector3.zero)
+            {
+                transform.localScale = explicitSittingScale;
+            }
+        }
+        else
+        {
+            FixSittingAnchor();
+
+            Transform targetAnchor = sittingTransformPoint != null ? sittingTransformPoint : chairSpot;
+            if (targetAnchor != null)
+            {
+                transform.position = targetAnchor.position + targetAnchor.TransformDirection(sittingPositionOffset);
+                Quaternion forwardSittingRot = targetAnchor.rotation * Quaternion.Euler(0f, 180f, 0f);
+                transform.rotation = forwardSittingRot * Quaternion.Euler(sittingRotationOffset);
+            }
         }
 
         SetSittingAnimation(true);

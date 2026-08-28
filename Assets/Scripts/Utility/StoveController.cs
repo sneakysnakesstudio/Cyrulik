@@ -157,6 +157,12 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     private bool _towelReadyToTake = false;
     private bool _isCompleted = false;
 
+    private Vector3 _originalPotWorldPosition;
+    private Quaternion _originalPotWorldRotation;
+    private Vector3 _originalPotScale = Vector3.one;
+    private bool _hasRecordedOriginalPotTransform = false;
+    private GameObject _physicalPotObject;
+
     private Vector3 _doorClosedRotation;
     private Vector3 _doorOpenRotation;
     private Vector3 _fireVisualOriginalScale = Vector3.one;
@@ -366,6 +372,48 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
                 case MovementAxis.Z:
                     _doorOpenRotation.z += doorOpenAngle;
                     break;
+            }
+        }
+    }
+
+    private void Start()
+    {
+        RecordInitialPotTransform();
+    }
+
+    private void RecordInitialPotTransform()
+    {
+        if (_hasRecordedOriginalPotTransform) return;
+
+        PotItem potItem = FindAnyObjectByType<PotItem>();
+        if (potItem != null)
+        {
+            _physicalPotObject = potItem.gameObject;
+            _originalPotWorldPosition = potItem.transform.position;
+            _originalPotWorldRotation = potItem.transform.rotation;
+            _originalPotScale = potItem.transform.localScale;
+            _hasRecordedOriginalPotTransform = true;
+            Debug.Log($"[StoveController] Zapamiętano pozycję początkową garnka: {_originalPotWorldPosition}");
+            return;
+        }
+
+        PickupItem[] allPickups = FindObjectsByType<PickupItem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        foreach (var p in allPickups)
+        {
+            if (p != null)
+            {
+                string id = p.ItemId != null ? p.ItemId.ToLowerInvariant() : "";
+                string n = p.name.ToLowerInvariant();
+                if (id == emptyPotItemId || id == waterPotItemId || id == "pot" || id == "pot_empty" || n.Contains("pot") || n.Contains("kettle") || n.Contains("czajnik") || n.Contains("garnek"))
+                {
+                    _physicalPotObject = p.gameObject;
+                    _originalPotWorldPosition = p.transform.position;
+                    _originalPotWorldRotation = p.transform.rotation;
+                    _originalPotScale = p.transform.localScale;
+                    _hasRecordedOriginalPotTransform = true;
+                    Debug.Log($"[StoveController] Zapamiętano pozycję początkową garnka ({p.name}): {_originalPotWorldPosition}");
+                    break;
+                }
             }
         }
     }
@@ -600,7 +648,7 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     }
 
     /// <summary>
-    /// Krok 3: Kładzie garnek z wodą na piecu.
+    /// Krok 3: Kładzie garnek z wodą na piecu (zwraca go do pierwotnej pozycji na piecu).
     /// </summary>
     private void PlacePotOnStove()
     {
@@ -608,37 +656,87 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
 
         _potOnStove = true;
 
-        // Zabierz garnek z rąk gracza
+        GameObject potToPlace = null;
+
+        // 1. Zawsze uwalniamy prawdziwy przedmiot z rąk gracza (nigdy go nie niszczymy!)
         if (playerHands != null && playerHands.HasItem)
         {
-            if (potOnStoveVisual != null)
+            potToPlace = playerHands.ReleaseHeldItem();
+        }
+
+        if (potToPlace == null && _physicalPotObject != null)
+        {
+            potToPlace = _physicalPotObject;
+        }
+
+        if (potToPlace != null)
+        {
+            _physicalPotObject = potToPlace;
+
+            // Włączamy obiekt i wszystkie jego renderery
+            potToPlace.SetActive(true);
+            Renderer[] renderers = potToPlace.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
             {
-                potOnStoveVisual.SetActive(true);
-                if (waterInPotVisual != null) waterInPotVisual.SetActive(true);
-                playerHands.DestroyHeldItem();
+                r.enabled = true;
+            }
+
+            // Ustawiamy garnek dokładnie na jego pierwotnej pozycji na piecu (lub na potSnapPoint)
+            if (_hasRecordedOriginalPotTransform)
+            {
+                potToPlace.transform.SetParent(potSnapPoint != null ? potSnapPoint : transform, true);
+                potToPlace.transform.position = _originalPotWorldPosition;
+                potToPlace.transform.rotation = _originalPotWorldRotation;
+                potToPlace.transform.localScale = _originalPotScale;
+            }
+            else if (potSnapPoint != null)
+            {
+                potToPlace.transform.SetParent(potSnapPoint, false);
+                potToPlace.transform.localPosition = Vector3.zero;
+                potToPlace.transform.localRotation = Quaternion.identity;
             }
             else
             {
-                // Przypnij rzeczywisty obiekt garnka do potSnapPoint
-                GameObject heldItem = playerHands.ReleaseHeldItem();
-                if (heldItem != null)
-                {
-                    Transform targetPoint = potSnapPoint != null ? potSnapPoint : transform;
-                    heldItem.transform.SetParent(targetPoint);
-                    heldItem.transform.localPosition = Vector3.zero;
-                    heldItem.transform.localRotation = Quaternion.identity;
+                potToPlace.transform.SetParent(transform, false);
+                potToPlace.transform.localPosition = new Vector3(0f, 0.75f, 0f);
+                potToPlace.transform.localRotation = Quaternion.identity;
+            }
 
-                    if (heldItem.TryGetComponent<Rigidbody>(out var rb))
-                    {
-                        rb.isKinematic = true;
-                        rb.useGravity = false;
-                    }
+            // Wyłączamy fizykę Rigidbody, aby garnek stabilnie stał na płycie pieca
+            if (potToPlace.TryGetComponent<Rigidbody>(out var rb))
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
 
-                    if (heldItem.TryGetComponent<PickupItem>(out var pickup))
-                    {
-                        pickup.enabled = false;
-                    }
-                }
+            // Wyłączamy możliwość podniesienia podczas gotowania
+            if (potToPlace.TryGetComponent<PickupItem>(out var pickup))
+            {
+                pickup.enabled = false;
+            }
+
+            // Ustawiamy wizualia wody na garnku
+            if (potToPlace.TryGetComponent<PotItem>(out var potItem))
+            {
+                potItem.SetWater(true);
+            }
+
+            // Ukrywamy ewentualny sztuczny placeholder garnka (potOnStoveVisual)
+            if (potOnStoveVisual != null)
+            {
+                potOnStoveVisual.SetActive(false);
+            }
+
+            // Dopasowujemy pozycję pary wodnej do garnka
+            if (steamVisual != null)
+            {
+                steamVisual.transform.position = potToPlace.transform.position + Vector3.up * 0.12f;
+            }
+            if (towelInPotVisual != null)
+            {
+                towelInPotVisual.transform.position = potToPlace.transform.position;
             }
         }
         else if (potOnStoveVisual != null)
@@ -653,7 +751,7 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
         }
 
         onPotPlaced?.Invoke();
-        Debug.Log("[Stove] Garnek z wodą został postawiony na piecu!");
+        Debug.Log("[Stove] Garnek z wodą został odłożony dokładnie na swoje pierwotne miejsce na piecu!");
 
         CheckStartBoiling();
     }

@@ -25,6 +25,26 @@ public class GameTimeController : MonoBehaviour
     [TextArea]
     [SerializeField] private string prefixText = "";
 
+    [Header("Dźwięk Cykania Zegara (Clock Tick SFX)")]
+    [Tooltip("Czy odtwarzać dźwięk cykania zegara co sekundę?")]
+    [SerializeField] private bool enableTickSound = true;
+
+    [Tooltip("Nazwa grupy dźwiękowej w AudioManagerze (np. clock_tick).")]
+    [SerializeField] private string tickAudioGroup = "clock_tick";
+
+    [Tooltip("Opcjonalny bezpośredni AudioClip cyknięcia (możesz go tu wrzucić z Project).")]
+    [SerializeField] private AudioClip tickAudioClip;
+
+    [Tooltip("Głośność cyknięcia zegara.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float tickVolume = 0.6f;
+
+    [Tooltip("Czy lekko losować pitch (ton) cykania, żeby brzmiało naturalnie (tik-tak)?")]
+    [SerializeField] private bool alternatePitch = true;
+
+    private AudioSource _tickAudioSource;
+    private bool _pitchToggle = false;
+
     public static GameTimeController Instance { get; private set; }
 
     public event Action OnOpeningTimeReached;
@@ -107,6 +127,46 @@ public class GameTimeController : MonoBehaviour
         {
             _lastDisplayedSecond = currentSecond;
             UpdateTimeUI();
+            PlayTickSound();
+        }
+    }
+
+    private void PlayTickSound()
+    {
+        if (!enableTickSound) return;
+
+        // 1. Z AudioManager (jeśli istnieje taka grupa)
+        if (!string.IsNullOrWhiteSpace(tickAudioGroup) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(tickAudioGroup);
+            return;
+        }
+
+        // 2. Z bezpośredniego AudioClip
+        if (tickAudioClip != null)
+        {
+            if (_tickAudioSource == null)
+            {
+                _tickAudioSource = GetComponent<AudioSource>();
+                if (_tickAudioSource == null)
+                {
+                    _tickAudioSource = gameObject.AddComponent<AudioSource>();
+                    _tickAudioSource.playOnAwake = false;
+                    _tickAudioSource.spatialBlend = 0f; // 2D UI sound
+                }
+            }
+
+            if (alternatePitch)
+            {
+                _pitchToggle = !_pitchToggle;
+                _tickAudioSource.pitch = _pitchToggle ? 1.03f : 0.97f;
+            }
+            else
+            {
+                _tickAudioSource.pitch = 1f;
+            }
+
+            _tickAudioSource.PlayOneShot(tickAudioClip, tickVolume);
         }
     }
 
@@ -135,6 +195,7 @@ public class GameTimeController : MonoBehaviour
 
     public void Pause() => isPaused = true;
     public void Resume() => isPaused = false;
+    public void SetTickingEnabled(bool enabled) => enableTickSound = enabled;
 
     public void SetTime(int hour, int minute, int second = 0)
     {
