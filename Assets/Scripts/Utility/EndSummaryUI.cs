@@ -195,15 +195,20 @@ public class EndSummaryUI : MonoBehaviour
         // Formatowanie głównego napisu
         if (mainTitleText != null)
         {
-            mainTitleText.text = isVictory ? "DAY COMPLETED" : "YOU FAILED";
+            mainTitleText.text = isVictory ? "THANK YOU FOR PLAYING" : "YOU FAILED";
             mainTitleText.color = isVictory ? victoryTitleColor : failureTitleColor;
         }
 
         // Tłumaczenie / upewnienie się że powód jest w 100% po angielsku
-        string englishReason = SanitizeToEnglish(reasonText, isVictory);
+        string englishReason = isVictory ? "Thank you for playing Cyrulik Demo!" : SanitizeToEnglish(reasonText, false);
         if (reasonDescriptionText != null)
         {
             reasonDescriptionText.text = englishReason;
+        }
+
+        if (quitButtonText != null)
+        {
+            quitButtonText.text = "EXIT (ESC)";
         }
 
         // Animacja wejścia na czarnym tle

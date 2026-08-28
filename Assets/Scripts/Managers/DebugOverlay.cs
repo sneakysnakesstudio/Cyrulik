@@ -236,6 +236,15 @@ public class DebugOverlay : MonoBehaviour
             {
                 pinQuestTracker = !pinQuestTracker;
             }
+
+            // Klawisz F5: Pełny stan (Jurek siedzi + wypił wodę + questy zaliczone)
+            if (Keyboard.current[Key.F5].wasPressedThisFrame)
+            {
+                if (CustomerJurek.Instance != null)
+                {
+                    CustomerJurek.Instance.SetupF5DebugState();
+                }
+            }
         }
 
         // Licznik FPS

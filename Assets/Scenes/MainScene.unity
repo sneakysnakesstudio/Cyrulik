@@ -997,9 +997,9 @@ MonoBehaviour:
   sittingAnimBool: IsSitting
   spawnPoint: {fileID: 1280042766}
   speedMode: 0
-  walkSpeed: 0.75
-  animationSpeed: 0.951
-  pathType: 1
+  walkSpeed: 1
+  animationSpeed: 1.072
+  pathType: 0
   triggerByGameTime: 1
   arrivalHour: 17
   arrivalMinute: 0
@@ -1080,6 +1080,14 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   hideOnStart: 0
+  mouseTrap: {fileID: 2087825960}
+  mouseSqueakClip: {fileID: 8300000, guid: f0eefdf01faa94845ad1de7b767c83cb, type: 3}
+  soundMouseSqueak: mouse_squeak
+  mouseSoundToDialogueDelay: 1
+  mouseInTheHouseReason: Mouse in The House!
+  exactSittingPosition: {x: -1.556814, y: 0.397, z: 4.958035}
+  exactSittingRotation: {x: 0, y: -90, z: 0}
+  exactSittingScale: {x: 1.3, y: 1.3, z: 1.6}
 --- !u!65 &42558650
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -67623,6 +67631,160 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 669051927}
   m_Mesh: {fileID: 7301738766801530882, guid: 88489da60f38fd44db1f048e6da14d1a, type: 3}
+--- !u!1001 &671487355
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.64
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.64
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.64
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -3.3366423
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.9006312
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 1.745312
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.039311882
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.99922705
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 175.494
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7029948723529949830, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: -7029948723529949830, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -516098083770646512, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: -516098083770646512, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_Name
+      value: TowelRackAndTowelFN
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: -7029948723529949830, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 671487357}
+    - targetCorrespondingSourceObject: {fileID: -7029948723529949830, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 671487361}
+  m_SourcePrefab: {fileID: 100100000, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+--- !u!1 &671487356 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -7029948723529949830, guid: 5943ad3e3d1eb0d43b95aaf249f11faa, type: 3}
+  m_PrefabInstance: {fileID: 671487355}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &671487357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 671487356}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65992084ff7598d46b2b776cd747ffa8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PickupItem
+  itemId: dirty_towel
+  interactionName: Towel
+  thoughtText: 
+  firstPickupThought: 
+  onlyShowThoughtDoNotPickup: 0
+  triggerThoughtOnLookAt: 0
+  showThoughtOnlyOnce: 1
+  inspectSound: 
+  inHandPosition: {x: 0, y: 0, z: 0}
+  inHandRotation: {x: 0, y: 0, z: 0}
+  inHandScale: {x: 1, y: 1, z: 1}
+  freezeInPlaceAtStart: 1
+  customPickupSound: 
+  customPickupClip: {fileID: 0}
+  customDropSound: 
+  customDropClip: {fileID: 0}
+  _playerHands: {fileID: 0}
+--- !u!65 &671487361
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 671487356}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.0021290758, y: 0.010206274, z: 0.013297741}
+  m_Center: {x: 0.000015835285, y: 0.000014844356, z: -0.0074722357}
 --- !u!1 &676119293
 GameObject:
   m_ObjectHideFlags: 0
@@ -81794,7 +81956,7 @@ MonoBehaviour:
   spawnPosition1: {fileID: 1157973204}
   spawnPosition2: {fileID: 1573543464}
   spawnPosition3: {fileID: 68141990}
-  selectedSpawnPosition: 0
+  selectedSpawnPosition: 2
   autoSpawnJurekOnStart: 0
   autoSpawnJurekDelay: 0.5
 --- !u!4 &959419717
@@ -100264,6 +100426,120 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1091345860}
   m_CullTransparentMesh: 1
+--- !u!1 &1094650004
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1094650005}
+  - component: {fileID: 1094650008}
+  - component: {fileID: 1094650007}
+  - component: {fileID: 1094650006}
+  m_Layer: 0
+  m_Name: water
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1094650005
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094650004}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.7, y: 0, z: 32.4}
+  m_LocalScale: {x: 129.33752, y: 5.8, z: 108.7}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6549642575794080585}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &1094650006
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094650004}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5000001
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!23 &1094650007
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094650004}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 0490c957c6c07b4438498afb10e4b853, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1094650008
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094650004}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1095733141
 GameObject:
   m_ObjectHideFlags: 0
@@ -100502,6 +100778,7 @@ MonoBehaviour:
     is way too gloomy! I'm taking my business elsewhere!
   jurekMouseScareReaction: Jesus Christ, a rat! In a barber shop?! I'm getting out
     of here right now!
+  jurekMouseCaughtReaction: Ohh my god mouse?! Take it out immediately!
 --- !u!4 &1106172807
 Transform:
   m_ObjectHideFlags: 0
@@ -101398,6 +101675,41 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1150544359
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1150544360}
+  m_Layer: 5
+  m_Name: Mouse
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1150544360
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150544359}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4493739748613559942}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1151592129
 GameObject:
   m_ObjectHideFlags: 0
@@ -117515,8 +117827,8 @@ MonoBehaviour:
   baitLocalOffset: {x: 0, y: -0.009, z: 0.009}
   baitLocalRotation: {x: 0, y: 0, z: 0}
   baitLocalScale: {x: 0.8, y: 0.8, z: 0.8}
-  caughtMouseVisualOnTrap: {fileID: 0}
-  deadMousePrefab: {fileID: 0}
+  caughtMouseVisualOnTrap: {fileID: 412589047712677575, guid: f602c99aa5a3e8649808ac7bab8fc1c2, type: 3}
+  deadMousePrefab: {fileID: 412589047712677575, guid: f602c99aa5a3e8649808ac7bab8fc1c2, type: 3}
   cheeseVisualOnTrap: {fileID: 0}
   promptNeedItem: Empty Trap
   promptPlaceItem: Place cheese on trap
@@ -117525,6 +117837,7 @@ MonoBehaviour:
   promptEmptySnapped: Empty mouse trap
   soundArmTrap: mousetrap_arm
   soundSnapTrap: mousetrap_snap
+  customSnapClip: {fileID: 8300000, guid: f0eefdf01faa94845ad1de7b767c83cb, type: 3}
   soundPickupMouse: cloth_pickup
   playerHands: {fileID: 361643063}
 --- !u!4 &2087825961
@@ -118249,9 +118562,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41dcc7959d74fed43b188a2d4fe3bc23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RazorStropInteractable
-  interactionName: Sharpen Razor
+  promptSharpen: Sharpen Razor
+  promptNeedRazor: Strop (Requires razor from desk)
+  acceptedRazorIds:
+  - razor
+  - razor_blade
+  - dull_razor
+  - blade
+  - sharp_razor
+  - razor_sharpened
   razorMinigame: {fileID: 1057920206}
-  requireBladeInHands: 1
+  playerHands: {fileID: 0}
   interactSound: card_flip
 --- !u!33 &3785113215297708
 MeshFilter:
@@ -119645,7 +119966,7 @@ GameObject:
   - component: {fileID: 7293654283870964156}
   - component: {fileID: 8992235523403912292}
   - component: {fileID: 8992235523403912291}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: default
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -147980,7 +148301,8 @@ GameObject:
   - component: {fileID: 8419370979249521376}
   - component: {fileID: 3720660113174908582}
   - component: {fileID: 8419370979249521377}
-  m_Layer: 0
+  - component: {fileID: 8419370979249521378}
+  m_Layer: 6
   m_Name: Group32821
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -149309,6 +149631,7 @@ RectTransform:
   - {fileID: 2069995837}
   - {fileID: 2029976160}
   - {fileID: 1312793802}
+  - {fileID: 1150544360}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -156187,7 +156510,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6c7b9ce303cf1f44adb115d776fd245, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StoveController
-  towelTaskId: clean_towel
   stoveLitTaskId: stove_lit
   stoveDoor: {fileID: 4120884532200467739}
   requireDoorOpenToLight: 1
@@ -156202,8 +156524,6 @@ MonoBehaviour:
   doorCloseSoundGroup: door_close
   waterPotItemId: pot_water
   emptyPotItemId: pot_empty
-  cleanTowelItemId: towel
-  hotTowelItemId: hot_towel
   fireVisual: {fileID: 328615765}
   fireLight: {fileID: 91110307}
   fireIgniteDuration: 11.75
@@ -156216,19 +156536,15 @@ MonoBehaviour:
   potOnStoveVisual: {fileID: 1811461134}
   waterInPotVisual: {fileID: 1258818900}
   steamVisual: {fileID: 637777678}
-  towelInPotVisual: {fileID: 1550934053}
-  hotTowelPrefab: {fileID: 0}
   boilDuration: 6
   promptOpenDoor: Open stove door
   promptCloseDoor: Close stove door
   promptLightStove: Light the stove
   promptPlacePot: Place pot with water on stove
-  promptNeedWater: Fill pot with water at the sink first
+  promptTakePot: Pick up pot from stove
+  promptTakeBoilingPot: Pick up pot with boiling water
   promptWaitingBoil: Heating water... (Wait for it to boil)
-  promptPutTowel: Put towel into boiling water
-  promptNeedTowel: Boiling water ready (Bring a clean towel)
-  promptTakeHotTowel: Take out hot towel
-  promptCompleted: Hot stove
+  promptStoveHot: Hot stove
   soundLightFire: stove_fire
   soundBoiling: water_boil
   soundCloth: cloth_pickup
@@ -156245,13 +156561,10 @@ MonoBehaviour:
   onPotPlaced:
     m_PersistentCalls:
       m_Calls: []
+  onPotTaken:
+    m_PersistentCalls:
+      m_Calls: []
   onWaterBoiling:
-    m_PersistentCalls:
-      m_Calls: []
-  onTowelInserted:
-    m_PersistentCalls:
-      m_Calls: []
-  onHotTowelTaken:
     m_PersistentCalls:
       m_Calls: []
   playerHands: {fileID: 361643063}
@@ -163033,7 +163346,8 @@ Transform:
   m_LocalPosition: {x: 347.7282, y: -43.00001, z: -1910.2084}
   m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 1
-  m_Children: []
+  m_Children:
+  - {fileID: 1094650005}
   m_Father: {fileID: 543450652934776267}
   m_LocalEulerAnglesHint: {x: 0, y: -79.705, z: 0}
 --- !u!1 &6560043571472981595
@@ -176255,26 +176569,46 @@ MonoBehaviour:
   m_GameObject: {fileID: 4264765288050394190}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 65992084ff7598d46b2b776cd747ffa8, type: 3}
+  m_Script: {fileID: 11500000, guid: 770f9ae51b3aea844af8065f0be0f55e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PickupItem
-  itemId: cheese
-  interactionName: Pick up
-  thoughtText: 
-  firstPickupThought: It need some cream first
-  onlyShowThoughtDoNotPickup: 0
-  triggerThoughtOnLookAt: 0
-  showThoughtOnlyOnce: 1
-  inspectSound: 
-  inHandPosition: {x: 0, y: 0, z: 0}
-  inHandRotation: {x: 0, y: 0, z: 0}
-  inHandScale: {x: 1, y: 1, z: 1}
-  freezeInPlaceAtStart: 1
-  customPickupSound: 
-  customPickupClip: {fileID: 0}
-  customDropSound: 
-  customDropClip: {fileID: 0}
-  _playerHands: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::BowlInteractable
+  hotWaterPotId: pot_water
+  cleanTowelResultId: clean_towel
+  promptNeedWater: Bowl (Needs hot water from stove)
+  promptDipTowel: Dip towel in hot water (Get clean towel)
+  promptBowlReady: Bowl has hot water (Bring a towel)
+  promptDone: Bowl (used)
+  waterInBowlVisual: {fileID: 1094650004}
+  soundWaterPour: water_pour
+  soundCloth: cloth_pickup
+  onWaterAdded:
+    m_PersistentCalls:
+      m_Calls: []
+  onTowelCleaned:
+    m_PersistentCalls:
+      m_Calls: []
+  playerHands: {fileID: 361643063}
+--- !u!65 &8419370979249521378
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4264765288050394190}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 150.63588, y: 52.0822, z: 203.9069}
+  m_Center: {x: 0.0007133485, y: -0.00008010866, z: 0.00078582775}
 --- !u!1 &8422989620201327509
 GameObject:
   m_ObjectHideFlags: 0
@@ -179845,9 +180179,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PickupItem
   itemId: cheese
   interactionName: Pick up
-  thoughtText: 
+  thoughtText: Lord have mercy
   firstPickupThought: 
-  onlyShowThoughtDoNotPickup: 0
+  onlyShowThoughtDoNotPickup: 1
   triggerThoughtOnLookAt: 0
   showThoughtOnlyOnce: 1
   inspectSound: 
@@ -181427,3 +181761,4 @@ SceneRoots:
   - {fileID: 543450652934776267}
   - {fileID: 2646256097294851771}
   - {fileID: 170895824}
+  - {fileID: 671487355}

@@ -56,6 +56,8 @@ public class MouseTrap : MonoBehaviour, IConditionalInteractable
     [Header("Audio")]
     [SerializeField] private string soundArmTrap = "mousetrap_arm";
     [SerializeField] private string soundSnapTrap = "mousetrap_snap";
+    [Tooltip("Dedykowany AudioClip zatrzaśnięcia pułapki (przeciągnij z Project).")]
+    [SerializeField] private AudioClip customSnapClip;
     [SerializeField] private string soundPickupMouse = "cloth_pickup";
 
     [Header("Referencje")]
@@ -243,7 +245,11 @@ public class MouseTrap : MonoBehaviour, IConditionalInteractable
         }
 
         // Dźwięk zatrzaśnięcia
-        if (!string.IsNullOrEmpty(soundSnapTrap) && AudioManager.Instance != null)
+        if (customSnapClip != null)
+        {
+            AudioSource.PlayClipAtPoint(customSnapClip, transform.position);
+        }
+        else if (!string.IsNullOrEmpty(soundSnapTrap) && AudioManager.Instance != null)
         {
             AudioManager.Instance.Play(soundSnapTrap);
         }

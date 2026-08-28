@@ -201,13 +201,20 @@ public class CurtainSway : MonoBehaviour
     }
 
     /// <summary>
-    /// Odtwarza dźwięk przejścia przez zasłonę (z AudioManager lub bezpośredniego AudioClip).
+    /// Odtwarza dźwięk przejścia przez zasłonę (z AudioManager lub bezpośredniego AudioClip)
+    /// i powiadamia CustomerJurek o rozpoczęciu 30s odliczania do pojawienia się.
     /// </summary>
     public void PlayFirstPassSound()
     {
         if (playOnlyOnce)
         {
             _hasPlayedFirstPassSound = true;
+        }
+
+        // Powiadomienie Jurka o przejściu przez zasłonę (pojawi się za 30 sekund)
+        if (CustomerJurek.Instance != null)
+        {
+            CustomerJurek.Instance.OnPlayerPassedCurtain();
         }
 
         // 1. Główny sposób: pobranie i odtworzenie z AudioManager
@@ -238,6 +245,14 @@ public class CurtainSway : MonoBehaviour
         else if (AudioManager.Instance == null && !string.IsNullOrWhiteSpace(audioGroupName))
         {
             Debug.LogWarning($"[CurtainSway] Nie można odtworzyć '{audioGroupName}', ponieważ AudioManager.Instance jest null!", this);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player") || other.GetComponentInParent<PlayerMovement>() != null)
+        {
+            PlayFirstPassSound();
         }
     }
 

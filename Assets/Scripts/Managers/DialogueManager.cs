@@ -161,6 +161,10 @@ public class DialogueManager : MonoBehaviour
     [TextArea(2, 4)]
     [SerializeField] private string jurekMouseScareReaction = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
 
+    [Tooltip("Kwestia wypowiadana przez Jurka, gdy mysz zatrzaśnie się w pułapce.")]
+    [TextArea(2, 4)]
+    [SerializeField] private string jurekMouseCaughtReaction = "Ohh my god mouse?! Take it out immediately!";
+
     /// <summary>
     /// Rozpoczyna powitalny dialog Jurka z graczem. Po zakończeniu dialogu wywoływany jest callback onComplete (marsz do fotela).
     /// </summary>
@@ -207,6 +211,14 @@ public class DialogueManager : MonoBehaviour
     public void ShowJurekMouseScareDialogue(Action onComplete = null)
     {
         ShowClientLine("Jurek", jurekMouseScareReaction, onComplete);
+    }
+
+    /// <summary>
+    /// Wyświetla reakcję Jurka na złapaną w pułapkę mysz.
+    /// </summary>
+    public void ShowJurekMouseCaughtDialogue(Action onComplete = null)
+    {
+        ShowClientLine("Jurek", jurekMouseCaughtReaction, onComplete);
     }
 
     [ContextMenu("Reset Jurek Dialogue to Default (EN)")]

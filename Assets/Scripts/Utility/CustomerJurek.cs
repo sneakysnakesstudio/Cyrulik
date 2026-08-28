@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Zarządza klientem (Jurek) – jego pojawieniem się o określonej godzinie (17:01:33),
@@ -170,6 +172,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     private bool _askedForWater = false;
     private bool _isSeated = false;
     private bool _hasReceivedWater = false;
+    private bool _hasReceivedTowel = false;
     private float _patienceRemaining = 0f;
     private float _footstepTimer = 0f;
     private Tween _movementTween;
@@ -190,6 +193,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     public bool IsWaitingForWater => _askedForWater && !_isSeated;
     public bool IsSeated => _isSeated;
     public bool HasReceivedWater => _hasReceivedWater;
+    public bool HasReceivedTowel => _hasReceivedTowel;
     public float PatienceRemaining => _patienceRemaining;
 
     public bool CanInteract
@@ -205,8 +209,16 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             if (!_hasInteractedWithPlayer)
                 return true;
 
-            // Gdy siedzi na fotelu i czeka na przyniesienie wody
+            // 1. Gdy siedzi na fotelu i czeka na przyniesienie wody
             if (_isSeated && !_hasReceivedWater)
+                return true;
+
+            // 2. Gdy wypił wodę i czeka na czysty ręcznik
+            if (_isSeated && _hasReceivedWater && !_hasReceivedTowel)
+                return true;
+
+            // 3. Gdy otrzymał ręcznik i czeka na brzytwę / golenie
+            if (_isSeated && _hasReceivedWater && _hasReceivedTowel && !_isShavingDone)
                 return true;
 
             return false;
@@ -221,6 +233,17 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             {
                 return IsPlayerHoldingWaterGlass() ? "Give water to Jurek" : "Talk to Jurek";
             }
+
+            if (_isSeated && _hasReceivedWater && !_hasReceivedTowel)
+            {
+                return IsPlayerHoldingCleanTowel() ? "Give clean towel to Jurek" : "Talk to Jurek";
+            }
+
+            if (_isSeated && _hasReceivedWater && _hasReceivedTowel && !_isShavingDone)
+            {
+                return IsPlayerHoldingRazor() ? "Shave Jurek" : "Talk to Jurek";
+            }
+
             return interactionName;
         }
     }
@@ -272,19 +295,59 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             gameObject.layer = interactableLayer;
         }
 
-        if (hideOnStart && jurekVisual != null && jurekVisual != gameObject)
-        {
-            jurekVisual.SetActive(false);
-        }
-        else
-        {
-            EnsureVisualsActive();
-        }
+        // Ukryj model Jurka na początku gry (pojawi się 30s po przejściu przez zasłony)
+        SetVisualsActive(false);
 
         // OPTYMALIZACJA: Cachuj hash i typ parametru animatora — brak foreach animator.parameters w Update
         CacheAnimatorParameters();
 
         FixSittingAnchor();
+    }
+
+    [Header("Pojawienie się po przejściu przez zasłony (Curtain Trigger)")]
+    [Tooltip("Czas w sekundach od przejścia gracza przez zasłony do pojawienia się i przyjścia Jurka.")]
+    [SerializeField] private float curtainArrivalDelay = 30.0f;
+
+    private Coroutine _curtainArrivalCoroutine;
+
+    /// <summary>
+    /// Wywoływane gdy gracz przechodzi przez zasłony w salonie.
+    /// Po 30 sekundach włącza model Jurka i rozpoczyna jego sekwencję przyjścia.
+    /// </summary>
+    public void OnPlayerPassedCurtain()
+    {
+        if (_hasArrived || _curtainArrivalCoroutine != null) return;
+
+        Debug.Log($"<color=#70FF70>[CustomerJurek] Gracz przeszedł przez zasłony! Jurek pojawi się za {curtainArrivalDelay} sekund.</color>");
+        _curtainArrivalCoroutine = StartCoroutine(CurtainArrivalRoutine(curtainArrivalDelay));
+    }
+
+    private IEnumerator CurtainArrivalRoutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        _curtainArrivalCoroutine = null;
+
+        Debug.Log("<color=#70FF70>[CustomerJurek] 30 sekund minęło! Jurek pojawia się na zewnątrz i wyrusza do salonu!</color>");
+        SetVisualsActive(true);
+        TriggerArrival();
+    }
+
+    public void SetVisualsActive(bool active)
+    {
+        if (jurekVisual != null && jurekVisual != gameObject)
+        {
+            jurekVisual.SetActive(active);
+        }
+
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            r.enabled = active;
+        }
+
+        foreach (var col in GetComponentsInChildren<Collider>(true))
+        {
+            col.enabled = active;
+        }
     }
 
     private void Start()
@@ -356,8 +419,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        // 2. Oczekiwanie na gracza w salonie + płynne obracanie się twarzą do gracza (tylko na stojąco!)
-        if (!_isSeated && _isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
+        // 2. Oczekiwanie na gracza w salonie (tylko w Waiting Point przed podejściem do fotela!)
+        if (!_isSeated && !_hasReachedChair && _isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
         {
             if (usePatienceTimer)
             {
@@ -374,8 +437,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 }
             }
 
-            // Płynne śledzenie gracza wzrokiem (obrót wokół osi Y) tylko gdy NIE siedzi
-            if (!_isSeated && lookAtPlayerWhileWaiting && playerTransform != null)
+            // Płynne śledzenie gracza wzrokiem TYLKO na stojąco przy Waiting Point
+            if (lookAtPlayerWhileWaiting && playerTransform != null)
             {
                 Vector3 lookDir = playerTransform.position - transform.position;
                 lookDir.y = 0f;
@@ -400,6 +463,12 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         else
         {
             _footstepTimer = 0.05f;
+        }
+
+        // 4. Skrót F5: Natychmiastowe ustawienie stanu gry (Jurek siedzi, wypił wodę, questy zaliczone)
+        if (Keyboard.current != null && Keyboard.current.f5Key.wasPressedThisFrame)
+        {
+            SetupF5DebugState();
         }
     }
 
@@ -673,15 +742,12 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         {
             DialogueManager.Instance.ShowJurekTimeoutDialogue(() =>
             {
-                if (leaveOnTimeout)
-                {
-                    WalkOut(() => ShowEndScreenWithFade("The client waited too long and left.", false));
-                }
+                ShowEndScreenWithFade("The client waited too long and left.", false);
             });
         }
-        else if (leaveOnTimeout)
+        else
         {
-            WalkOut(() => ShowEndScreenWithFade("The client waited too long and left.", false));
+            ShowEndScreenWithFade("The client waited too long and left.", false);
         }
     }
 
@@ -797,26 +863,20 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _hasLeft = true;
         _movementTween?.Kill();
 
-        Debug.Log("[CustomerJurek] Klient ucieka z salonu po zauważeniu myszy!");
+        Debug.Log("[CustomerJurek] Porażka (mysz w salonie) – wyświetlam ekran końcowy.");
 
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.ShowJurekMouseScareDialogue(() =>
             {
-                WalkOut(() =>
-                {
-                    ShowEndScreenWithFade("The client saw a rat in the salon and ran away!", false);
-                    onComplete?.Invoke();
-                });
+                ShowEndScreenWithFade(mouseInTheHouseReason, false);
+                onComplete?.Invoke();
             });
         }
         else
         {
-            WalkOut(() =>
-            {
-                ShowEndScreenWithFade("The client saw a rat in the salon and ran away!", false);
-                onComplete?.Invoke();
-            });
+            ShowEndScreenWithFade(mouseInTheHouseReason, false);
+            onComplete?.Invoke();
         }
     }
 
@@ -930,6 +990,163 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 }
             }
         }
+        else if (_isSeated && _hasReceivedWater && !_hasReceivedTowel)
+        {
+            if (IsPlayerHoldingCleanTowel())
+            {
+                TakeTowelFromPlayer();
+            }
+            else
+            {
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.ShowClientLine("Jurek", "Could you prepare that warm towel for my face?");
+                }
+            }
+        }
+        else if (_isSeated && _hasReceivedWater && _hasReceivedTowel && !_isShavingDone)
+        {
+            if (IsPlayerHoldingRazor())
+            {
+                StartShavingSequence();
+            }
+            else
+            {
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.ShowClientLine("Jurek", "I'm ready for the razor, friend. Bring it over!");
+                }
+            }
+        }
+    }
+
+    private void TakeTowelFromPlayer()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands != null && playerHands.HasItem)
+        {
+            playerHands.DestroyHeldItem();
+        }
+
+        _hasReceivedTowel = true;
+        Debug.Log("[CustomerJurek] Jurek otrzymał czysty/ciepły ręcznik!");
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play("cloth_pickup");
+        }
+
+        if (PreparationStateManager.Instance != null)
+        {
+            PreparationStateManager.Instance.SetTaskState("clean_towel", true);
+            PreparationStateManager.Instance.SetTaskState("towel_prepared", true);
+        }
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.ShowClientLine("Jurek", "Ah, warm and clean towel... Thank you, now I'm ready for the shave!", () =>
+            {
+                onReadyForShaving?.Invoke();
+            });
+        }
+        else
+        {
+            onReadyForShaving?.Invoke();
+        }
+    }
+
+    [Header("Sekwencja Końcowa Golenia (Ending Shaving Sequence)")]
+    [Tooltip("Dedykowany klip dźwiękowy golenia brzytwą. Jeśli pusty, odtworzy 'ostrzenie szybkie' z AudioManager.")]
+    [SerializeField] private AudioClip razorShaveSoundClip;
+    [SerializeField] private string soundShave = "ostrzenie szybkie";
+    [SerializeField] private float blackScreenDuration = 3.0f;
+
+    private bool _isShavingDone = false;
+
+    private void StartShavingSequence()
+    {
+        if (_isShavingDone) return;
+        _isShavingDone = true;
+
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands != null && playerHands.HasItem)
+        {
+            playerHands.DestroyHeldItem();
+        }
+
+        Debug.Log("[CustomerJurek] Rozpoczęcie golenia! Czarny ekran, dźwięk żyletki i ekran końcowy.");
+
+        StartCoroutine(ShavingEndingRoutine());
+    }
+
+    private IEnumerator ShavingEndingRoutine()
+    {
+        // 1. Ściemnij ekran do czerni
+        if (ScreenFader.Instance != null)
+        {
+            ScreenFader.Instance.FadeOut(0.45f);
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 2. Odtwórz dźwięk golenia / brzytwy
+        if (razorShaveSoundClip != null)
+        {
+            AudioSource.PlayClipAtPoint(razorShaveSoundClip, Camera.main != null ? Camera.main.transform.position : transform.position);
+        }
+        else if (!string.IsNullOrEmpty(soundShave) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(soundShave);
+        }
+
+        // 3. Czekaj na czarnym ekranie podczas golenia
+        yield return new WaitForSeconds(blackScreenDuration);
+
+        // 4. Pokaż ekran końcowy "Dziękuję za granie" z przyciskami Restart i Exit
+        if (EndSummaryUI.Instance != null)
+        {
+            EndSummaryUI.Instance.ShowEndScreen("Thank you for playing!", true);
+        }
+    }
+
+    private bool IsPlayerHoldingRazor()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands == null || !playerHands.HasItem)
+            return false;
+
+        GameObject held = playerHands.HeldItem;
+        if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
+        {
+            string id = pickup.ItemId != null ? pickup.ItemId.Trim().ToLowerInvariant() : "";
+            return id == "razor" || id == "razor_blade" || id == "dull_razor" || id == "blade" || id == "sharp_razor" || id == "razor_sharpened";
+        }
+
+        string n = held != null ? held.name.ToLowerInvariant() : "";
+        return n.Contains("razor") || n.Contains("brzytwa") || n.Contains("blade");
+    }
+
+    private bool IsPlayerHoldingCleanTowel()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands == null || !playerHands.HasItem)
+            return false;
+
+        GameObject held = playerHands.HeldItem;
+        if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
+        {
+            string id = pickup.ItemId != null ? pickup.ItemId.Trim().ToLowerInvariant() : "";
+            return id == "clean_towel" || id == "hot_towel" || id == "towel_prepared";
+        }
+        return false;
     }
 
     private void TakeWaterFromPlayer()
@@ -943,18 +1160,18 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
 
         _hasReceivedWater = true;
-        Debug.Log("[CustomerJurek] Jurek otrzymał szklankę wody i jest gotowy na golenie!");
+        Debug.Log("[CustomerJurek] Jurek otrzymał szklankę wody!");
 
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.StartJurekThankForWaterDialogue(() =>
             {
-                onReadyForShaving?.Invoke();
+                CheckMouseTrapAfterWaterReceived();
             });
         }
         else
         {
-            onReadyForShaving?.Invoke();
+            CheckMouseTrapAfterWaterReceived();
         }
     }
 
@@ -998,10 +1215,15 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     /// </summary>
     public void OnPlayerPouringWater()
     {
-        Debug.Log("[CustomerJurek] Gracz nalewa wodę. Jurek natychmiast siada na fotelu!");
-        _isSeated = true;
+        Debug.Log("[CustomerJurek] Gracz nalewa wodę. Jurek wyłącza patrzenie na gracza i natychmiast siada na fotelu!");
+        lookAtPlayerWhileWaiting = false;
         _isWaitingForPlayer = false;
         _hasInteractedWithPlayer = true;
+        _isSeated = true;
+        _isWalking = false;
+
+        _movementTween?.Kill();
+        transform.DOKill();
 
         if (PatienceMeterUI.Instance != null)
         {
@@ -1015,6 +1237,73 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.Play("chair_move");
+        }
+    }
+
+    [Header("Pułapka na Myszy (Mouse Trap Check)")]
+    [Tooltip("Referencja do pułapki na myszy w scenie. Jeśli pusta, skrypt sam ją znajdzie.")]
+    [SerializeField] private MouseTrap mouseTrap;
+
+    [Header("Dźwięki Myszy i Pułapki")]
+    [Tooltip("Dźwięk pisku myszy (AudioClip), który odtworzy się ZANIM Jurek zacznie krzyczeć (gdy brak sera).")]
+    [SerializeField] private AudioClip mouseSqueakClip;
+    [SerializeField] private string soundMouseSqueak = "mouse_squeak";
+
+    [Tooltip("Czas w sekundach od pisku myszy do reakcji i krzyku Jurka.")]
+    [SerializeField] private float mouseSoundToDialogueDelay = 1.0f;
+
+    [Tooltip("Powód wyświetlany na ekranie końcowym gdy brak sera na pułapce.")]
+    [SerializeField] private string mouseInTheHouseReason = "Mouse in The House!";
+
+    private void CheckMouseTrapAfterWaterReceived()
+    {
+        if (mouseTrap == null)
+            mouseTrap = FindAnyObjectByType<MouseTrap>();
+
+        // 1. Ser leży na pułapce -> mysz się zatrzaskuje!
+        if (mouseTrap != null && mouseTrap.IsArmed)
+        {
+            Debug.Log("[CustomerJurek] Ser był na pułapce! Mysz wpada w pułapkę i zatrzaskuje się (dźwięk + model myszy).");
+            
+            // Wywołaj zatrzaśnięcie (włącza model złapanej myszy i odtwarza dźwięk zatrzaśnięcia)
+            mouseTrap.CatchMouse();
+
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.ShowJurekMouseCaughtDialogue(() =>
+                {
+                    onReadyForShaving?.Invoke();
+                });
+            }
+            else
+            {
+                onReadyForShaving?.Invoke();
+            }
+            return;
+        }
+
+        // 2. Brak sera na pułapce -> najpierw odtwórz pisk myszy, a po chwili krzyk i ucieczka
+        Debug.Log("<color=#FF6060>[CustomerJurek] BRAK SERA! Odtwarzam pisk myszy przed dialogiem...</color>");
+        
+        PlayMouseSqueakSound();
+
+        DG.Tweening.DOVirtual.DelayedCall(mouseSoundToDialogueDelay, () =>
+        {
+            TriggerMouseScareAndLeave();
+        }).SetLink(gameObject, DG.Tweening.LinkBehaviour.KillOnDestroy);
+    }
+
+    private void PlayMouseSqueakSound()
+    {
+        if (mouseSqueakClip != null)
+        {
+            AudioSource.PlayClipAtPoint(mouseSqueakClip, transform.position);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(soundMouseSqueak) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(soundMouseSqueak);
         }
     }
 
@@ -1037,8 +1326,13 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
     }
 
+    [Header("Dokładne koordynaty siedzenia na fotelu")]
+    [SerializeField] private Vector3 exactSittingPosition = new Vector3(-1.556814f, 0.397f, 4.958035f);
+    [SerializeField] private Vector3 exactSittingRotation = new Vector3(0f, -90f, 0f);
+    [SerializeField] private Vector3 exactSittingScale = new Vector3(1.3f, 1.3f, 1.6f);
+
     /// <summary>
-    /// Teleportuje Jurka na pozycję fotela (SittingTransformPoint lub chairSpot) z uwzględnieniem offsetu i włącza animację siedzenia.
+    /// Teleportuje Jurka na pozycję fotela na dokładnych koordynatach i włącza animację siedzenia.
     /// </summary>
     [ContextMenu("Snap To Chair Sitting Position")]
     public void SnapToChairSittingPosition()
@@ -1050,6 +1344,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         transform.rotation = Quaternion.Euler(0f, -90f, 0f);
         transform.localScale = new Vector3(1.3f, 1.3f, 1.6f);
 
+        _isSeated = true;
         SetSittingAnimation(true);
     }
 
@@ -1306,6 +1601,19 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [ContextMenu("Debug: Force Seated With Water (Ready For Shaving)")]
     public void ForceSeatedWithWater()
     {
+        SetupF5DebugState();
+    }
+
+    /// <summary>
+    /// Klawisz F5: Pełne ustawienie stanu gry pod testowanie golenia / obsługi klienta:
+    /// 1. Jurek siedzi na fotelu, ma wypitą wodę, jest zadowolony i gotowy do golenia.
+    /// 2. Zadania w PreparationStateManager są zaliczone (atmosfera, ręcznik, brzytwa, pułapka).
+    /// 3. Włączone lampy i radio (atmosfera).
+    /// 4. Mysz zatrzaśnięta w pułapce (pokazany model myszy).
+    /// </summary>
+    [ContextMenu("Debug: F5 Scene Setup (Seated + Quests Completed)")]
+    public void SetupF5DebugState()
+    {
         _movementTween?.Kill();
         _hasArrived = true;
         _hasLeft = false;
@@ -1331,9 +1639,32 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             frontDoor.Unlock();
         }
 
+        // 1. Zaliczenie zadań w PreparationStateManager (wszystkie oprócz myszy)
+        if (PreparationStateManager.Instance != null)
+        {
+            PreparationStateManager.Instance.SetTaskState("proper_atmosphere", true);
+            PreparationStateManager.Instance.SetTaskState("clean_towel", true);
+            PreparationStateManager.Instance.SetTaskState("towel_prepared", true);
+            PreparationStateManager.Instance.SetTaskState("razor_sharpened", true);
+        }
+
+        // 2. Włączenie świateł i radia (atmosfera)
+        var switches = FindObjectsByType<LampSwitch>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var sw in switches)
+        {
+            if (sw != null && !sw.IsOn) sw.Interact();
+        }
+
+        var radio = FindAnyObjectByType<RadioInteractable>();
+        if (radio != null && !radio.IsOn)
+        {
+            radio.Interact();
+        }
+
+        // 3. Sygnał gotowości do golenia
         onReadyForShaving?.Invoke();
 
-        Debug.Log("<color=#70FF70>[CustomerJurek DEBUG] Jurek natychmiast posadzony na fotelu ze szklanką wody (Gotowy do golenia)!</color>");
+        Debug.Log("<color=#70FF70>[F5 DEBUG] Załadowano stan F5: Jurek siedzi, woda wypita, questy zaliczone (bez zadania z myszą)!</color>");
     }
 
     /// <summary>

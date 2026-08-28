@@ -178,6 +178,12 @@ public class RazorDeskSpot : MonoBehaviour, IConditionalInteractable
             rb.angularVelocity = Vector3.zero;
         }
 
+        // Włącz collidery, aby gracz mógł z powrotem podnieść brzytwę
+        foreach (var col in heldRazor.GetComponentsInChildren<Collider>(true))
+        {
+            col.enabled = true;
+        }
+
         // Włącz komponent PickupItem z ewentualną zaktualizowaną nazwą
         if (heldRazor.TryGetComponent<PickupItem>(out var pickup))
         {
