@@ -53,6 +53,11 @@ public class CurtainSway : MonoBehaviour
 
     private void Start()
     {
+        if (gameObject.isStatic)
+        {
+            Debug.LogError($"[CurtainSway] UWAGA! Obiekt {gameObject.name} jest ustawiony jako STATIC! Skrypty modyfikujące wierzchołki (Vertex Displacement) nie działają na statycznych obiektach w Buildzie. Odznacz 'Static' w Inspektorze!", this);
+        }
+
         _meshFilter = GetComponent<MeshFilter>();
         if (_meshFilter == null || _meshFilter.sharedMesh == null)
         {
@@ -61,16 +66,17 @@ public class CurtainSway : MonoBehaviour
             return;
         }
 
-        // Tworzymy kopię mesha w pamięci, aby modyfikować instancję bez wpływu na plik assetu
+        // Tworzymy kopię mesha w pamięci
         _originalMesh = _meshFilter.sharedMesh;
         _clonedMesh = Instantiate(_originalMesh);
         _clonedMesh.name = _originalMesh.name + "_SwayInstance";
+        _clonedMesh.MarkDynamic(); // OPTYMALIZACJA: Mówimy Unity, że ten mesh będzie często zmieniany (szybsze przesyłanie do GPU)
         _meshFilter.mesh = _clonedMesh;
 
         _baseVertices = _originalMesh.vertices;
         _displacedVertices = new Vector3[_baseVertices.Length];
 
-        // Wyznaczamy zakres Y (góra i dół zasłony) w przestrzeni lokalnej
+        // Wyznaczamy zakres Y
         _minY = float.MaxValue;
         _maxY = float.MinValue;
 
@@ -82,6 +88,11 @@ public class CurtainSway : MonoBehaviour
         }
 
         _meshHeight = Mathf.Max(0.01f, _maxY - _minY);
+
+        // OPTYMALIZACJA: Zamiast przeliczać Bounds co klatkę, powiększamy je raz o maksymalną amplitudę
+        Bounds newBounds = _clonedMesh.bounds;
+        newBounds.Expand(new Vector3(waveAmplitudeX * 2f, 0f, waveAmplitudeZ * 2f + playerPushForce));
+        _clonedMesh.bounds = newBounds;
 
         CharacterController playerCC = FindAnyObjectByType<CharacterController>();
         if (playerCC != null)
@@ -110,15 +121,13 @@ public class CurtainSway : MonoBehaviour
 
         if (_playerTransform != null)
         {
-            float dist = Vector3.Distance(transform.position, _playerTransform.position);
-            if (dist < playerTriggerDistance)
+            float dist = (_playerTransform.position - transform.position).sqrMagnitude;
+            if (dist < playerTriggerDistance * playerTriggerDistance)
             {
-                // Gracz przechodzi blisko – wzbudzamy podmuch zasłony
                 _playerImpulse = Mathf.Lerp(_playerImpulse, playerPushForce, Time.deltaTime * 5f);
             }
             else
             {
-                // Powolne wygasanie podmuchu gracza
                 _playerImpulse = Mathf.Lerp(_playerImpulse, 0f, Time.deltaTime * 2f);
             }
         }
@@ -131,12 +140,9 @@ public class CurtainSway : MonoBehaviour
         for (int i = 0; i < _baseVertices.Length; i++)
         {
             Vector3 v = _baseVertices[i];
+            float normalizedY = (v.y - _minY) / _meshHeight;
+            float swayWeight = 1f - normalizedY;
 
-            // Obliczamy wagę falowania na podstawie wysokości Y (0 na samej górze przy karniszu, 1 na dole)
-            float normalizedY = (v.y - _minY) / _meshHeight; // 0 na dole, 1 na górze
-            float swayWeight = 1f - normalizedY; // 1 na dole, 0 na górze
-
-            // Zamrożenie górnej części przy karniszu
             if (normalizedY > (1f - topPinMargin))
             {
                 swayWeight = 0f;
@@ -148,7 +154,6 @@ public class CurtainSway : MonoBehaviour
 
             if (swayWeight > 0.001f)
             {
-                // Połączenie fali sinusoidalnej i szumu Perlin Noise dla organicznego wiatru
                 float spatialFactor = (v.x + v.y) * waveFrequency;
                 float noiseZ = (Mathf.PerlinNoise(v.x * 2f + time * 0.5f, v.y * 2f) - 0.5f) * 0.5f;
                 float waveZ = (Mathf.Sin(time + spatialFactor) + noiseZ) * (waveAmplitudeZ + _playerImpulse);
@@ -165,7 +170,7 @@ public class CurtainSway : MonoBehaviour
 
         _clonedMesh.vertices = _displacedVertices;
         _clonedMesh.RecalculateNormals();
-        _clonedMesh.RecalculateBounds();
+        // OPTYMALIZACJA: Usunięto _clonedMesh.RecalculateBounds() z Update, granice są statycznie powiększone w Start
     }
 
     private void OnDestroy()

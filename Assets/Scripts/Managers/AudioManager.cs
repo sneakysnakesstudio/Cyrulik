@@ -52,6 +52,8 @@ public class AudioManager : MonoBehaviour
 
     [Header("SFX Audio Pool")]
     [SerializeField] private int initialPoolSize = 8;
+    [Tooltip("Maksymalna liczba AudioSource'ów w poolu (zapobiega nieskończonemu rozrostowi przy długich sesjach).")]
+    [SerializeField] private int maxPoolSize = 16;
 
     private readonly List<AudioSource> _sourcePool = new List<AudioSource>();
     private Tween _musicFadeTween;
@@ -578,13 +580,19 @@ public class AudioManager : MonoBehaviour
 
     private AudioSource GetAvailableSource()
     {
-        foreach (AudioSource source in _sourcePool)
+        // OPTYMALIZACJA: for zamiast foreach (brak enumeratora) + limit rozrostu poola
+        for (int i = 0; i < _sourcePool.Count; i++)
         {
-            if (source == null)
-                continue;
-
-            if (!source.isPlaying)
+            var source = _sourcePool[i];
+            if (source != null && !source.isPlaying)
                 return source;
+        }
+
+        // Nie twórz nowego AudioSource jeśli osiągnięto limit — zapobiega memory leak przy długich sesjach
+        if (_sourcePool.Count >= maxPoolSize)
+        {
+            Debug.LogWarning($"[AudioManager] Pool limit ({maxPoolSize}) osiągnięty — pomijam SFX. Zwiększ maxPoolSize jeśli brakuje dźwięków.");
+            return null;
         }
 
         return CreatePooledSource();

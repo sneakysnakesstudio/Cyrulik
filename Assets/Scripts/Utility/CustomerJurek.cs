@@ -174,6 +174,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     private float _footstepTimer = 0f;
     private Tween _movementTween;
 
+    // --- OPTYMALIZACJA: Cache parametrów animatora (unikamy animator.parameters GC Alloc każdą klatkę) ---
+    private int  _walkBoolHash    = -1;
+    private bool _walkParamIsBool = false;
+
+    // --- OPTYMALIZACJA: Reużywalne bufory list (unikamy new List<> przy każdym marszu) ---
+    private readonly List<Transform> _routeBuffer       = new List<Transform>(16);
+    private readonly List<Vector3>   _validPointsBuffer = new List<Vector3>(16);
+
     public bool HasArrived => _hasArrived;
     public bool HasLeft => _hasLeft;
     public bool IsWalking => _isWalking;
@@ -272,6 +280,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         {
             EnsureVisualsActive();
         }
+
+        // OPTYMALIZACJA: Cachuj hash i typ parametru animatora — brak foreach animator.parameters w Update
+        CacheAnimatorParameters();
     }
 
     private void Start()
@@ -558,24 +569,25 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
-        List<Transform> route = new List<Transform>();
+        // OPTYMALIZACJA: Reużywamy _routeBuffer zamiast new List<Transform>() przy każdym wywołaniu
+        _routeBuffer.Clear();
         if (insideEntranceWaypoints != null && insideEntranceWaypoints.Length > 0)
         {
-            foreach (var wp in insideEntranceWaypoints)
+            for (int i = 0; i < insideEntranceWaypoints.Length; i++)
             {
-                if (wp != null) route.Add(wp);
+                if (insideEntranceWaypoints[i] != null) _routeBuffer.Add(insideEntranceWaypoints[i]);
             }
         }
 
-        if (waitingSpot != null && (route.Count == 0 || route[route.Count - 1] != waitingSpot))
+        if (waitingSpot != null && (_routeBuffer.Count == 0 || _routeBuffer[_routeBuffer.Count - 1] != waitingSpot))
         {
-            route.Add(waitingSpot);
+            _routeBuffer.Add(waitingSpot);
         }
 
-        if (route.Count > 0)
+        if (_routeBuffer.Count > 0)
         {
-            float duration = GetMovementDuration(route.ToArray(), waitingSpotWalkDuration);
-            WalkAlongWaypoints(route.ToArray(), duration, OnFullyReachedWaitingSpot);
+            float duration = GetMovementDuration(_routeBuffer.ToArray(), waitingSpotWalkDuration);
+            WalkAlongWaypoints(_routeBuffer.ToArray(), duration, OnFullyReachedWaitingSpot);
         }
         else
         {
@@ -683,13 +695,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         _isWalking = true;
         SetWalkingAnimation(true);
 
-        List<Vector3> validPoints = new List<Vector3>();
+        // OPTYMALIZACJA: Reużywamy _validPointsBuffer zamiast new List<Vector3>() przy każdym wywołaniu
+        _validPointsBuffer.Clear();
         for (int i = 0; i < points.Length; i++)
         {
-            if (points[i] != null) validPoints.Add(points[i].position);
+            if (points[i] != null) _validPointsBuffer.Add(points[i].position);
         }
 
-        if (validPoints.Count == 0)
+        if (_validPointsBuffer.Count == 0)
         {
             _isWalking = false;
             onComplete?.Invoke();
@@ -698,10 +711,10 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         _movementTween?.Kill();
 
-        if (validPoints.Count == 1)
+        if (_validPointsBuffer.Count == 1)
         {
-            transform.DOLookAt(validPoints[0], 0.2f, AxisConstraint.Y);
-            _movementTween = transform.DOMove(validPoints[0], duration)
+            transform.DOLookAt(_validPointsBuffer[0], 0.2f, AxisConstraint.Y);
+            _movementTween = transform.DOMove(_validPointsBuffer[0], duration)
                 .SetEase(Ease.Linear)
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
                 .OnUpdate(() =>
@@ -717,7 +730,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
         else
         {
-            _movementTween = transform.DOPath(validPoints.ToArray(), duration, pathType, PathMode.Full3D)
+            _movementTween = transform.DOPath(_validPointsBuffer.ToArray(), duration, pathType, PathMode.Full3D)
                 .SetLookAt(0.05f)
                 .SetEase(Ease.Linear)
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
@@ -740,23 +753,32 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         animator.speed = walking ? animationSpeed : 1.0f;
 
-        if (!string.IsNullOrEmpty(walkingAnimBool))
+        if (_walkBoolHash == -1) return; // parametr nie znaleziony lub nie został zbuforowany
+
+        // OPTYMALIZACJA: Brak foreach animator.parameters — używamy pre-hashowanego ID i zbuforowanego typu
+        if (_walkParamIsBool)
+            animator.SetBool(_walkBoolHash, walking);
+        else
+            animator.SetFloat(_walkBoolHash, walking ? 1.0f : 0.0f);
+    }
+
+    /// <summary>
+    /// Cachuje hash i typ parametru animatora chodu — wywoływane raz w Awake.
+    /// Eliminuje foreach animator.parameters (GC Alloc) z każdego wywołania SetWalkingAnimation.
+    /// </summary>
+    private void CacheAnimatorParameters()
+    {
+        if (animator == null || string.IsNullOrEmpty(walkingAnimBool)) return;
+
+        _walkBoolHash = Animator.StringToHash(walkingAnimBool);
+
+        // Przejdź przez parametry TYLKO raz (w Awake), żeby ustalić typ bool/float
+        foreach (var param in animator.parameters)
         {
-            // Sprawdź typ parametru w Animatorze
-            foreach (var param in animator.parameters)
+            if (param.name == walkingAnimBool)
             {
-                if (param.name == walkingAnimBool)
-                {
-                    if (param.type == AnimatorControllerParameterType.Bool)
-                    {
-                        animator.SetBool(walkingAnimBool, walking);
-                    }
-                    else if (param.type == AnimatorControllerParameterType.Float)
-                    {
-                        animator.SetFloat(walkingAnimBool, walking ? 1.0f : 0.0f);
-                    }
-                    return;
-                }
+                _walkParamIsBool = (param.type == AnimatorControllerParameterType.Bool);
+                break;
             }
         }
     }

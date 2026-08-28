@@ -54,7 +54,12 @@ public class PlayerHands : MonoBehaviour
     private GameObject _heldItem;
     private Rigidbody _heldRigidbody;
     private Collider[] _heldColliders;
+    private Renderer[] _heldRenderers;       // OPTYMALIZACJA: cache rendererów — brak GetComponentsInChildren przy każdym SetRenderersEnabled
     private GameObject _activeVisual;
+
+    // OPTYMALIZACJA: cache koliderów i CharacterController gracza — brak GetComponentsInParent/FindAnyObjectByType przy każdym Drop
+    private Collider[]        _cachedPlayerColliders;
+    private CharacterController _cachedPlayerCC;
 
     public bool HasItem => _heldItem != null;
     public GameObject HeldItem => _heldItem;
@@ -65,6 +70,12 @@ public class PlayerHands : MonoBehaviour
     private void Awake()
     {
         DeactivateAllVisuals();
+
+        // OPTYMALIZACJA: Buforuj kolidery i CC gracza raz — brak GetComponentsInParent/FindAnyObjectByType przy każdym Drop
+        _cachedPlayerColliders = GetComponentsInParent<Collider>(true);
+        if (_cachedPlayerColliders == null || _cachedPlayerColliders.Length == 0)
+            _cachedPlayerColliders = GetComponentsInChildren<Collider>(true);
+        _cachedPlayerCC = GetComponentInParent<CharacterController>() ?? GetComponent<CharacterController>();
     }
 
     private void OnEnable()
@@ -146,6 +157,7 @@ public class PlayerHands : MonoBehaviour
         _heldItem = item;
         _heldRigidbody = item.GetComponent<Rigidbody>();
         _heldColliders = item.GetComponentsInChildren<Collider>();
+        _heldRenderers = item.GetComponentsInChildren<Renderer>(true); // OPTYMALIZACJA: cache raz przy podniesieniu
 
         // Wyłączamy fizykę na czas trzymania
         if (_heldRigidbody != null)
@@ -276,33 +288,24 @@ public class PlayerHands : MonoBehaviour
         if (droppedItem == null) return;
 
         Collider[] itemColliders = droppedItem.GetComponentsInChildren<Collider>(true);
-        Collider[] playerColliders = GetComponentsInParent<Collider>(true);
-        if (playerColliders == null || playerColliders.Length == 0)
-        {
-            playerColliders = GetComponentsInChildren<Collider>(true);
-        }
 
-        CharacterController cc = GetComponentInParent<CharacterController>() 
-            ?? GetComponent<CharacterController>() 
-            ?? FindAnyObjectByType<CharacterController>();
-
-        foreach (var itemCol in itemColliders)
+        for (int i = 0; i < itemColliders.Length; i++)
         {
+            var itemCol = itemColliders[i];
             if (itemCol == null || itemCol.isTrigger) continue;
 
-            if (cc != null)
-            {
-                Physics.IgnoreCollision(itemCol, cc, true);
-            }
+            // OPTYMALIZACJA: Używamy zbuforowanego CC z Awake — brak FindAnyObjectByType przy każdym Drop
+            if (_cachedPlayerCC != null)
+                Physics.IgnoreCollision(itemCol, _cachedPlayerCC, true);
 
-            if (playerColliders != null)
+            // OPTYMALIZACJA: Używamy zbuforowanej tablicy koliderów z Awake — brak GetComponentsInParent
+            if (_cachedPlayerColliders != null)
             {
-                foreach (var pCol in playerColliders)
+                for (int j = 0; j < _cachedPlayerColliders.Length; j++)
                 {
+                    var pCol = _cachedPlayerColliders[j];
                     if (pCol != null && pCol != itemCol)
-                    {
                         Physics.IgnoreCollision(itemCol, pCol, true);
-                    }
                 }
             }
         }
@@ -400,10 +403,23 @@ public class PlayerHands : MonoBehaviour
     private void SetRenderersEnabled(GameObject root, bool enabled)
     {
         if (root == null) return;
-        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
-        foreach (var r in renderers)
+
+        // OPTYMALIZACJA: Używamy zbuforowanych rendererów zamiast GetComponentsInChildren przy każdym wywołaniu
+        if (_heldRenderers != null && root == _heldItem)
         {
-            if (r != null) r.enabled = enabled;
+            for (int i = 0; i < _heldRenderers.Length; i++)
+            {
+                if (_heldRenderers[i] != null)
+                    _heldRenderers[i].enabled = enabled;
+            }
+            return;
+        }
+
+        // Fallback (np. dla activeVisual lub gdy brak cache)
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null) renderers[i].enabled = enabled;
         }
     }
 
@@ -470,9 +486,10 @@ public class PlayerHands : MonoBehaviour
     public void ClearHand()
     {
         DeactivateAllVisuals();
-        _heldItem = null;
+        _heldItem      = null;
         _heldRigidbody = null;
         _heldColliders = null;
+        _heldRenderers = null; // OPTYMALIZACJA: wyczyść cache rendererów — brak wiszących referencji
     }
 
     /// <summary>

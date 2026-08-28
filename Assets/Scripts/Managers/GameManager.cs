@@ -62,7 +62,13 @@ public class GameManager : MonoBehaviour
 
     private void SpawnJurekImmediately()
     {
-        CustomerJurek jurek = FindAnyObjectByType<CustomerJurek>(FindObjectsInactive.Include);
+        // OPTYMALIZACJA: Singleton zamiast drogiego FindAnyObjectByType
+        CustomerJurek jurek = CustomerJurek.Instance;
+
+        // Fallback tylko gdy singleton nie gotowy (np. Jurek na nieaktywnym obiekcie)
+        if (jurek == null)
+            jurek = FindAnyObjectByType<CustomerJurek>(FindObjectsInactive.Include);
+
         if (jurek != null)
         {
             jurek.TriggerArrival();

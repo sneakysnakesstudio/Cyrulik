@@ -36,9 +36,17 @@ public class RuntimeLightOptimizer : MonoBehaviour
     private Camera _playerCamera;
     private float _timer;
 
+    // --- OPTYMALIZACJA: Pre-obliczone kwadraty odległości (unikamy sqrt w Vector3.Distance każdą klatkę) ---
+    private float _lightCullDistSqr;
+    private float _shadowMaxDistSqr;
+
     private void Start()
     {
         _playerCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+
+        // OPTYMALIZACJA: Pre-oblicz kwadraty odległości raz — brak sqrt w każdej klatce Update
+        _lightCullDistSqr = lightCullDistance * lightCullDistance;
+        _shadowMaxDistSqr = shadowCastingMaxDistance * shadowCastingMaxDistance;
 
         // Zbierz wszystkie światła w scenie
         _allLights = FindObjectsByType<Light>(FindObjectsInactive.Include);
@@ -91,20 +99,22 @@ public class RuntimeLightOptimizer : MonoBehaviour
             if (light == null) continue;
             if (light.type == LightType.Directional) continue;
 
-            float dist = Vector3.Distance(playerPos, light.transform.position);
-
             // Światło włączone przez grę (intensity > 0) — sprawdź odległość
             if (light.intensity > 0.01f)
             {
+                // OPTYMALIZACJA: sqrMagnitude zamiast Vector3.Distance — brak kosztownego sqrt
+                Vector3 delta = light.transform.position - playerPos;
+                float distSqr = delta.sqrMagnitude;
+
                 if (lightCullDistance > 0)
                 {
-                    light.enabled = dist <= lightCullDistance;
+                    light.enabled = distSqr <= _lightCullDistSqr;
                 }
 
                 // Włącz shadow casting tylko gdy gracz jest blisko
                 if (light.enabled && disableAdditionalLightShadows && shadowCastingMaxDistance > 0)
                 {
-                    light.shadows = dist <= shadowCastingMaxDistance
+                    light.shadows = distSqr <= _shadowMaxDistSqr
                         ? LightShadows.Hard
                         : LightShadows.None;
                 }
