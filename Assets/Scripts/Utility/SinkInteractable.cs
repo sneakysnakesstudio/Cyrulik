@@ -160,9 +160,10 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         PlayGlassPourSound();
 
         // 3. Natychmiast posadź Jurka w momencie kliknięcia nalewania
-        if (CustomerJurek.Instance != null)
+        CustomerJurek jurek = CustomerJurek.Instance != null ? CustomerJurek.Instance : FindAnyObjectByType<CustomerJurek>();
+        if (jurek != null)
         {
-            CustomerJurek.Instance.OnPlayerPouringWater();
+            jurek.OnPlayerPouringWater();
         }
 
         Debug.Log($"[Sink] Rozpoczęto nalewanie wody do szklanki ({glassPourDuration}s)... Gracz i kamera zablokowane.");
@@ -218,9 +219,10 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
         PlayWaterSound();
 
         // 3. Reakcja Jurka
-        if (CustomerJurek.Instance != null)
+        CustomerJurek jurekPot = CustomerJurek.Instance != null ? CustomerJurek.Instance : FindAnyObjectByType<CustomerJurek>();
+        if (jurekPot != null)
         {
-            CustomerJurek.Instance.OnPlayerPouringWater();
+            jurekPot.OnPlayerPouringWater();
         }
 
         Debug.Log($"[Sink] Rozpoczęto nalewanie wody do garnka ({potPourDuration}s)... Ruch gracza zablokowany (kamera aktywna).");

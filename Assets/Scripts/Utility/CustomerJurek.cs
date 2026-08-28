@@ -363,8 +363,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        // 2. Oczekiwanie na gracza w salonie + płynne obracanie się twarzą do gracza
-        if (_isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
+        // 2. Oczekiwanie na gracza w salonie + płynne obracanie się twarzą do gracza (tylko na stojąco!)
+        if (!_isSeated && _isWaitingForPlayer && !_hasInteractedWithPlayer && !_hasLeft)
         {
             if (usePatienceTimer)
             {
@@ -381,8 +381,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 }
             }
 
-            // Płynne śledzenie gracza wzrokiem (obrót wokół osi Y)
-            if (lookAtPlayerWhileWaiting && playerTransform != null)
+            // Płynne śledzenie gracza wzrokiem (obrót wokół osi Y) tylko gdy NIE siedzi
+            if (!_isSeated && lookAtPlayerWhileWaiting && playerTransform != null)
             {
                 Vector3 lookDir = playerTransform.position - transform.position;
                 lookDir.y = 0f;
@@ -1058,8 +1058,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
         if (useExplicitSittingCoordinates)
         {
-            transform.position = explicitSittingPosition;
-            transform.rotation = Quaternion.Euler(explicitSittingEulerAngles);
+            transform.localPosition = explicitSittingPosition;
+            transform.localRotation = Quaternion.Euler(explicitSittingEulerAngles);
             if (explicitSittingScale != Vector3.zero)
             {
                 transform.localScale = explicitSittingScale;
@@ -1073,8 +1073,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             if (targetAnchor != null)
             {
                 transform.position = targetAnchor.position + targetAnchor.TransformDirection(sittingPositionOffset);
-                Quaternion forwardSittingRot = targetAnchor.rotation * Quaternion.Euler(0f, 180f, 0f);
-                transform.rotation = forwardSittingRot * Quaternion.Euler(sittingRotationOffset);
+                transform.rotation = targetAnchor.rotation * Quaternion.Euler(sittingRotationOffset);
             }
         }
 
