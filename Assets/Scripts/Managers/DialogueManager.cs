@@ -144,8 +144,9 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private List<ClientDialogueUI.DialogueLine> jurekThankForWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
     {
         new ClientDialogueUI.DialogueLine("Jurek", "Ah, thank you! That hits the spot."),
-        new ClientDialogueUI.DialogueLine("Jurek", "Alright, I'm ready. Let's get to work!"),
-        new ClientDialogueUI.DialogueLine("Barber", "Right away, sir.")
+        new ClientDialogueUI.DialogueLine("Barber", "So, how are we cutting your hair today, sir?"),
+        new ClientDialogueUI.DialogueLine("Jurek", "I don't have much time today, I'd just like a clean shave."),
+        new ClientDialogueUI.DialogueLine("Barber", "Understood. Let's get right to it!")
     };
 
     [Tooltip("Kwestia wypowiadana przez Jurka, gdy minie czas cierpliwości (np. 30s) i nikt do niego nie podchodzi.")]
@@ -224,6 +225,13 @@ public class DialogueManager : MonoBehaviour
             new ClientDialogueUI.DialogueLine("Jurek", "Ah, finally... but my throat is completely dry."),
             new ClientDialogueUI.DialogueLine("Jurek", "Could you pour me a glass of water before we start?"),
             new ClientDialogueUI.DialogueLine("Barber", "Of course, sir! Just a moment.")
+        };
+        jurekThankForWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
+        {
+            new ClientDialogueUI.DialogueLine("Jurek", "Ah, thank you! That hits the spot."),
+            new ClientDialogueUI.DialogueLine("Barber", "So, how are we cutting your hair today, sir?"),
+            new ClientDialogueUI.DialogueLine("Jurek", "I don't have much time today, I'd just like a clean shave."),
+            new ClientDialogueUI.DialogueLine("Barber", "Understood. Let's get right to it!")
         };
         jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
         jurekGloomyComplaint = "It's too dark for me to even go further... can you light this room?";
