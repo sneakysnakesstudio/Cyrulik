@@ -584,7 +584,7 @@ Transform:
   m_GameObject: {fileID: 42558647}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071064, z: -0, w: 0.70710725}
-  m_LocalPosition: {x: -1.6593734, y: 1.6098177, z: 4.916844}
+  m_LocalPosition: {x: 21.890627, y: -0.44018233, z: 4.916869}
   m_LocalScale: {x: 1.3, y: 1.3, z: 1.6}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -662,7 +662,7 @@ MonoBehaviour:
   chairSpot: {fileID: 591832187}
   chairWalkDuration: 4.5
   sittingTransformPoint: {fileID: 840657071650075319}
-  sittingPositionOffset: {x: 0, y: 1, z: 0}
+  sittingPositionOffset: {x: 0, y: 0, z: 0}
   sittingRotationOffset: {x: 0, y: 0, z: 0}
   exitDestination: {fileID: 63777770}
   exitWalkDuration: 3.5
@@ -97626,6 +97626,7 @@ GameObject:
   - component: {fileID: 1534563395}
   - component: {fileID: 1534563396}
   - component: {fileID: 1534563397}
+  - component: {fileID: 1534563398}
   m_Layer: 6
   m_Name: Radio
   m_TagString: Untagged
@@ -97705,6 +97706,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.49999553, y: 0.29999995, z: 0.80760014}
   m_Center: {x: -3.1099977, y: 1.84, z: 7.5238185}
+--- !u!114 &1534563398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1534563394}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05969904e834b8449a6c710498bf1fce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractiveParticleHint
+  effectId: interactive_glint
+  particleTint: {r: 1, g: 0.92, b: 0.6, a: 0.85}
+  localOffset: {x: 0, y: 0, z: 0}
+  particleScale: 0.6
+  showOnlyWhenInteractable: 1
+  maxDistance: 6
+  playBurstOnInteract: 1
+  burstEffectId: pickup_burst
 --- !u!1 &1538108139
 GameObject:
   m_ObjectHideFlags: 0
@@ -112534,8 +112555,8 @@ Transform:
   m_GameObject: {fileID: 7682705294255989190}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.07067, y: -0.00581, z: 0.00244}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0.07067, y: -0.00581, z: 0.000761}
+  m_LocalScale: {x: 1, y: 1.04849, z: 1.026896}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3277650628358773003}
@@ -155298,7 +155319,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 6404146792755403875, guid: c19b4be75e192614090a9e860ed4ccfb, type: 3}
+  - {fileID: 2100000, guid: 1a90174c13b4b0a43b91e145007aa480, type: 2}
   - {fileID: 6881618885357290243, guid: c19b4be75e192614090a9e860ed4ccfb, type: 3}
   - {fileID: -2210248507469019029, guid: c19b4be75e192614090a9e860ed4ccfb, type: 3}
   - {fileID: 6153529528037566728, guid: c19b4be75e192614090a9e860ed4ccfb, type: 3}
