@@ -151,11 +151,11 @@ public class RazorMinigame : MonoBehaviour, IInteractable
     [Tooltip("Sharpness percentage threshold required for success (default: 100%).")]
     [Range(10f, 100f)] [SerializeField] private float sharpThreshold = 100f;
 
-    [Tooltip("Sharpness gained per GOOD hit (default: 25%).")]
-    [SerializeField] private float gainGood = 25f;
+    [Tooltip("Sharpness gained per GOOD hit (default: 20%).")]
+    [SerializeField] private float gainGood = 20f;
 
-    [Tooltip("Sharpness penalty on MISS (default: -5%).")]
-    [SerializeField] private float penaltyMiss = 5f;
+    [Tooltip("Sharpness penalty on MISS (default: 10%).")]
+    [SerializeField] private float penaltyMiss = 10f;
 
     [Tooltip("Reference attempts for speed scaling.")]
     [SerializeField] private int totalAttempts = 4;

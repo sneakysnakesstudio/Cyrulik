@@ -11,6 +11,8 @@ using UnityEngine.Events;
 /// </summary>
 public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 {
+    public static CustomerJurek Instance { get; private set; }
+
     [Header("Postać / Wizualia Jurka")]
     [Tooltip("Główny obiekt z modelem Jurka (do włączenia/wyłączenia).")]
     [SerializeField] private GameObject jurekVisual;
@@ -19,6 +21,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Animator animator;
     [Tooltip("Nazwa parametru w Animatorze (np. 'IsWalking' jako Bool lub 'Speed' jako Float).")]
     [SerializeField] private string walkingAnimBool = "IsWalking";
+    [Tooltip("Nazwa parametru Bool w Animatorze dla pozycji siedzącej (np. 'IsSitting').")]
+    [SerializeField] private string sittingAnimBool = "IsSitting";
 
     [Header("Punkt Startowy (Spawn / Wysiadka z auta)")]
     [Tooltip("Punkt w scenie, gdzie Jurek pojawia się na starcie (np. przy aucie).")]
@@ -108,6 +112,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private float rotationSpeedTowardsPlayer = 4.5f;
     [Tooltip("Transform gracza (jeśli pusty, skrypt znajdzie go automatycznie).")]
     [SerializeField] private Transform playerTransform;
+    [SerializeField] private PlayerHands playerHands;
 
     [Header("Interakcja z graczem")]
     [SerializeField] private string interactionName = "Talk to Jurek";
@@ -123,9 +128,20 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [Header("3. Trasa: Po wewnętrznych schodkach do Fotela (Górny podest)")]
     [Tooltip("Punkty trasy prowadzące od Waiting Pointu, po wewnętrznych schodkach na podest (dodaj tutaj punkty schodków!).")]
     [SerializeField] private Transform[] toChairWaypoints;
-    [Tooltip("Docelowy punkt przy stanowisku fryzjerskim / fotelu.")]
+    [Tooltip("Docelowy punkt przy stanowisku fryzjerskim / fotelu (Waypoint marszu).")]
     [SerializeField] private Transform chairSpot;
     [SerializeField] private float chairWalkDuration = 4.5f;
+
+    [Header("Punkt Siedzenia na Fotelu (Sitting Point)")]
+    [Tooltip("Dedykowany punkt fotela / krzesełka (SittingTransformPoint), na który Jurek siada po nalaniu / otrzymaniu wody.")]
+    [SerializeField] private Transform sittingTransformPoint;
+
+    [Header("Offset Siedzenia na Fotelu (Sitting Offset)")]
+    [Tooltip("Przesunięcie pozycji Jurka podczas siedzenia (np. Y = 0.15 aby siedział wyżej, Z = 0.1 aby dosunąć/odsunąć od oparcia).")]
+    [SerializeField] private Vector3 sittingPositionOffset = new Vector3(0f, 0.15f, 0f);
+
+    [Tooltip("Przesunięcie rotacji Jurka podczas siedzenia (kąty Eulera w stopniach).")]
+    [SerializeField] private Vector3 sittingRotationOffset = Vector3.zero;
 
     [Header("Trasa Wyjścia (Fail Branch)")]
     [SerializeField] private Transform exitDestination;
@@ -140,6 +156,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [SerializeField] private UnityEvent onReachedBarberChair;
     [SerializeField] private UnityEvent onPatienceTimeout;
     [SerializeField] private UnityEvent onJurekLeft;
+    [SerializeField] private UnityEvent onReadyForShaving;
 
     [Tooltip("Czy ukrywać model Jurka na starcie gry (odznacz to, jeśli chcesz widzieć postać cały czas podczas testowania w scenie)?")]
     [SerializeField] private bool hideOnStart = false;
@@ -150,6 +167,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     private bool _isWaitingForPlayer = false;
     private bool _hasInteractedWithPlayer = false;
     private bool _hasReachedChair = false;
+    private bool _askedForWater = false;
+    private bool _isSeated = false;
+    private bool _hasReceivedWater = false;
     private float _patienceRemaining = 0f;
     private float _footstepTimer = 0f;
     private Tween _movementTween;
@@ -159,14 +179,50 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     public bool IsWalking => _isWalking;
     public bool IsWaitingForPlayer => _isWaitingForPlayer;
     public bool HasReachedChair => _hasReachedChair;
+    public bool IsWaitingForWater => _askedForWater && !_isSeated;
+    public bool IsSeated => _isSeated;
+    public bool HasReceivedWater => _hasReceivedWater;
     public float PatienceRemaining => _patienceRemaining;
 
-    public bool CanInteract => _hasArrived && !_isWalking && !_hasLeft && !_hasInteractedWithPlayer && (ClientDialogueUI.Instance == null || !ClientDialogueUI.Instance.IsDialogueActive);
-    public string InteractionName => interactionName;
+    public bool CanInteract
+    {
+        get
+        {
+            if (!_hasArrived || _isWalking || _hasLeft)
+                return false;
+
+            if (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive)
+                return false;
+
+            if (!_hasInteractedWithPlayer)
+                return true;
+
+            // Gdy siedzi na fotelu i czeka na przyniesienie wody
+            if (_isSeated && !_hasReceivedWater)
+                return true;
+
+            return false;
+        }
+    }
+
+    public string InteractionName
+    {
+        get
+        {
+            if (_isSeated && !_hasReceivedWater)
+            {
+                return IsPlayerHoldingWaterGlass() ? "Give water to Jurek" : "Talk to Jurek";
+            }
+            return interactionName;
+        }
+    }
     public string BlockedMessage => null;
 
     private void Awake()
     {
+        if (Instance == null) Instance = this;
+        else if (Instance != this) Destroy(gameObject);
+
         if (jurekVisual == null)
         {
             var smr = GetComponentInChildren<SkinnedMeshRenderer>(true);
@@ -199,14 +255,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             }
         }
 
-        // Zapewnij obecność Collisera do detekcji promienia interakcji gracza
-        if (GetComponent<Collider>() == null && GetComponentInChildren<Collider>() == null)
-        {
-            var col = gameObject.AddComponent<CapsuleCollider>();
-            col.center = new Vector3(0f, 0.9f, 0f);
-            col.radius = 0.35f;
-            col.height = 1.8f;
-        }
+        SetupPhysicsAndCollisions();
 
         // Ustaw warstwę Interactable jeśli istnieje
         int interactableLayer = LayerMask.NameToLayer("Interactable");
@@ -222,6 +271,62 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         else
         {
             EnsureVisualsActive();
+        }
+    }
+
+    private void Start()
+    {
+        // Ponowne sprawdzenie ignorowania kolizji w Start, gdyby gracz zainicjalizował się po Awake
+        IgnoreCollisionWithPlayer();
+    }
+
+    private void SetupPhysicsAndCollisions()
+    {
+        // 1. Dodaj Kinematic Rigidbody (informuje silnik PhysX, że ten obiekt porusza się ze skryptu)
+        var rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+        }
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+        // 2. Zapewnij obecność Collidera do detekcji promienia interakcji gracza
+        if (GetComponent<Collider>() == null && GetComponentInChildren<Collider>() == null)
+        {
+            var col = gameObject.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0f, 0.9f, 0f);
+            col.radius = 0.35f;
+            col.height = 1.8f;
+        }
+
+        // 3. Wyłącz fizyczne spychanie gracza przez kolidery Jurka (zapobiega wystrzeleniu gracza poza mapę)
+        IgnoreCollisionWithPlayer();
+    }
+
+    private void IgnoreCollisionWithPlayer()
+    {
+        CharacterController playerCC = null;
+        if (playerTransform != null)
+        {
+            playerCC = playerTransform.GetComponent<CharacterController>();
+        }
+        if (playerCC == null)
+        {
+            playerCC = FindAnyObjectByType<CharacterController>();
+        }
+
+        if (playerCC != null)
+        {
+            Collider[] jurekColliders = GetComponentsInChildren<Collider>(true);
+            foreach (var col in jurekColliders)
+            {
+                if (col != null)
+                {
+                    Physics.IgnoreCollision(col, playerCC, true);
+                }
+            }
         }
     }
 
@@ -751,52 +856,223 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         Debug.Log("[CustomerJurek] Gracz podszedł i wszedł w interakcję z Jurkiem!");
         onPlayerInteracted?.Invoke();
 
-        // 1. Sprawdź czy salon został odpowiednio przygotowany (lampki + radio)
-        bool atmospherePassed = !requireAtmosphere || (PreparationStateManager.Instance != null && PreparationStateManager.Instance.IsTaskCompleted(atmosphereTaskId));
-
-        if (!atmospherePassed)
+        if (!_hasReachedChair)
         {
-            Debug.Log("<color=#FF6060>[CustomerJurek] Atmosfera w salonie nieprzygotowana (brak lamp/radia)! Jurek odmawia golenia i wychodzi.</color>");
-            TriggerGloomyAtmosphereFail();
-            return;
+            // 1. Sprawdź czy salon został odpowiednio przygotowany (lampki + radio)
+            bool atmospherePassed = !requireAtmosphere || (PreparationStateManager.Instance != null && PreparationStateManager.Instance.IsTaskCompleted(atmosphereTaskId));
+
+            if (!atmospherePassed)
+            {
+                Debug.Log("<color=#FF6060>[CustomerJurek] Atmosfera w salonie nieprzygotowana (brak lamp/radia)! Jurek prosi o zapalenie światła.</color>");
+                TriggerGloomyAtmosphereWarning();
+                return;
+            }
+
+            // 2. Jeśli atmosfera jest gotowa, normalny dialog powitalny
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.StartJurekArrivalDialogue(OnDialogueCompleted);
+            }
+            else
+            {
+                OnDialogueCompleted();
+            }
+        }
+        else if (!_askedForWater && !_isSeated)
+        {
+            _askedForWater = true;
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.StartJurekWaterDialogue(OnWaterDialogueCompleted);
+            }
+            else
+            {
+                OnWaterDialogueCompleted();
+            }
+        }
+        else if (_isSeated && !_hasReceivedWater)
+        {
+            if (IsPlayerHoldingWaterGlass())
+            {
+                TakeWaterFromPlayer();
+            }
+            else
+            {
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.ShowClientLine("Jurek", "I'm still waiting for that glass of water, friend...");
+                }
+            }
+        }
+    }
+
+    private void TakeWaterFromPlayer()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands != null && playerHands.HasItem)
+        {
+            playerHands.DestroyHeldItem();
         }
 
-        // 2. Jeśli atmosfera jest gotowa, normalny dialog powitalny
+        _hasReceivedWater = true;
+        Debug.Log("[CustomerJurek] Jurek otrzymał szklankę wody i jest gotowy na golenie!");
+
+        // Upewnij się, że Jurek jest idealnie posadzony na SittingTransformPoint
+        SnapToChairSittingPosition();
+
         if (DialogueManager.Instance != null)
         {
-            DialogueManager.Instance.StartJurekArrivalDialogue(OnDialogueCompleted);
+            DialogueManager.Instance.StartJurekThankForWaterDialogue(() =>
+            {
+                onReadyForShaving?.Invoke();
+            });
         }
         else
         {
-            OnDialogueCompleted();
+            onReadyForShaving?.Invoke();
+        }
+    }
+
+    private bool IsPlayerHoldingWaterGlass()
+    {
+        if (playerHands == null)
+            playerHands = FindAnyObjectByType<PlayerHands>();
+
+        if (playerHands == null || !playerHands.HasItem)
+            return false;
+
+        GameObject held = playerHands.HeldItem;
+        if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
+        {
+            string id = pickup.ItemId;
+            if (string.Equals(id, "filled_glass", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(id, "glass_water", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(id, "glass_full", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void OnWaterDialogueCompleted()
+    {
+        Debug.Log("[CustomerJurek] Jurek prosi o wodę i czeka, aż gracz się odwróci by nalać.");
+        _isWaitingForPlayer = true; // Wait for the player to get water
+        _hasInteractedWithPlayer = false;
+        _patienceRemaining = patienceDuration;
+        
+        if (usePatienceTimer && PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.Show(patienceDuration, "Jurek (Thirsty)");
         }
     }
 
     /// <summary>
-    /// Wywoływane, gdy gracz nie zapalił lamp i radia (fail state ponurej atmosfery).
+    /// Called when the player interacts with the sink to pour water.
     /// </summary>
-    public void TriggerGloomyAtmosphereFail()
+    public void OnPlayerPouringWater()
+    {
+        if (_askedForWater && !_isSeated)
+        {
+            Debug.Log("[CustomerJurek] Gracz odwrócił się nalać wody. Jurek w tym czasie siada na fotel!");
+            _isSeated = true;
+            _isWaitingForPlayer = false;
+            _hasInteractedWithPlayer = true;
+
+            if (PatienceMeterUI.Instance != null)
+            {
+                PatienceMeterUI.Instance.Hide(true);
+            }
+
+            // Przesunięcie i obrót na fotelu z uwzględnieniem offsetu
+            SnapToChairSittingPosition();
+            
+            // Opcjonalnie dźwięk szurania krzesłem
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.Play("chair_move");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Teleportuje Jurka na pozycję fotela (SittingTransformPoint lub chairSpot) z uwzględnieniem offsetu i włącza animację siedzenia.
+    /// </summary>
+    [ContextMenu("Snap To Chair Sitting Position")]
+    public void SnapToChairSittingPosition()
+    {
+        Transform targetAnchor = sittingTransformPoint != null ? sittingTransformPoint : chairSpot;
+        if (targetAnchor != null)
+        {
+            transform.position = targetAnchor.position + targetAnchor.TransformDirection(sittingPositionOffset);
+            transform.rotation = targetAnchor.rotation * Quaternion.Euler(sittingRotationOffset);
+        }
+
+        SetSittingAnimation(true);
+    }
+
+    private void SetSittingAnimation(bool sitting)
+    {
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>();
+
+        if (animator == null) return;
+
+        // 1. Ustaw główny skonfigurowany parametr Bool (domyślnie 'IsSitting')
+        if (!string.IsNullOrEmpty(sittingAnimBool))
+        {
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == sittingAnimBool)
+                {
+                    animator.SetBool(sittingAnimBool, sitting);
+                    return;
+                }
+            }
+        }
+
+        // 2. Sprawdź alternatywne warianty nazewnictwa
+        foreach (var param in animator.parameters)
+        {
+            if (param.name.Equals("IsSitting", StringComparison.OrdinalIgnoreCase) ||
+                param.name.Equals("IsSeated", StringComparison.OrdinalIgnoreCase) ||
+                param.name.Equals("Sitting", StringComparison.OrdinalIgnoreCase))
+            {
+                animator.SetBool(param.name, sitting);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Wywoływane, gdy gracz nie zapalił lamp i radia (ostrzeżenie, klient czeka dalej).
+    /// </summary>
+    public void TriggerGloomyAtmosphereWarning()
     {
         if (_hasLeft) return;
-        _hasLeft = true;
-        _movementTween?.Kill();
 
         if (DialogueManager.Instance != null)
         {
             DialogueManager.Instance.ShowJurekGloomyDialogue(() =>
             {
-                WalkOut(() =>
+                // Po dialogu wracamy do stanu oczekiwania
+                _hasInteractedWithPlayer = false;
+                _isWaitingForPlayer = true;
+                
+                if (usePatienceTimer && PatienceMeterUI.Instance != null)
                 {
-                    ShowEndScreenWithFade(gloomyFailReason, false);
-                });
+                    PatienceMeterUI.Instance.Show(patienceDuration, "Jurek");
+                    PatienceMeterUI.Instance.UpdateProgress(_patienceRemaining, patienceDuration);
+                }
             });
         }
         else
         {
-            WalkOut(() =>
-            {
-                ShowEndScreenWithFade(gloomyFailReason, false);
-            });
+            _hasInteractedWithPlayer = false;
+            _isWaitingForPlayer = true;
         }
     }
 
@@ -871,7 +1147,19 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
-        Debug.Log("[CustomerJurek] Jurek dotarł na stanowisko fryzjerskie i jest gotowy do golenia!");
+        Debug.Log("[CustomerJurek] Jurek dotarł na stanowisko fryzjerskie i czeka na interakcję.");
+        
+        _isWaitingForPlayer = true;
+        _hasInteractedWithPlayer = false;
+        _askedForWater = false;
+        _isSeated = false;
+        
+        _patienceRemaining = patienceDuration;
+        if (usePatienceTimer && PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.Show(patienceDuration, "Jurek");
+        }
+        
         onReachedBarberChair?.Invoke();
     }
 

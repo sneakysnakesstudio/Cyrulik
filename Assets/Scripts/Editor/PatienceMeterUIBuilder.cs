@@ -53,6 +53,19 @@ public static class PatienceMeterUIBuilder
         outline.effectColor = new Color(0.85f, 0.62f, 0.18f, 0.85f);
         outline.effectDistance = new Vector2(2f, -2f);
 
+        // Avatar (mordka) po lewej stronie paska
+        GameObject avatarGo = new GameObject("Avatar_Image", typeof(RectTransform), typeof(Image));
+        avatarGo.transform.SetParent(containerGo.transform, false);
+        var avatarRect = avatarGo.GetComponent<RectTransform>();
+        avatarRect.anchorMin = new Vector2(0f, 0.5f);
+        avatarRect.anchorMax = new Vector2(0f, 0.5f);
+        avatarRect.pivot = new Vector2(1f, 0.5f);
+        avatarRect.sizeDelta = new Vector2(56f, 56f);
+        avatarRect.anchoredPosition = new Vector2(-12f, 0f);
+
+        var avatarImg = avatarGo.GetComponent<Image>();
+        avatarImg.color = new Color(0.15f, 0.14f, 0.13f, 1f); // Ciemny placeholder
+
         // 2. Nagłówek (Header Text)
         GameObject headerGo = new GameObject("Header_Text", typeof(RectTransform), typeof(TextMeshProUGUI));
         headerGo.transform.SetParent(containerGo.transform, false);
@@ -126,6 +139,7 @@ public static class PatienceMeterUIBuilder
         so.FindProperty("percentageText").objectReferenceValue = percentTmp;
         so.FindProperty("progressBarFill").objectReferenceValue = fillImg;
         so.FindProperty("progressBarBackground").objectReferenceValue = barBgImg;
+        so.FindProperty("avatarImage").objectReferenceValue = avatarImg;
         so.ApplyModifiedProperties();
 
         Undo.RegisterCreatedObjectUndo(managerGo, "Create Patience Meter UI");

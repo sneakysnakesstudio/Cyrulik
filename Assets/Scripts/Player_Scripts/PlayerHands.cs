@@ -33,7 +33,8 @@ public class PlayerHands : MonoBehaviour
     [SerializeField] private InHandVisual[] inHandVisuals;
 
     [Header("Ustawienia upuszczania")]
-    [SerializeField] private float dropForce = 0.5f;
+    [Tooltip("Dodatkowa siła wyrzutu (0 = swobodny upadek prosto pod nogi na ziemię).")]
+    [SerializeField] private float dropForce = 0f;
 
     [Header("Audio Podnoszenia i Upuszczania")]
     [Tooltip("Domyślna nazwa grupy dźwięku podnoszenia w AudioManager (np. 'item_pickup' lub 'cloth_pickup').")]
@@ -210,6 +211,7 @@ public class PlayerHands : MonoBehaviour
 
     /// <summary>
     /// Wyrzuca aktualnie trzymany przedmiot do świata i odtwarza dźwięk upuszczenia.
+    /// Przedmiot spada swobodnie prosto na ziemię bez wystrzeliwania w dal.
     /// </summary>
     public void DropHeldItem()
     {
@@ -219,10 +221,26 @@ public class PlayerHands : MonoBehaviour
         GameObject droppedItem = _heldItem;
         PickupItem pickup = droppedItem.GetComponentInChildren<PickupItem>();
 
-        // Przywracamy renderery obiektu świata, jeśli były ukryte
+        // 1. Przywracamy widoczność renderera obiektu świata
         SetRenderersEnabled(droppedItem, true);
+
+        // 2. Bezpieczna pozycja upuszczenia - lekko z przodu i w dół, aby nie kolidował z ciałem gracza
+        Vector3 dropPosition;
+        if (holdPoint != null)
+        {
+            dropPosition = holdPoint.position + (holdPoint.forward * 0.15f) - (Vector3.up * 0.1f);
+        }
+        else
+        {
+            dropPosition = transform.position + (transform.forward * 0.35f) + (Vector3.up * 0.6f);
+        }
+
         droppedItem.transform.SetParent(null);
+        droppedItem.transform.position = dropPosition;
+
+        // 3. Włącz kolidery i zignoruj kolizje z ciałem gracza (zapobiega fizycznemu wystrzeleniu przedmiotu)
         SetCollidersEnabled(true);
+        IgnorePlayerCollisions(droppedItem);
 
         if (_heldRigidbody == null)
         {
@@ -240,13 +258,54 @@ public class PlayerHands : MonoBehaviour
             _heldRigidbody.useGravity = true;
             _heldRigidbody.linearVelocity = Vector3.zero;
             _heldRigidbody.angularVelocity = Vector3.zero;
-            _heldRigidbody.AddForce(transform.forward * dropForce, ForceMode.Impulse);
+
+            if (dropForce > 0.01f)
+            {
+                _heldRigidbody.AddForce(transform.forward * dropForce, ForceMode.Impulse);
+            }
         }
 
         // Dźwięk upuszczenia przedmiotu
         PlayDropSound(pickup);
 
         ClearHand();
+    }
+
+    private void IgnorePlayerCollisions(GameObject droppedItem)
+    {
+        if (droppedItem == null) return;
+
+        Collider[] itemColliders = droppedItem.GetComponentsInChildren<Collider>(true);
+        Collider[] playerColliders = GetComponentsInParent<Collider>(true);
+        if (playerColliders == null || playerColliders.Length == 0)
+        {
+            playerColliders = GetComponentsInChildren<Collider>(true);
+        }
+
+        CharacterController cc = GetComponentInParent<CharacterController>() 
+            ?? GetComponent<CharacterController>() 
+            ?? FindAnyObjectByType<CharacterController>();
+
+        foreach (var itemCol in itemColliders)
+        {
+            if (itemCol == null || itemCol.isTrigger) continue;
+
+            if (cc != null)
+            {
+                Physics.IgnoreCollision(itemCol, cc, true);
+            }
+
+            if (playerColliders != null)
+            {
+                foreach (var pCol in playerColliders)
+                {
+                    if (pCol != null && pCol != itemCol)
+                    {
+                        Physics.IgnoreCollision(itemCol, pCol, true);
+                    }
+                }
+            }
+        }
     }
 
     private void PlayPickupSound(PickupItem pickup)

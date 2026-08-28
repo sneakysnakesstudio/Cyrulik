@@ -80,6 +80,13 @@ public class PatienceMeterUI : MonoBehaviour
     [SerializeField] private AudioClip customWarningClip;
     [SerializeField] private AudioSource customAudioSource;
 
+    [Header("Avatar")]
+    [Tooltip("Obrazek z twarzą klienta (mordka).")]
+    [SerializeField] private Image avatarImage;
+    [Tooltip("Domyślny sprite twarzy.")]
+    [SerializeField] private Sprite defaultAvatarSprite;
+    private Tween _avatarShakeTween;
+
     private bool _isVisible = false;
     private float _currentPatience = 1f; // 0..1
     private float _totalDuration = 30f;
@@ -193,6 +200,17 @@ public class PatienceMeterUI : MonoBehaviour
             _fadeTween = meterCanvasGroup.DOFade(1f, slideInDuration)
                 .SetUpdate(true);
         }
+
+        if (avatarImage != null)
+        {
+            if (defaultAvatarSprite != null) avatarImage.sprite = defaultAvatarSprite;
+            
+            _avatarShakeTween?.Kill();
+            avatarImage.rectTransform.localRotation = Quaternion.identity;
+            _avatarShakeTween = avatarImage.rectTransform.DOShakeRotation(2f, new Vector3(0, 0, 12f), 20, 90f, false)
+                .SetLoops(-1, LoopType.Restart)
+                .SetUpdate(true);
+        }
     }
 
     /// <summary>
@@ -302,6 +320,7 @@ public class PatienceMeterUI : MonoBehaviour
         if (!_isVisible) return;
         _isVisible = false;
         StopCriticalPulse();
+        _avatarShakeTween?.Kill();
 
         if (success && progressBarFill != null)
         {
@@ -357,6 +376,7 @@ public class PatienceMeterUI : MonoBehaviour
     {
         _isVisible = false;
         StopCriticalPulse();
+        _avatarShakeTween?.Kill();
 
         _moveTween?.Kill();
         _fadeTween?.Kill();
@@ -424,6 +444,27 @@ public class PatienceMeterUI : MonoBehaviour
         var outline = containerGo.GetComponent<Outline>();
         outline.effectColor = new Color(0.85f, 0.62f, 0.18f, 0.85f);
         outline.effectDistance = new Vector2(2f, -2f);
+
+        // Avatar (mordka) po lewej stronie paska
+        GameObject avatarGo = new GameObject("Avatar_Image", typeof(RectTransform), typeof(Image));
+        avatarGo.transform.SetParent(containerGo.transform, false);
+        var avatarRect = avatarGo.GetComponent<RectTransform>();
+        avatarRect.anchorMin = new Vector2(0f, 0.5f);
+        avatarRect.anchorMax = new Vector2(0f, 0.5f);
+        avatarRect.pivot = new Vector2(1f, 0.5f);
+        avatarRect.sizeDelta = new Vector2(56f, 56f);
+        avatarRect.anchoredPosition = new Vector2(-12f, 0f);
+
+        avatarImage = avatarGo.GetComponent<Image>();
+        if (defaultAvatarSprite != null)
+        {
+            avatarImage.sprite = defaultAvatarSprite;
+            avatarImage.color = Color.white;
+        }
+        else
+        {
+            avatarImage.color = new Color(0.15f, 0.14f, 0.13f, 1f); // Ciemny placeholder
+        }
 
         // 2. Nagłówek (Header Text)
         GameObject headerGo = new GameObject("Header_Text", typeof(RectTransform), typeof(TextMeshProUGUI));

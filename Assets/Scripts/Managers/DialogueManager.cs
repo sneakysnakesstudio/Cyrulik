@@ -132,13 +132,29 @@ public class DialogueManager : MonoBehaviour
         new ClientDialogueUI.DialogueLine("Jurek", "...")
     };
 
+    [Tooltip("Kwestie dialogowe gdy Jurek dotrze do fotela i poprosi o szklankę wody.")]
+    [SerializeField] private List<ClientDialogueUI.DialogueLine> jurekWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
+    {
+        new ClientDialogueUI.DialogueLine("Jurek", "Ah, finally... but my throat is completely dry."),
+        new ClientDialogueUI.DialogueLine("Jurek", "Could you pour me a glass of water before we start?"),
+        new ClientDialogueUI.DialogueLine("Barber", "Of course, sir! Just a moment.")
+    };
+
+    [Tooltip("Kwestie dialogowe gdy gracz wręcza Jurkowi szklankę wody.")]
+    [SerializeField] private List<ClientDialogueUI.DialogueLine> jurekThankForWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
+    {
+        new ClientDialogueUI.DialogueLine("Jurek", "Ah, thank you! That hits the spot."),
+        new ClientDialogueUI.DialogueLine("Jurek", "Alright, I'm ready. Let's get to work!"),
+        new ClientDialogueUI.DialogueLine("Barber", "Right away, sir.")
+    };
+
     [Tooltip("Kwestia wypowiadana przez Jurka, gdy minie czas cierpliwości (np. 30s) i nikt do niego nie podchodzi.")]
     [TextArea(2, 4)]
     [SerializeField] private string jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
 
     [Tooltip("Kwestia wypowiadana przez Jurka, gdy w salonie jest za ciemno i brak muzyki (nieprzygotowana atmosfera).")]
     [TextArea(2, 4)]
-    [SerializeField] private string jurekGloomyComplaint = "It's pitch black and dead silent in here... The atmosphere is way too gloomy! I'm taking my business elsewhere!";
+    [SerializeField] private string jurekGloomyComplaint = "It's too dark for me to even go further... can you light this room?";
 
     [Tooltip("Kwestia wypowiadana przez Jurka, gdy zauważy mysz w salonie.")]
     [TextArea(2, 4)]
@@ -150,6 +166,22 @@ public class DialogueManager : MonoBehaviour
     public void StartJurekArrivalDialogue(Action onComplete = null)
     {
         StartClientConversation(jurekArrivalDialogue, onComplete);
+    }
+
+    /// <summary>
+    /// Rozpoczyna dialog prośby o wodę przy fotelu.
+    /// </summary>
+    public void StartJurekWaterDialogue(Action onComplete = null)
+    {
+        StartClientConversation(jurekWaterDialogue, onComplete);
+    }
+
+    /// <summary>
+    /// Rozpoczyna dialog podziękowania za wodę przy fotelu.
+    /// </summary>
+    public void StartJurekThankForWaterDialogue(Action onComplete = null)
+    {
+        StartClientConversation(jurekThankForWaterDialogue, onComplete);
     }
 
     /// <summary>
@@ -187,8 +219,14 @@ public class DialogueManager : MonoBehaviour
             new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
             new ClientDialogueUI.DialogueLine("Jurek", "...")
         };
+        jurekWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
+        {
+            new ClientDialogueUI.DialogueLine("Jurek", "Ah, finally... but my throat is completely dry."),
+            new ClientDialogueUI.DialogueLine("Jurek", "Could you pour me a glass of water before we start?"),
+            new ClientDialogueUI.DialogueLine("Barber", "Of course, sir! Just a moment.")
+        };
         jurekTimeoutComplaint = "How much longer am I supposed to stand here?! If nobody's going to serve me, I'm taking my business elsewhere!";
-        jurekGloomyComplaint = "It's pitch black and dead silent in here... The atmosphere is way too gloomy! I'm taking my business elsewhere!";
+        jurekGloomyComplaint = "It's too dark for me to even go further... can you light this room?";
         jurekMouseScareReaction = "Jesus Christ, a rat! In a barber shop?! I'm getting out of here right now!";
         Debug.Log("[DialogueManager] Zresetowano dialogi Jurka do domyślnych (EN)!");
     }
