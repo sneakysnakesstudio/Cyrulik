@@ -299,8 +299,15 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
             gameObject.layer = interactableLayer;
         }
 
-        // Ukryj model Jurka na początku gry (pojawi się 30s po przejściu przez zasłony)
-        SetVisualsActive(false);
+        // Włącz model Jurka na starcie gry (chyba że zaznaczono hideOnStart)
+        if (hideOnStart)
+        {
+            SetVisualsActive(false);
+        }
+        else
+        {
+            EnsureVisualsActive();
+        }
 
         // OPTYMALIZACJA: Cachuj hash i typ parametru animatora — brak foreach animator.parameters w Update
         CacheAnimatorParameters();
@@ -356,6 +363,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
 
     private void Start()
     {
+        if (!hideOnStart)
+        {
+            EnsureVisualsActive();
+        }
+
         FixSittingAnchor();
 
         // Ponowne sprawdzenie ignorowania kolizji w Start, gdyby gracz zainicjalizował się po Awake

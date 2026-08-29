@@ -183644,13 +183644,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DoorInteractable
   interactionName: Door
   lockedAtStart: 1
-  requireKey: 1
+  requireKey: 0
   requiredKeyItemId: wardrobe_key
   consumeKeyOnUnlock: 1
   keyMissingMessage: It's locked. I need to find the key...
   unlockSoundName: drawer_open
   customUnlockClip: {fileID: 0}
-  firstDoors: 1
+  firstDoors: 0
   requiredTaskId: dressed_up
   blockedMessage: I should get dressed first...
   OnDoorBlocked:

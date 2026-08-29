@@ -182,14 +182,25 @@ public class IntroSequence : MonoBehaviour
             controlsCanvasGroup.gameObject.SetActive(false);
         }
 
-        // 7. Rozjaśnianie ekranu (fade do zera) oraz płynne wyciszanie dźwięku
+        // 7. NATYCHMIAST odblokuj gracza (ruch, kamera i interakcje od razu aktywne!)
+        if (playerMovement != null) playerMovement.enabled = true;
+        if (playerHands != null) playerHands.enabled = true;
+
+        // 8. Płynne rozjaśnianie ekranu (w tle, nie blokując już gracza)
+        if (introCanvasGroup != null)
+        {
+            introCanvasGroup.blocksRaycasts = false;
+            introCanvasGroup.interactable = false;
+        }
+
         if (introCanvasGroup != null || _introAudioSource != null)
         {
+            float targetFadeTime = Mathf.Min(fadeDuration, 1.0f);
             float elapsed = 0f;
-            while (elapsed < fadeDuration)
+            while (elapsed < targetFadeTime)
             {
                 elapsed += Time.deltaTime;
-                float t = elapsed / fadeDuration;
+                float t = elapsed / targetFadeTime;
 
                 if (introCanvasGroup != null)
                     introCanvasGroup.alpha = Mathf.Lerp(1f, 0f, t);
@@ -204,6 +215,7 @@ public class IntroSequence : MonoBehaviour
             {
                 introCanvasGroup.alpha = 0f;
                 introCanvasGroup.blocksRaycasts = false;
+                introCanvasGroup.gameObject.SetActive(false);
             }
 
             if (_introAudioSource != null && loopClockAudio)
@@ -211,10 +223,6 @@ public class IntroSequence : MonoBehaviour
                 _introAudioSource.Stop();
             }
         }
-
-        // 8. Oddajemy kontrolę graczowi
-        if (playerMovement != null) playerMovement.enabled = true;
-        if (playerHands != null) playerHands.enabled = true;
     }
 
     private bool WasAnyKeyPressed()
