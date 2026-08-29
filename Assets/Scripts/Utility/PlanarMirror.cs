@@ -1,10 +1,14 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// Proste lustro — stała kamera (CameraMirror) renderuje widok pokoju do RenderTexture,
-/// która jest wyświetlana na tafli lustra. Kamera się NIE rusza.
-/// Optymalizacje: brak cieni/PP, distance culling, FPS throttling.
+/// Zero-Lag Retro Mirror — wydajny system renderowania odbicia lustrzanego w stylu PSX.
+/// Kamera lustra NIGDY nie jest włączona automatycznie przez URP — renderujemy ją manualnie
+/// przez mirrorCamera.Render() wyłącznie gdy:
+/// 1. Lustro jest widoczne w kamerze gracza (frustum culling).
+/// 2. Gracz jest wystarczająco blisko (distance culling).
+/// 3. Upłynął wymagany czas od ostatniego renderu (FPS throttling).
+/// Dzięki temu eliminujemy główną przyczynę lagów (ciągłe przebudowywanie pipelinu URP).
 /// </summary>
 public class PlanarMirror : MonoBehaviour
 {
@@ -13,19 +17,28 @@ public class PlanarMirror : MonoBehaviour
     [SerializeField] private MeshRenderer mirrorRenderer;
 
     [Header("Render Texture")]
-    [Tooltip("Wysokość textury. 256 = PSX styl, 512 = czyściej.")]
-    [SerializeField] private int textureHeight = 512;
+    [Tooltip("Wysokość tekstury. 256 = PSX retro styl (4x mniej GPU niż 512).")]
+    [SerializeField] private int textureHeight = 256;
     [SerializeField] private FilterMode filterMode = FilterMode.Bilinear;
 
     [Header("Performance")]
     [Tooltip("Powyżej tej odległości lustro przestaje renderować.")]
-    [SerializeField] private float maxRenderDistance = 8f;
-    [Tooltip("FPS throttling — 30 FPS odbicia zamiast 144. 0 = bez limitu.")]
-    [SerializeField] private int mirrorTargetFPS = 30;
+    [SerializeField] private float maxRenderDistance = 5f;
+
+    [Tooltip("Ile razy na sekundę odświeżać odbicie. 15 = retro PSX, 30 = płynniej.")]
+    [SerializeField] private int mirrorTargetFPS = 15;
+
+    [Tooltip("Maksymalny dystans renderowania kamery lustra (farClipPlane). Nie renderujemy obiektów zza ścian.")]
+    [SerializeField] private float mirrorFarClip = 6f;
+
+    [Header("Enable / Disable Mirror")]
+    [Tooltip("Wyłącz lustro całkowicie, aby zaoszczędzić GPU na słabych maszynach.")]
+    [SerializeField] public bool enableMirror = true;
 
     private RenderTexture _rt;
     private Camera _playerCamera;
     private float _timer;
+    private Plane[] _frustumPlanes;
 
     private void Start()
     {
@@ -37,18 +50,33 @@ public class PlanarMirror : MonoBehaviour
         if (mirrorRenderer == null)
             mirrorRenderer = GetComponentInChildren<MeshRenderer>();
 
+        if (!enableMirror)
+        {
+            DisableMirror();
+            return;
+        }
+
         SetupCamera();
         CreateRT();
+
+        // WAŻNE: kamera musi być zawsze wyłączona — renderujemy ją manualnie przez Render()
+        // URP nie doda jej do swojego pipelinu, więc nie będzie powodować lagów
+        if (mirrorCamera != null)
+            mirrorCamera.enabled = false;
     }
 
     private void SetupCamera()
     {
         if (mirrorCamera == null) return;
 
+        // Kamera wyłączona na stałe — manualny render
+        mirrorCamera.enabled = false;
         mirrorCamera.allowHDR = false;
         mirrorCamera.allowMSAA = false;
         mirrorCamera.useOcclusionCulling = true;
-        mirrorCamera.enabled = true;
+
+        // Ograniczamy zasięg — nie renderujemy obiektów zza ścian
+        mirrorCamera.farClipPlane = mirrorFarClip;
 
         var data = mirrorCamera.GetComponent<UniversalAdditionalCameraData>();
         if (data != null)
@@ -71,10 +99,10 @@ public class PlanarMirror : MonoBehaviour
 
         _rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32)
         {
-            name = "MirrorRT",
+            name       = "MirrorRT",
             filterMode = filterMode,
-            wrapMode = TextureWrapMode.Clamp,
-            useMipMap = false
+            wrapMode   = TextureWrapMode.Clamp,
+            useMipMap  = false
         };
         _rt.Create();
 
@@ -92,36 +120,54 @@ public class PlanarMirror : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (mirrorCamera == null) return;
+        if (!enableMirror || mirrorCamera == null) return;
 
-        // Distance culling
+        // --- THROTTLING: renderuj nie częściej niż mirrorTargetFPS razy na sekundę ---
+        if (mirrorTargetFPS > 0)
+        {
+            _timer += Time.unscaledDeltaTime;
+            float interval = 1f / mirrorTargetFPS;
+            if (_timer < interval) return;
+            _timer = 0f;
+        }
+
+        // --- DISTANCE CULLING: nie renderuj gdy gracz jest za daleko ---
         if (_playerCamera != null)
         {
             Vector3 mirrorPos = mirrorRenderer != null
                 ? mirrorRenderer.bounds.center
                 : transform.position;
 
-            float dist = Vector3.Distance(_playerCamera.transform.position, mirrorPos);
-            if (dist > maxRenderDistance)
-            {
-                mirrorCamera.enabled = false;
-                return;
-            }
+            float distSqr = (mirrorPos - _playerCamera.transform.position).sqrMagnitude;
+            if (distSqr > maxRenderDistance * maxRenderDistance) return;
         }
 
-        // FPS throttling
-        if (mirrorTargetFPS > 0)
+        // --- FRUSTUM CULLING: renderuj tylko gdy tafla lustra jest widoczna ---
+        if (mirrorRenderer != null && _playerCamera != null)
         {
-            _timer += Time.unscaledDeltaTime;
-            if (_timer < 1f / mirrorTargetFPS)
-            {
-                mirrorCamera.enabled = false;
+            _frustumPlanes = GeometryUtility.CalculateFrustumPlanes(_playerCamera);
+            if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, mirrorRenderer.bounds))
                 return;
-            }
-            _timer = 0f;
         }
 
-        mirrorCamera.enabled = true;
+        // --- MANUALNY RENDER: tylko na żądanie, bez angażowania pipelinu URP ---
+        mirrorCamera.Render();
+    }
+
+    /// <summary>
+    /// Włącza lub wyłącza renderowanie lustra w czasie gry (np. z ekranu ustawień graficznych).
+    /// </summary>
+    public void SetEnabled(bool enabled)
+    {
+        enableMirror = enabled;
+        if (!enabled)
+            DisableMirror();
+    }
+
+    private void DisableMirror()
+    {
+        if (mirrorCamera != null)
+            mirrorCamera.enabled = false;
     }
 
     private void OnDestroy()

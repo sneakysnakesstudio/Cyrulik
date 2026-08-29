@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -41,6 +42,12 @@ public class PauseMenu : MonoBehaviour
     [SerializeField] private Toggle fullscreenToggle;
     [SerializeField] private AudioMixer masterMixer;
     [SerializeField] private string volumeParameter = "MasterVolume";
+
+    [Header("Brightness Settings (Opcjonalnie)")]
+    [Tooltip("Opcjonalny suwak jasności w panelu ustawień pauzy.")]
+    [SerializeField] private Slider brightnessSlider;
+    [Tooltip("URP Volume do modyfikacji ekspozycji. Jeśli puste, znajdzie automatycznie.")]
+    [SerializeField] private Volume targetVolume;
 
     [Header("Audio SFX (Opcjonalnie)")]
     [SerializeField] private string buttonClickSound = "button_click";
@@ -387,6 +394,14 @@ public class PauseMenu : MonoBehaviour
         Screen.fullScreen = isFullscreen;
     }
 
+    /// <summary>Wywoływana gdy gracz przesuwa suwak jasności w menu pauzy.</summary>
+    private void OnBrightnessChanged(float value)
+    {
+        PlayerPrefs.SetFloat("Cyrulik_Brightness", value);
+        PlayerPrefs.Save();
+        BrightnessCalibrationUI.ApplyBrightness(targetVolume, value);
+    }
+
     // ---------------------------------------------------------
     // UI ANIMATIONS & VISIBILITY
     // ---------------------------------------------------------
@@ -481,6 +496,19 @@ public class PauseMenu : MonoBehaviour
         {
             fullscreenToggle.isOn = Screen.fullScreen;
             fullscreenToggle.onValueChanged.AddListener(SetFullscreen);
+        }
+
+        // Suwak jasności (opcjonalnie)
+        if (targetVolume == null)
+            targetVolume = FindAnyObjectByType<Volume>();
+        if (brightnessSlider != null)
+        {
+            float savedBrightness = PlayerPrefs.GetFloat("Cyrulik_Brightness", -0.2f);
+            brightnessSlider.minValue = -1.5f;
+            brightnessSlider.maxValue = 1.0f;
+            brightnessSlider.value = savedBrightness;
+            brightnessSlider.onValueChanged.AddListener(OnBrightnessChanged);
+            BrightnessCalibrationUI.ApplyBrightness(targetVolume, savedBrightness);
         }
     }
 

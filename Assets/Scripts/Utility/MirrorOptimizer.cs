@@ -1,11 +1,11 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// Jednorazowy konfigurator wydajności kamery lustra.
-/// PlanarMirror.cs już obsługuje: Frustum Culling, Distance Culling i FPS Throttling (30 FPS).
-/// Ten komponent TYLKO wyłącza kosztowne funkcje (cienie, post-processing, HDR, MSAA)
-/// przy starcie i NIE ingeruje w logikę renderowania PlanarMirror.
+/// PlanarMirror.cs obsługuje: Frustum Culling, Distance Culling i FPS Throttling.
+/// Ten komponent wyłącza kosztowne funkcje (cienie, post-processing, HDR, MSAA)
+/// przy starcie i udostępnia metodę publiczną SetMirrorEnabled() do przełączania lustra z UI ustawień.
 /// </summary>
 public class MirrorOptimizer : MonoBehaviour
 {
@@ -34,6 +34,10 @@ public class MirrorOptimizer : MonoBehaviour
 
         if (mirrorRenderer == null)
             mirrorRenderer = GetComponentInChildren<Renderer>();
+
+        // WAŻNE: zawsze wyłącz kamerę lustra przy starcie — PlanarMirror renderuje ją manualnie
+        if (mirrorCamera != null)
+            mirrorCamera.enabled = false;
     }
 
     private void Start()
@@ -45,7 +49,7 @@ public class MirrorOptimizer : MonoBehaviour
     {
         if (mirrorCamera == null) return;
 
-        // Wyłącz drogie funkcje jednorazowo — PlanarMirror zarządza samym włączaniem/wyłączaniem kamery
+        // Wyłącz drogie funkcje jednorazowo — PlanarMirror zarządza samym renderowaniem
         mirrorCamera.allowHDR = false;
         mirrorCamera.allowMSAA = false;
 
@@ -61,6 +65,27 @@ public class MirrorOptimizer : MonoBehaviour
             cameraData.requiresDepthTexture = false;
             cameraData.requiresColorTexture = false;
             cameraData.antialiasing = AntialiasingMode.None;
+        }
+    }
+
+    /// <summary>
+    /// Włącza lub wyłącza lustro z zewnątrz (np. z ekranu ustawień graficznych lub GameOptimizer).
+    /// Pobiera komponent PlanarMirror z obiektu lub jego dzieci i ustawia enableMirror.
+    /// </summary>
+    public void SetMirrorEnabled(bool enabled)
+    {
+        PlanarMirror mirror = GetComponent<PlanarMirror>();
+        if (mirror == null)
+            mirror = GetComponentInChildren<PlanarMirror>(true);
+
+        if (mirror != null)
+        {
+            mirror.SetEnabled(enabled);
+            Debug.Log($"[MirrorOptimizer] Lustro: {(enabled ? "WŁĄCZONE" : "WYŁĄCZONE")}");
+        }
+        else
+        {
+            Debug.LogWarning("[MirrorOptimizer] Nie znaleziono komponentu PlanarMirror!", this);
         }
     }
 

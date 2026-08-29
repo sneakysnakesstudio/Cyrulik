@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -7,6 +7,7 @@ using UnityEngine.Rendering.Universal;
 /// Optymalizator świateł runtime.
 /// W buildzie wyłącza kosztowne real-time shadows z Point/Spot lightów — główna przyczyna
 /// spadków FPS przy włączaniu świateł w URP (każde takie światło generuje osobną 1024x1024 shadowmapę).
+/// Na poziomie Low stosuje ForceVertex rendering dla jeszcze większego zysku FPS.
 /// Nie dotyka Directional Light (główne oświetlenie sceny).
 /// Dodaj ten komponent raz do dowolnego GameObject w scenie.
 /// </summary>
@@ -17,17 +18,17 @@ public class RuntimeLightOptimizer : MonoBehaviour
     [SerializeField] private bool disableAdditionalLightShadows = true;
 
     [Tooltip("Maksymalna odległość od gracza, przy której światło może rzucać cień (0 = wyłączone).")]
-    [SerializeField] private float shadowCastingMaxDistance = 4f;
+    [SerializeField] private float shadowCastingMaxDistance = 3f;
 
     [Tooltip("Jak często sprawdzać odległość do świateł (sekundy). Mniejsze = dokładniejsze, większe = szybsze.")]
-    [SerializeField] private float updateInterval = 0.2f;
+    [SerializeField] private float updateInterval = 0.1f;
 
     [Header("Range Culling")]
     [Tooltip("Wyłącz światła całkowicie gdy gracz jest dalej niż ta odległość.")]
-    [SerializeField] private float lightCullDistance = 15f;
+    [SerializeField] private float lightCullDistance = 10f;
 
     [Tooltip("Czy włączyć distance culling świateł.")]
-    [SerializeField] private bool enableDistanceCulling = false;
+    [SerializeField] private bool enableDistanceCulling = true;
 
     // ---
 
@@ -65,6 +66,8 @@ public class RuntimeLightOptimizer : MonoBehaviour
     {
         if (_allLights == null) return;
 
+        bool isLowQuality = QualitySettings.GetQualityLevel() == 0;
+
         foreach (Light light in _allLights)
         {
             if (light == null) continue;
@@ -77,9 +80,15 @@ public class RuntimeLightOptimizer : MonoBehaviour
             {
                 light.shadows = LightShadows.None;
             }
+
+            // Na niskim poziomie jakości — włącz vertex lighting (ogromny zysk FPS na słabym GPU)
+            if (isLowQuality)
+            {
+                light.renderMode = LightRenderMode.ForceVertex;
+            }
         }
 
-        Debug.Log($"[RuntimeLightOptimizer] Zoptymalizowano {_allLights.Length} świateł — wyłączono real-time shadows z Point/Spot lightów.");
+        Debug.Log($"[RuntimeLightOptimizer] Zoptymalizowano {_allLights.Length} świateł — wyłączono real-time shadows z Point/Spot lightów. LowQuality ForceVertex: {isLowQuality}");
     }
 
     private void Update()

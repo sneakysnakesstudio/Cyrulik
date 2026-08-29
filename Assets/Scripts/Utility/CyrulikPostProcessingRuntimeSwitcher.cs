@@ -104,11 +104,11 @@ namespace Cyrulik.PostProcessing
             GetOrAdd(profile, out ColorAdjustments ca);
             ca.active = true;
             ca.postExposure.overrideState = true;
-            ca.postExposure.value = 0.25f;
+            ca.postExposure.value = -0.35f;
             ca.contrast.overrideState = true;
-            ca.contrast.value = 25f;
+            ca.contrast.value = 35f;
             ca.saturation.overrideState = true;
-            ca.saturation.value = -15f;
+            ca.saturation.value = -20f;
             ca.colorFilter.overrideState = true;
             ca.colorFilter.value = new Color(0.96f, 0.92f, 0.84f, 1f);
 
@@ -166,7 +166,7 @@ namespace Cyrulik.PostProcessing
             GetOrAdd(profile, out ColorAdjustments ca);
             ca.active = true;
             ca.postExposure.overrideState = true;
-            ca.postExposure.value = 0.35f;
+            ca.postExposure.value = 0f;
             ca.contrast.overrideState = true;
             ca.contrast.value = 35f;
             ca.saturation.overrideState = true;
@@ -228,7 +228,7 @@ namespace Cyrulik.PostProcessing
             GetOrAdd(profile, out ColorAdjustments ca);
             ca.active = true;
             ca.postExposure.overrideState = true;
-            ca.postExposure.value = 0.15f;
+            ca.postExposure.value = -0.15f;
             ca.contrast.overrideState = true;
             ca.contrast.value = 18f;
             ca.saturation.overrideState = true;
