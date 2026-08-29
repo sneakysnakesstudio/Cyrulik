@@ -455,10 +455,10 @@ public static class PauseMenuUIBuilder
         var rect = panelGo.GetComponent<RectTransform>();
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(620f, 480f);
+        rect.sizeDelta = new Vector2(780f, 560f);
 
         var img = panelGo.GetComponent<Image>();
-        img.color = new Color(0.08f, 0.07f, 0.06f, 0.95f);
+        img.color = new Color(0.08f, 0.07f, 0.06f, 0.96f);
         img.raycastTarget = true;
 
         var outline = panelGo.GetComponent<Outline>();
@@ -472,38 +472,109 @@ public static class PauseMenuUIBuilder
         headerRect.anchorMin = new Vector2(0.5f, 1f);
         headerRect.anchorMax = new Vector2(0.5f, 1f);
         headerRect.pivot = new Vector2(0.5f, 1f);
-        headerRect.anchoredPosition = new Vector2(0f, -25f);
-        headerRect.sizeDelta = new Vector2(500f, 50f);
+        headerRect.anchoredPosition = new Vector2(0f, -20f);
+        headerRect.sizeDelta = new Vector2(650f, 45f);
 
         var headerTmp = headerGo.GetComponent<TextMeshProUGUI>();
         headerTmp.text = title;
-        headerTmp.fontSize = 36;
+        headerTmp.fontSize = 34;
         headerTmp.fontStyle = FontStyles.Bold;
         headerTmp.color = new Color(0.95f, 0.8f, 0.45f, 1f);
         headerTmp.alignment = TextAlignmentOptions.Center;
         headerTmp.raycastTarget = false;
         if (titleFont != null) headerTmp.font = titleFont;
 
-        // Content
-        GameObject contentGo = new GameObject("Credits_Content", typeof(RectTransform), typeof(TextMeshProUGUI));
-        contentGo.transform.SetParent(panelGo.transform, false);
-        var contentRect = contentGo.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0.5f, 0.5f);
-        contentRect.anchorMax = new Vector2(0.5f, 0.5f);
-        contentRect.anchoredPosition = new Vector2(0f, 15f);
-        contentRect.sizeDelta = new Vector2(520f, 250f);
+        // Scroll View Container
+        GameObject scrollViewGo = new GameObject("Scroll_View", typeof(RectTransform), typeof(ScrollRect));
+        scrollViewGo.transform.SetParent(panelGo.transform, false);
+        var scrollRectTransform = scrollViewGo.GetComponent<RectTransform>();
+        scrollRectTransform.anchorMin = Vector2.zero;
+        scrollRectTransform.anchorMax = Vector2.one;
+        scrollRectTransform.offsetMin = new Vector2(30f, 80f);  // Miejsce na przycisk BACK
+        scrollRectTransform.offsetMax = new Vector2(-30f, -70f); // Miejsce na nagłówek
 
-        var contentTmp = contentGo.GetComponent<TextMeshProUGUI>();
-        contentTmp.text = "<b>CYRULIK</b>\n" +
+        var scrollRect = scrollViewGo.GetComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 35f;
+
+        // Viewport (z maskowaniem RectMask2D)
+        GameObject viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+        viewportGo.transform.SetParent(scrollViewGo.transform, false);
+        var viewportRect = viewportGo.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.sizeDelta = Vector2.zero;
+        viewportRect.pivot = new Vector2(0f, 1f);
+
+        // Content
+        GameObject contentGo = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        contentGo.transform.SetParent(viewportGo.transform, false);
+        var contentRect = contentGo.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = new Vector2(0f, 300f);
+
+        var vlg = contentGo.GetComponent<VerticalLayoutGroup>();
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.padding = new RectOffset(10, 10, 10, 20);
+        vlg.spacing = 15f;
+
+        var csf = contentGo.GetComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        scrollRect.viewport = viewportRect;
+        scrollRect.content = contentRect;
+
+        // Tekst Credits (z obsługą linków TMP_LinkOpener)
+        GameObject textGo = new GameObject("Credits_Text", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(TMP_LinkOpener));
+        textGo.transform.SetParent(contentGo.transform, false);
+
+        var contentTmp = textGo.GetComponent<TextMeshProUGUI>();
+        contentTmp.text = "<b><size=26><color=#F4D06F>CYRULIK</color></size></b>\n" +
                           "<size=16><color=#C0A060>A Psychological Horror Barber Experience</color></size>\n\n" +
-                          "<b>Developed by:</b> SneakySnakesStudio\n" +
-                          "<b>Inspired by:</b> <i>\"Chciałbym się ogolić\" (1966)</i>\n" +
-                          "<b>Special Thanks:</b> To all testers & supporters!\n\n" +
-                          "<size=14><color=#808080>All rights reserved. Poland 1980s retro aesthetic.</color></size>";
-        contentTmp.fontSize = 19;
-        contentTmp.color = new Color(0.9f, 0.88f, 0.82f, 1f);
+                          "<color=#E0B050><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b></color>\n" +
+                          "<color=#E0B050><b>TWÓRCY (CORE TEAM)</b></color>\n" +
+                          "<b>Game Design & Development:</b> SneakySnakesStudio\n" +
+                          "<b>Music & Audio Direction:</b> Tymon Urbańczyk\n" +
+                          "<b>Inspiracja:</b> <i>\"Chciałbym się ogolić\" (reż. Andrzej Kondratiuk, 1966)</i>\n\n" +
+                          "<color=#E0B050><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b></color>\n" +
+                          "<color=#E0B050><b>PODZIĘKOWANIA (SPECIAL THANKS)</b></color>\n" +
+                          "Serdeczne podziękowania dla wszystkich testerów, graczy oraz osób wspierających powstanie projektu!\n\n" +
+                          "<color=#E0B050><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b></color>\n" +
+                          "<color=#E0B050><b>TYMCZASOWE ASSETY I PODZIĘKOWANIA DLA AUTORÓW</b></color>\n" +
+                          "<size=14><color=#A8A8A8>Podziękowania dla twórców darmowych i otwartych assetów (CC / Royalty-Free),\nz których korzystamy tymczasowo w trakcie produkcji gry przed zastąpieniem ich autorskimi:</color></size>\n\n" +
+                          "1. <b>Old Lamp Lowpoly</b> – by <i>Renee B (@reneetjuhh)</i>\n" +
+                          "   Link: <color=#64B5F6><u><link=\"https://sketchfab.com/3d-models/old-lamp-lowpoly-a59d1a9dd7df43809c27ecc84e5cac32\">[Sketchfab - Old Lamp Lowpoly]</link></u></color>\n\n" +
+                          "<b>Pozostałe używane kategorie zasobów:</b>\n" +
+                          "• <b>Meble retro i wnętrze:</b> <size=15><color=#C5C0B5>Retro Furniture, Desk, Soviet Sink, Retro Fridge, Couch, Bed, Stove</color></size>\n" +
+                          "   Źródła: <color=#64B5F6><u><link=\"https://sketchfab.com/\">[Sketchfab]</link></u></color> • <color=#64B5F6><u><link=\"https://www.cgtrader.com/\">[CGTrader]</link></u></color>\n" +
+                          "• <b>Rekwizyty fryzjerskie:</b> <size=15><color=#C5C0B5>Shaving Set, Razors, Shave Lotion, Mirror, Towels, Glass</color></size>\n" +
+                          "   Źródła: <color=#64B5F6><u><link=\"https://sketchfab.com/\">[Sketchfab]</link></u></color>\n" +
+                          "• <b>Zegary i elektronika:</b> <size=15><color=#C5C0B5>USSR Old TV, Vintage Wall Clocks, Alarm Clock Vityaz, Radio</color></size>\n" +
+                          "   Źródła: <color=#64B5F6><u><link=\"https://sketchfab.com/\">[Sketchfab]</link></u></color>\n" +
+                          "• <b>Drzwi, okna i dywany:</b> <size=15><color=#C5C0B5>Front/Interior Doors Pack, Vintage Rugs, Curtains, Window</color></size>\n" +
+                          "   Źródła: <color=#64B5F6><u><link=\"https://sketchfab.com/\">[Sketchfab]</link></u></color>\n" +
+                          "• <b>Shadery i post-process:</b> <size=15><color=#C5C0B5>PSX-Style Retro Shaders & Vertex Wobble, Pixel Crush</color></size>\n" +
+                          "   Źródła: <color=#64B5F6><u><link=\"https://assetstore.unity.com/\">[Unity Asset Store]</link></u></color>\n" +
+                          "• <b>Czcionki:</b> <size=15><color=#C5C0B5>Rye & Barlow Condensed</color></size> (<color=#64B5F6><u><link=\"https://fonts.google.com/\">[Google Fonts OFL]</link></u></color>)\n" +
+                          "• <b>Dźwięki SFX:</b> <size=15><color=#C5C0B5>Radio Switch & Ambient Retro SFX</color></size> (<color=#64B5F6><u><link=\"https://freesound.org/\">[Freesound.org CC]</link></u></color>)\n\n" +
+                          "<color=#E0B050>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</color>\n" +
+                          "<size=13><color=#888888><i>(Kliknięcie w link otwiera stronę źródłową assetu w przeglądarce)</i>\n" +
+                          "Wszystkie prawa zastrzeżone © SneakySnakesStudio • Cyrulik</color></size>";
+
+        contentTmp.fontSize = 18;
+        contentTmp.color = new Color(0.92f, 0.90f, 0.85f, 1f);
         contentTmp.alignment = TextAlignmentOptions.Center;
-        contentTmp.raycastTarget = false;
+        contentTmp.enableWordWrapping = true;
+        contentTmp.raycastTarget = true;
         if (font != null) contentTmp.font = font;
 
         // Back Button
@@ -512,8 +583,8 @@ public static class PauseMenuUIBuilder
         backBtnRect.anchorMin = new Vector2(0.5f, 0f);
         backBtnRect.anchorMax = new Vector2(0.5f, 0f);
         backBtnRect.pivot = new Vector2(0.5f, 0f);
-        backBtnRect.anchoredPosition = new Vector2(0f, 25f);
-        backBtnRect.sizeDelta = new Vector2(200f, 48f);
+        backBtnRect.anchoredPosition = new Vector2(0f, 20f);
+        backBtnRect.sizeDelta = new Vector2(200f, 44f);
         backBtn.GetComponentInChildren<TextMeshProUGUI>().alignment = TextAlignmentOptions.Center;
 
         return panelGo;

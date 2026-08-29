@@ -11,7 +11,18 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Speed")]
     [SerializeField] private float walkSpeed = 5f;
-    [SerializeField] private float sprintSpeed = 6f;
+    [SerializeField] private float sprintSpeed = 6.5f;
+
+    [Header("Sprint Stamina (3.5 - 5s Dash)")]
+    [SerializeField] private bool useStamina = true;
+    [Tooltip("Maksymalny czas ciągłego sprintu w sekundach (3.5 - 5s).")]
+    [SerializeField] private float maxStamina = 4.0f;
+    [Tooltip("Tempo zużywania staminy na sekundę sprintu.")]
+    [SerializeField] private float staminaDrainRate = 1.0f;
+    [Tooltip("Tempo regeneracji staminy na sekundę odpoczynku.")]
+    [SerializeField] private float staminaRegenRate = 0.85f;
+    [Tooltip("Procent naładowania staminy (np. 0.25 = 25%) wymagany do wznowienia sprintu po wyczerpaniu.")]
+    [SerializeField] private float staminaResumeThreshold = 0.25f;
 
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
@@ -61,6 +72,15 @@ public class PlayerMovement : MonoBehaviour
          (_characterController.velocity.x * _characterController.velocity.x +
           _characterController.velocity.z * _characterController.velocity.z > 0.01f));
 
+    private float _currentStamina;
+    private bool _isExhausted = false;
+    private bool _isSprinting = false;
+
+    public float CurrentStamina => _currentStamina;
+    public float MaxStamina => maxStamina;
+    public bool IsSprinting => _isSprinting;
+    public bool IsExhausted => _isExhausted;
+
     private void Awake()
     {
         _characterController =
@@ -68,6 +88,8 @@ public class PlayerMovement : MonoBehaviour
 
         _lastSafeGroundedPosition = transform.position;
         _hasSafePosition = true;
+
+        _currentStamina = maxStamina;
     }
 
     private void OnEnable()
@@ -194,13 +216,50 @@ public class PlayerMovement : MonoBehaviour
             moveDirection.Normalize();
         }
 
-        bool isSprinting =
-            speedAction.action.IsPressed();
+        bool wantsToSprint = speedAction.action.IsPressed() && _moveInput.sqrMagnitude > 0.01f;
 
-        float currentSpeed =
-            isSprinting
-                ? sprintSpeed
-                : walkSpeed;
+        if (useStamina)
+        {
+            if (wantsToSprint && !_isExhausted && _currentStamina > 0f)
+            {
+                _isSprinting = true;
+                _currentStamina -= staminaDrainRate * Time.deltaTime;
+                if (_currentStamina <= 0f)
+                {
+                    _currentStamina = 0f;
+                    _isExhausted = true;
+                    _isSprinting = false;
+                }
+            }
+            else
+            {
+                _isSprinting = false;
+                if (_currentStamina < maxStamina)
+                {
+                    _currentStamina += staminaRegenRate * Time.deltaTime;
+                    if (_currentStamina >= maxStamina)
+                    {
+                        _currentStamina = maxStamina;
+                    }
+                }
+
+                if (_isExhausted && _currentStamina >= (maxStamina * staminaResumeThreshold))
+                {
+                    _isExhausted = false;
+                }
+            }
+
+            if (SprintStaminaUI.Instance != null)
+            {
+                SprintStaminaUI.Instance.UpdateStamina(_currentStamina, maxStamina, _isExhausted, _isSprinting);
+            }
+        }
+        else
+        {
+            _isSprinting = wantsToSprint;
+        }
+
+        float currentSpeed = _isSprinting ? sprintSpeed : walkSpeed;
 
         Vector3 velocity =
             moveDirection * currentSpeed;
@@ -213,7 +272,7 @@ public class PlayerMovement : MonoBehaviour
         );
 
         Vector3 horizontalVelocity = new Vector3(_characterController.velocity.x, 0f, _characterController.velocity.z);
-        HandleFootsteps(horizontalVelocity, isSprinting);
+        HandleFootsteps(horizontalVelocity, _isSprinting);
     }
 
     private void HandleFootsteps(Vector3 horizontalVelocity, bool isSprinting)

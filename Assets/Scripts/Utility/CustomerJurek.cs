@@ -55,8 +55,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
     [Tooltip("Czy Jurek ma pojawiać się automatycznie o określonej godzinie w grze?")]
     [SerializeField] private bool triggerByGameTime = true;
     [SerializeField] private int arrivalHour = 17;
-    [SerializeField] private int arrivalMinute = 1;
-    [SerializeField] private int arrivalSecond = 33;
+    [SerializeField] private int arrivalMinute = 0;
+    [SerializeField] private int arrivalSecond = 7;
 
     [Header("1. Trasa: Od auta do początku schodków")]
     [Tooltip("Punkty trasy od auta (spawnPoint) aż do dolnego stopnia schodów na zewnątrz.")]
