@@ -5,7 +5,7 @@ using UnityEngine.Audio;
 using UnityEngine.Serialization;
 using UnityEngine.Events;
 
-public class DoorInteractable : MonoBehaviour, IConditionalInteractable
+public class DoorInteractable : MonoBehaviour, IConditionalInteractable, IHoldInteractable
 {
     public event Action<bool> OnDoorStateChanged;
 
@@ -24,6 +24,15 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable
 
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Door";
+
+    [Header("Hold Interaction (Kółeczko -> Kwadrat)")]
+    [Tooltip("Czy otwarcie tych drzwi/szuflady wymaga przytrzymania interakcji?")]
+    [SerializeField] private bool requireHold = false;
+    [Tooltip("Czas w sekundach wymagany do przytrzymania (np. 0.4s).")]
+    [SerializeField] private float holdDuration = 0.45f;
+
+    public bool RequiresHold => requireHold;
+    public float HoldDuration => holdDuration;
 
     [Header("Availability")]
     [Tooltip("Zaznacz tylko na drzwiach/szufladach, które mają być zablokowane na początku.")]

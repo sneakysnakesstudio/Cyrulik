@@ -70,7 +70,13 @@ public class Crosshair : MonoBehaviour
     private Tween _interactionBlinkTween;
     private Tween _blockedTween;
 
+    [Header("Hold Interaction (Kółeczko -> Kwadrat)")]
+    [SerializeField] private Image holdProgressRing;
+    [SerializeField] private Image squareMorphFrame;
+
     private RectTransform _crosshairRect;
+    private float _holdTimer = 0f;
+    private bool _isHolding = false;
 
     private void Awake()
     {
@@ -116,6 +122,49 @@ public class Crosshair : MonoBehaviour
 
         interactionNameText.text = string.Empty;
         interactionNameText.alpha = 0f;
+
+        EnsureHoldUI();
+    }
+
+    private void EnsureHoldUI()
+    {
+        if (holdProgressRing == null && crosshairImage != null)
+        {
+            GameObject ringGo = new GameObject("HoldProgressRing", typeof(RectTransform), typeof(Image));
+            ringGo.transform.SetParent(crosshairImage.transform.parent, false);
+            ringGo.transform.position = crosshairImage.transform.position;
+
+            var rRect = ringGo.GetComponent<RectTransform>();
+            rRect.sizeDelta = new Vector2(28f, 28f);
+
+            holdProgressRing = ringGo.GetComponent<Image>();
+            holdProgressRing.color = new Color(0.95f, 0.8f, 0.35f, 0.95f);
+            holdProgressRing.type = Image.Type.Filled;
+            holdProgressRing.fillMethod = Image.FillMethod.Radial360;
+            holdProgressRing.fillOrigin = (int)Image.Origin360.Top;
+            holdProgressRing.fillClockwise = true;
+            holdProgressRing.fillAmount = 0f;
+            holdProgressRing.raycastTarget = false;
+        }
+
+        if (squareMorphFrame == null && crosshairImage != null)
+        {
+            GameObject sqGo = new GameObject("SquareMorphFrame", typeof(RectTransform), typeof(Image), typeof(Outline));
+            sqGo.transform.SetParent(crosshairImage.transform.parent, false);
+            sqGo.transform.position = crosshairImage.transform.position;
+
+            var sqRect = sqGo.GetComponent<RectTransform>();
+            sqRect.sizeDelta = new Vector2(20f, 20f);
+
+            squareMorphFrame = sqGo.GetComponent<Image>();
+            squareMorphFrame.color = new Color(1f, 1f, 1f, 0f);
+            squareMorphFrame.raycastTarget = false;
+
+            var outline = sqGo.GetComponent<Outline>();
+            outline.effectColor = new Color(0.95f, 0.8f, 0.35f, 0.85f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            squareMorphFrame.gameObject.SetActive(false);
+        }
     }
 
     private void OnEnable()
@@ -500,6 +549,100 @@ public class Crosshair : MonoBehaviour
         }
 
         return interactableColor;
+    }
+
+    private void Update()
+    {
+        HandleHoldProgress();
+    }
+
+    private void HandleHoldProgress()
+    {
+        if (_currentInteractable is IHoldInteractable holdInteractable && holdInteractable.RequiresHold)
+        {
+            bool isPressing = false;
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                isPressing = UnityEngine.InputSystem.Keyboard.current.eKey.isPressed;
+            }
+            if (!isPressing && UnityEngine.InputSystem.Mouse.current != null)
+            {
+                isPressing = UnityEngine.InputSystem.Mouse.current.leftButton.isPressed;
+            }
+
+            if (isPressing)
+            {
+                _isHolding = true;
+                _holdTimer += Time.deltaTime;
+                float progress = Mathf.Clamp01(_holdTimer / holdInteractable.HoldDuration);
+
+                if (holdProgressRing != null)
+                {
+                    holdProgressRing.gameObject.SetActive(true);
+                    holdProgressRing.fillAmount = progress;
+                }
+
+                // Morfowanie z kółeczka w kwadrat
+                if (squareMorphFrame != null)
+                {
+                    squareMorphFrame.gameObject.SetActive(true);
+                    squareMorphFrame.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one * 1.35f, progress);
+                    squareMorphFrame.color = new Color(1f, 1f, 1f, progress * 0.9f);
+                }
+
+                if (crosshairImage != null)
+                {
+                    crosshairImage.transform.localScale = Vector3.Lerp(_defaultScale, _defaultScale * 0.3f, progress);
+                }
+
+                // Sukces po napełnieniu
+                if (progress >= 1f)
+                {
+                    _holdTimer = 0f;
+                    _isHolding = false;
+                    ResetHoldVisuals();
+                    if (playerMovement != null)
+                    {
+                        playerMovement.PerformInteraction();
+                    }
+                }
+            }
+            else if (_isHolding)
+            {
+                _holdTimer = 0f;
+                _isHolding = false;
+                ResetHoldVisuals();
+            }
+        }
+        else
+        {
+            if (_isHolding)
+            {
+                _holdTimer = 0f;
+                _isHolding = false;
+                ResetHoldVisuals();
+            }
+        }
+    }
+
+    private void ResetHoldVisuals()
+    {
+        if (holdProgressRing != null)
+        {
+            holdProgressRing.fillAmount = 0f;
+            holdProgressRing.gameObject.SetActive(false);
+        }
+
+        if (squareMorphFrame != null)
+        {
+            squareMorphFrame.transform.localScale = Vector3.zero;
+            squareMorphFrame.gameObject.SetActive(false);
+        }
+
+        if (crosshairImage != null)
+        {
+            crosshairImage.transform.localScale = _defaultScale;
+        }
     }
 
     private void KillTweens()

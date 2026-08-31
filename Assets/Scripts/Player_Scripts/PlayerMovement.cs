@@ -353,6 +353,18 @@ public class PlayerMovement : MonoBehaviour
         if (_currentInteractable == null)
             return;
 
+        // Jeśli obiekt wymaga przytrzymania (Hold to Open), procesem zarządza Crosshair!
+        if (_currentInteractable is IHoldInteractable holdInteractable && holdInteractable.RequiresHold)
+            return;
+
+        PerformInteraction();
+    }
+
+    public void PerformInteraction()
+    {
+        if (_currentInteractable == null)
+            return;
+
         if (_currentInteractable is IConditionalInteractable conditional)
         {
             if (!conditional.CanInteract)

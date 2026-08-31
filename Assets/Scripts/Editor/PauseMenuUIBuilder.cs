@@ -573,7 +573,7 @@ public static class PauseMenuUIBuilder
         contentTmp.fontSize = 18;
         contentTmp.color = new Color(0.92f, 0.90f, 0.85f, 1f);
         contentTmp.alignment = TextAlignmentOptions.Center;
-        contentTmp.enableWordWrapping = true;
+        contentTmp.textWrappingMode = TextWrappingModes.Normal;
         contentTmp.raycastTarget = true;
         if (font != null) contentTmp.font = font;
 
