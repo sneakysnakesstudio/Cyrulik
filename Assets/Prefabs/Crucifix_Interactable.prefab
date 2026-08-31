@@ -206,7 +206,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2113103184896907328}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}
+  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
   m_LocalPosition: {x: -1.7122313, y: 1.142, z: 21.836515}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -218,7 +218,7 @@ Transform:
   - {fileID: 1461326019707600793}
   - {fileID: 1031491829453029134}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
 --- !u!65 &6499083776267056540
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -253,21 +253,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrucifixInteractable
   interactionName: Look at Crucifix
-  triggerOnLookAt: 1
-  triggerOnInteract: 1
-  lookAtCooldown: 8
-  fullConcussionOnlyOnce: 0
-  enableCameraFocus: 1
-  focusZoomFov: 42
-  focusHoldDuration: 1.8
-  enableEdgeFlash: 1
-  edgeFlashColor: {r: 0.72, g: 0.08, b: 0.08, a: 0.88}
-  enableConcussion: 1
-  concussionDuration: 3.5
-  concussionIntensity: 1
-  customImpactClip: {fileID: 0}
+  triggerOnRightClick: 1
+  triggerOnInteract: 0
+  triggerOnLookAt: 0
+  cooldown: 3.5
+  dollySettings:
+    usePhysicalPush: 1
+    targetDistance: 1.19
+    targetOffset: {x: 0, y: -0.05, z: 0}
+    targetFov: 35
+    approachDuration: 0.85
+    holdDuration: 2.2
+    returnDuration: 0.75
+    approachEase: 9
+    returnEase: 7
+    lockPlayerMovement: 1
+  enableDivineGlow: 1
+  divineGlowColor: {r: 1, g: 0.86148024, b: 0.3443396, a: 0.88}
+  glowIntensity: 1.6
+  enableCrosshairShake: 1
+  crosshairShakeStrength: 0.81
+  enableCameraShake: 1
+  cameraShakeIntensity: 0.33
+  shakeDelay: 0.57
   audioGroupName: 
-  thoughtText: "Bo\u017Ce... znowu ten b\xF3l w skroniach. Jakbym dosta\u0142 obuchem..."
+  customHeavenlyClip: {fileID: 0}
+  prayerText: LORD HAVE MERCY
+  textAppearanceDelay: 0.79
   onCinematicTriggered:
     m_PersistentCalls:
       m_Calls: []

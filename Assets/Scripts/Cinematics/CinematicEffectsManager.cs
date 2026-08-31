@@ -5,7 +5,44 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Główny menedżer efektów kinowych (Cinema Transitions, Edge Flash, Divine Grace / Poświata Anielska, Obuch, Camera Focus).
+/// Ustawienia kinowego najazdu fizycznego (Dolly Push-in z gracza na przedmiot i z powrotem do gracza).
+/// </summary>
+[System.Serializable]
+public class CinematicDollySettings
+{
+    [Tooltip("Czy kamera ma fizycznie przemieścić się z pozycji gracza pod sam przedmiot i wrócić?")]
+    public bool usePhysicalPush = true;
+
+    [Tooltip("Odległość zatrzymania kamery przed badanym przedmiotem (w metrach).")]
+    public float targetDistance = 0.42f;
+
+    [Tooltip("Dodatkowy offset pozycji kamery względem celu (np. lekko niżej/wyżej).")]
+    public Vector3 targetOffset = new Vector3(0f, -0.05f, 0f);
+
+    [Tooltip("Kąt widzenia (FOV) kamery podczas przebywania przed obiektem.")]
+    public float targetFov = 35f;
+
+    [Tooltip("Czas płynnego dolotu kamery z gracza do przedmiotu (w sekundach).")]
+    public float approachDuration = 0.85f;
+
+    [Tooltip("Czas skupienia / przebywania tuż przed przedmiotem (w sekundach).")]
+    public float holdDuration = 2.0f;
+
+    [Tooltip("Czas płynnego powrotu kamery z przedmiotu do pozycji gracza (w sekundach).")]
+    public float returnDuration = 0.75f;
+
+    [Tooltip("Krzywa przejścia dolotu (approach ease).")]
+    public Ease approachEase = Ease.OutCubic;
+
+    [Tooltip("Krzywa przejścia powrotu (return ease).")]
+    public Ease returnEase = Ease.InOutQuad;
+
+    [Tooltip("Czy zamrozić ruch gracza podczas trwania sekwencji ujęcia.")]
+    public bool lockPlayerMovement = true;
+}
+
+/// <summary>
+/// Główny menedżer efektów kinowych (Cinema Transitions, Edge Flash, Divine Grace / Poświata Anielska, Obuch, Camera Dolly Zoom).
 /// Działa automatycznie jako Singleton i zarządza nakładkami winiety, ruchem kamery oraz dźwiękiem.
 /// </summary>
 public class CinematicEffectsManager : MonoBehaviour
@@ -35,13 +72,8 @@ public class CinematicEffectsManager : MonoBehaviour
     [Tooltip("Kolor anielskiej, świętej poświaty (złoto-biały).")]
     [SerializeField] private Color defaultDivineGlowColor = new Color(1.0f, 0.94f, 0.72f, 0.85f);
 
-    [Header("Camera Focus & Zoom Settings")]
-    [Tooltip("Domyślny kąt widzenia (FOV) podczas zbliżenia kinowego.")]
-    [SerializeField] private float cinematicFov = 38f;
-    [Tooltip("Czas płynnego najazdu/dojścia kamery (zoom in).")]
-    [SerializeField] private float focusInDuration = 0.75f;
-    [Tooltip("Czas płynnego powrotu kamery (zoom out).")]
-    [SerializeField] private float focusOutDuration = 0.6f;
+    [Header("Domyślne Parametry Dolly Zoom")]
+    [SerializeField] private CinematicDollySettings defaultDollySettings = new CinematicDollySettings();
 
     [Header("Audio Settings")]
     [Tooltip("Dedykowany AudioSource dla efektów kinowych.")]
@@ -58,11 +90,17 @@ public class CinematicEffectsManager : MonoBehaviour
     private Image _edgeFlashImage;
     private Tween _edgeFlashTween;
 
-    // Cache kamery
+    // Cache kamery i gracza
     private Camera _mainCamera;
+    private Unity.Cinemachine.CinemachineBrain _cinemachineBrain;
     private float _defaultFov = 60f;
     private Tween _fovTween;
-    private Coroutine _focusSequenceRoutine;
+    private Tween _moveTween;
+    private Tween _rotTween;
+    private Coroutine _dollyRoutine;
+
+    private bool _isDollyActive = false;
+    public bool IsDollyActive => _isDollyActive;
 
     // Wygenerowane proceduralne klipy audio
     private static AudioClip _proceduralConcussionClip;
@@ -110,6 +148,8 @@ public class CinematicEffectsManager : MonoBehaviour
 
         _edgeFlashTween?.Kill();
         _fovTween?.Kill();
+        _moveTween?.Kill();
+        _rotTween?.Kill();
     }
 
     private void CacheCamera()
@@ -120,6 +160,7 @@ public class CinematicEffectsManager : MonoBehaviour
             if (_mainCamera != null)
             {
                 _defaultFov = _mainCamera.fieldOfView;
+                _cinemachineBrain = _mainCamera.GetComponent<Unity.Cinemachine.CinemachineBrain>();
             }
         }
     }
@@ -145,7 +186,6 @@ public class CinematicEffectsManager : MonoBehaviour
     {
         if (_edgeCanvasGroup != null && _edgeFlashImage != null) return;
 
-        // Szukamy istniejącego obiektu w scenie
         Transform existing = transform.Find("CinematicEdgeCanvas");
         if (existing != null)
         {
@@ -154,14 +194,13 @@ public class CinematicEffectsManager : MonoBehaviour
             if (_edgeCanvasGroup != null && _edgeFlashImage != null) return;
         }
 
-        // Tworzymy dynamiczny Canvas dla efektów kinowych
         GameObject canvasGo = new GameObject("CinematicEdgeCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(CanvasGroup));
         canvasGo.transform.SetParent(transform, false);
 
         Canvas canvas = canvasGo.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.overrideSorting = true;
-        canvas.sortingOrder = CanvasLayerManager.LAYER_CROSSHAIR_HUD + 1; // Tuż nad celownikiem
+        canvas.sortingOrder = CanvasLayerManager.LAYER_CROSSHAIR_HUD + 1;
 
         CanvasScaler scaler = canvasGo.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -173,7 +212,6 @@ public class CinematicEffectsManager : MonoBehaviour
         _edgeCanvasGroup.blocksRaycasts = false;
         _edgeCanvasGroup.interactable = false;
 
-        // Generujemy obiekt winiety (Edge Vignette Image)
         GameObject imgGo = new GameObject("EdgeFlashImage", typeof(RectTransform), typeof(Image));
         imgGo.transform.SetParent(canvasGo.transform, false);
 
@@ -190,9 +228,6 @@ public class CinematicEffectsManager : MonoBehaviour
         _edgeFlashImage.color = defaultDivineGlowColor;
     }
 
-    /// <summary>
-    /// Generuje proceduralną teksturę miękkiej winiety krawędziowej.
-    /// </summary>
     private Sprite GenerateVignetteSprite()
     {
         const int size = 256;
@@ -212,7 +247,6 @@ public class CinematicEffectsManager : MonoBehaviour
                 float dist = Vector2.Distance(new Vector2(x, y), center);
                 float normDist = Mathf.Clamp01(dist / maxDist);
 
-                // Miękkie przejście — środek przezroczysty, brzegi nasycone
                 float alpha = Mathf.SmoothStep(0f, 1f, Mathf.Pow(normDist, 2.2f));
                 colors[y * size + x] = new Color(1f, 1f, 1f, alpha);
             }
@@ -228,9 +262,6 @@ public class CinematicEffectsManager : MonoBehaviour
     // 1. FLASH NA BOKACH EKRANU (EDGE FLASH / VIGNETTE PULSE)
     // ──────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Odpala kinowy puls winiety na krawędziach ekranu.
-    /// </summary>
     public void TriggerEdgeFlash(Color? flashColor = null, float duration = 1.2f, float peakAlpha = 0.85f, int pulseCount = 2)
     {
         EnsureEdgeFlashOverlay();
@@ -260,13 +291,9 @@ public class CinematicEffectsManager : MonoBehaviour
     }
 
     // ──────────────────────────────────────────────────────────
-    // 2. ANIELSKA POŚWIATA I ŁASKA (DIVINE GRACE / HEAVENLY GLOW)
+    // 2. ANIELSKA POŚWIATA I ŁASKA (DIVINE GRACE)
     // ──────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Wyzwala anielską / psychodeliczną poświatę (złoto-białą na bokach), subtelny mistyczny shimmer i dźwięk z playlisty "Croos_audio_sfx".
-    /// Wprowadza w transowo-modlitewny stan skupienia.
-    /// </summary>
     public void TriggerDivineGrace(
         float duration = 2.5f,
         float intensity = 1.0f,
@@ -274,140 +301,196 @@ public class CinematicEffectsManager : MonoBehaviour
         AudioClip customClip = null,
         string audioGroupName = "Croos_audio_sfx")
     {
-        // 1. Złoto-biała święta poświata na bokach z subtelnym, psychodelicznym tętnieniem
         Color divineColor = glowColor ?? defaultDivineGlowColor;
         TriggerEdgeFlash(divineColor, duration, 0.85f * intensity, 1);
 
-        // 2. Subtelne, medytacyjno-psychodeliczne kołysanie głowy
         if (HeadBobbing.Instance != null)
         {
             HeadBobbing.Instance.TriggerConcussion(duration, 0.35f * intensity);
         }
 
-        // 3. Delikatny shimmer celownika
         if (Crosshair.Instance != null)
         {
             Crosshair.Instance.PlayConcussionShake(duration * 0.45f, 4.5f * intensity, 12);
         }
 
-        // 4. Dźwięk z playlisty Croos_audio_sfx lub anielski akord
         PlayHeavenlyAudio(customClip, audioGroupName, 0.95f * intensity);
     }
 
     // ──────────────────────────────────────────────────────────
-    // 3. OBUCH / CONCUSSION SHOCK (GIBANIE KAMERY + KROPKA + AUDIO)
+    // 3. FIZYCZNY NAJAZD / DOLLY ZOOM Z GRACZA DO PRZEDMIOTU I POWRÓT
     // ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Wyzwala pełny efekt uderzenia obuchem / wstrząsu.
+    /// Wykonuje płynny fizyczny najazd kamery z pozycji gracza pod sam badany przedmiot,
+    /// trzyma ujęcie, po czym płynnie wraca z powrotem do gracza.
     /// </summary>
-    public void TriggerConcussionShock(
-        float duration = 3.5f,
-        float intensity = 1.0f,
-        Color? flashColor = null,
-        AudioClip customClip = null,
-        string audioGroup = null)
-    {
-        if (Crosshair.Instance != null)
-        {
-            Crosshair.Instance.PlayConcussionShake(duration * 0.5f, 15f * intensity, 25);
-        }
-
-        if (HeadBobbing.Instance != null)
-        {
-            HeadBobbing.Instance.TriggerConcussion(duration, intensity);
-        }
-
-        TriggerEdgeFlash(flashColor ?? defaultFlashColor, duration * 0.6f, 0.85f * intensity, 2);
-
-        PlayConcussionAudio(customClip, audioGroup, 1f * intensity);
-    }
-
-    // ──────────────────────────────────────────────────────────
-    // 4. PŁYNNE PRZEJŚCIE / FOCUS KAMERY DO PRZEDMIOTU
-    // ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Płynnie przybliża kamerę do badanego przedmiotu (zoom FOV) ze skupieniem uwagi.
-    /// </summary>
-    public void FocusCameraOn(Transform target, float holdDuration = 1.6f, float zoomFov = -1f, Action onComplete = null)
+    public void PlayDollyZoom(Transform target, CinematicDollySettings settings = null, Action onHoldStart = null, Action onComplete = null)
     {
         CacheCamera();
-        if (_mainCamera == null)
+        if (_mainCamera == null || target == null)
         {
+            onHoldStart?.Invoke();
             onComplete?.Invoke();
             return;
         }
 
-        if (_focusSequenceRoutine != null)
+        if (_dollyRoutine != null)
         {
-            StopCoroutine(_focusSequenceRoutine);
+            StopCoroutine(_dollyRoutine);
         }
 
-        float targetFov = (zoomFov > 0f) ? zoomFov : cinematicFov;
-        _focusSequenceRoutine = StartCoroutine(FocusRoutine(target, holdDuration, targetFov, onComplete));
+        CinematicDollySettings activeSettings = settings ?? defaultDollySettings;
+        _dollyRoutine = StartCoroutine(DollyZoomRoutine(target, activeSettings, onHoldStart, onComplete));
     }
 
-    private IEnumerator FocusRoutine(Transform target, float holdDuration, float targetFov, Action onComplete)
+    private IEnumerator DollyZoomRoutine(Transform target, CinematicDollySettings s, Action onHoldStart, Action onComplete)
     {
+        _isDollyActive = true;
         CacheCamera();
+
+        Transform camTransform = _mainCamera.transform;
+        Vector3 startCamPos = camTransform.position;
+        Quaternion startCamRot = camTransform.rotation;
+        float startFov = _mainCamera.fieldOfView;
+
+        // 1. Zablokuj gracza i cinemachine na czas trwania najazdu
+        if (s.lockPlayerMovement && PlayerMovement.Instance != null)
+        {
+            PlayerMovement.Instance.enabled = false;
+        }
+
+        if (_cinemachineBrain != null)
+        {
+            _cinemachineBrain.enabled = false;
+        }
+
+        if (HeadBobbing.Instance != null)
+        {
+            HeadBobbing.Instance.enabled = false;
+        }
+
+        // 2. Oblicz punkt docelowy przed przedmiotem
+        Vector3 directionToPlayer = (startCamPos - target.position).normalized;
+        if (directionToPlayer.sqrMagnitude < 0.001f)
+        {
+            directionToPlayer = target.forward;
+        }
+
+        Vector3 targetPos = target.position + (directionToPlayer * s.targetDistance) + s.targetOffset;
+        Quaternion targetRot = Quaternion.LookRotation(target.position - targetPos, Vector3.up);
+
+        // 3. FAZA 1: Najazd z gracza na rzecz (Approach)
+        _moveTween?.Kill();
+        _rotTween?.Kill();
         _fovTween?.Kill();
 
-        if (_mainCamera != null)
+        if (s.usePhysicalPush)
         {
-            _fovTween = _mainCamera
-                .DOFieldOfView(targetFov, focusInDuration)
-                .SetEase(Ease.OutCubic);
+            _moveTween = camTransform.DOMove(targetPos, s.approachDuration).SetEase(s.approachEase);
+            _rotTween = camTransform.DORotateQuaternion(targetRot, s.approachDuration).SetEase(s.approachEase);
         }
 
-        yield return new WaitForSeconds(focusInDuration + holdDuration);
+        _fovTween = _mainCamera.DOFieldOfView(s.targetFov, s.approachDuration).SetEase(s.approachEase);
 
-        if (_mainCamera != null)
+        yield return new WaitForSeconds(s.approachDuration);
+
+        // 4. FAZA 2: Skupienie na przedmiocie (Hold)
+        onHoldStart?.Invoke();
+        yield return new WaitForSeconds(s.holdDuration);
+
+        // 5. FAZA 3: Powrót do gracza (Return)
+        // Pobierz aktualną pozycję bazową głowy gracza
+        Vector3 returnPos = startCamPos;
+        Quaternion returnRot = startCamRot;
+
+        if (PlayerMovement.Instance != null)
         {
-            _fovTween = _mainCamera
-                .DOFieldOfView(_defaultFov, focusOutDuration)
-                .SetEase(Ease.InOutSine);
+            returnPos = startCamPos;
+            returnRot = startCamRot;
         }
 
-        yield return new WaitForSeconds(focusOutDuration);
+        _moveTween?.Kill();
+        _rotTween?.Kill();
+        _fovTween?.Kill();
 
-        _focusSequenceRoutine = null;
+        if (s.usePhysicalPush)
+        {
+            _moveTween = camTransform.DOMove(returnPos, s.returnDuration).SetEase(s.returnEase);
+            _rotTween = camTransform.DORotateQuaternion(returnRot, s.returnDuration).SetEase(s.returnEase);
+        }
+
+        _fovTween = _mainCamera.DOFieldOfView(startFov, s.returnDuration).SetEase(s.returnEase);
+
+        yield return new WaitForSeconds(s.returnDuration);
+
+        // 6. FAZA 4: Odblokowanie gracza i przywrócenie kontroli
+        if (_cinemachineBrain != null)
+        {
+            _cinemachineBrain.enabled = true;
+        }
+
+        if (HeadBobbing.Instance != null)
+        {
+            HeadBobbing.Instance.enabled = true;
+        }
+
+        if (s.lockPlayerMovement && PlayerMovement.Instance != null)
+        {
+            PlayerMovement.Instance.enabled = true;
+        }
+
+        _isDollyActive = false;
+        _dollyRoutine = null;
         onComplete?.Invoke();
     }
 
     /// <summary>
-    /// Natychmiastowo przerywa przybliżenie kamery i przywraca normalny FOV.
+    /// Klasyczny prosty focus kamery (FOV zoom).
     /// </summary>
+    public void FocusCameraOn(Transform target, float holdDuration = 1.6f, float zoomFov = -1f, Action onComplete = null)
+    {
+        var settings = new CinematicDollySettings
+        {
+            usePhysicalPush = false,
+            targetFov = (zoomFov > 0f) ? zoomFov : defaultDollySettings.targetFov,
+            holdDuration = holdDuration,
+            lockPlayerMovement = false
+        };
+
+        PlayDollyZoom(target, settings, null, onComplete);
+    }
+
     public void ResetCameraFocus()
     {
-        if (_focusSequenceRoutine != null)
+        if (_dollyRoutine != null)
         {
-            StopCoroutine(_focusSequenceRoutine);
-            _focusSequenceRoutine = null;
+            StopCoroutine(_dollyRoutine);
+            _dollyRoutine = null;
         }
+
+        _moveTween?.Kill();
+        _rotTween?.Kill();
+        _fovTween?.Kill();
+
+        if (_cinemachineBrain != null) _cinemachineBrain.enabled = true;
+        if (HeadBobbing.Instance != null) HeadBobbing.Instance.enabled = true;
+        if (PlayerMovement.Instance != null) PlayerMovement.Instance.enabled = true;
 
         CacheCamera();
         if (_mainCamera != null)
         {
-            _fovTween?.Kill();
-            _fovTween = _mainCamera
-                .DOFieldOfView(_defaultFov, 0.4f)
-                .SetEase(Ease.OutQuad);
+            _mainCamera.fieldOfView = _defaultFov;
         }
+        _isDollyActive = false;
     }
 
     // ──────────────────────────────────────────────────────────
-    // 5. ODTWARZANIE DŹWIĘKÓW (HEAVENLY CHORD & OBUCH)
+    // 4. ODTWARZANIE DŹWIĘKÓW
     // ──────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Odtwarza anielski, czysty dźwięk akordu (Heavenly Choir / Chime).
-    /// <summary>
-    /// Odtwarza anielski / mistyczny dźwięk z bazy AudioManager (np. playlista 'Croos_audio_sfx') lub custom / proceduralny akord.
-    /// </summary>
     public void PlayHeavenlyAudio(AudioClip customClip = null, string audioGroup = "Croos_audio_sfx", float volume = 1f)
     {
-        // 1. Sprawdź najpierw AudioManager dla podanej grupy lub jej wariantów ("Croos_audio_sfx" / "Cross_audio_sfx")
         if (AudioManager.Instance != null)
         {
             string primaryGroup = !string.IsNullOrEmpty(audioGroup) ? audioGroup : "Croos_audio_sfx";
@@ -416,7 +499,6 @@ public class CinematicEffectsManager : MonoBehaviour
                 return;
             }
 
-            // Fallback na alternatywną pisownię jeśli pierwsza nie została znaleziona
             string fallbackGroup = primaryGroup.Equals("Croos_audio_sfx", StringComparison.OrdinalIgnoreCase) ? "Cross_audio_sfx" : "Croos_audio_sfx";
             if (AudioManager.Instance.TryPlay(fallbackGroup))
             {
@@ -424,7 +506,6 @@ public class CinematicEffectsManager : MonoBehaviour
             }
         }
 
-        // 2. Jeśli podano klip w parametrze lub Inspectorze
         AudioClip clipToPlay = customClip ?? customHeavenlyClip;
         if (clipToPlay == null)
         {
@@ -441,34 +522,6 @@ public class CinematicEffectsManager : MonoBehaviour
         }
     }
 
-    public void PlayConcussionAudio(AudioClip customClip = null, string audioGroup = null, float volume = 1f)
-    {
-        string grp = !string.IsNullOrEmpty(audioGroup) ? audioGroup : concussionAudioGroup;
-        if (!string.IsNullOrEmpty(grp) && AudioManager.Instance != null)
-        {
-            AudioManager.Instance.Play(grp);
-            return;
-        }
-
-        AudioClip clipToPlay = customClip ?? customConcussionClip;
-        if (clipToPlay == null)
-        {
-            if (_proceduralConcussionClip == null)
-            {
-                _proceduralConcussionClip = GenerateProceduralConcussionClip();
-            }
-            clipToPlay = _proceduralConcussionClip;
-        }
-
-        if (cinemaAudioSource != null && clipToPlay != null)
-        {
-            cinemaAudioSource.PlayOneShot(clipToPlay, Mathf.Clamp01(volume));
-        }
-    }
-
-    /// <summary>
-    /// Generuje proceduralny, wzniosły, anielski akord organowo-chóralny z dzwonkiem (Divine Chord).
-    /// </summary>
     public static AudioClip GenerateProceduralHeavenlyChordClip()
     {
         const int sampleRate = 44100;
@@ -476,7 +529,6 @@ public class CinematicEffectsManager : MonoBehaviour
         int sampleCount = Mathf.FloorToInt(sampleRate * duration);
         float[] samples = new float[sampleCount];
 
-        // Częstotliwości akordu F-dur / C-dur (261.6Hz C4, 329.6Hz E4, 392.0Hz G4, 523.2Hz C5, 1046.5Hz C6 shimmer)
         float[] chordFreqs = { 261.63f, 329.63f, 392.00f, 523.25f, 1046.5f };
         float[] weights = { 0.35f, 0.28f, 0.25f, 0.20f, 0.12f };
 
@@ -484,12 +536,10 @@ public class CinematicEffectsManager : MonoBehaviour
         {
             float t = (float)i / sampleRate;
 
-            // Płynna obwiednia: miękki atak (0.35s) i długie wybrzmiewanie
             float attack = Mathf.SmoothStep(0f, 1f, t / 0.35f);
             float decay = Mathf.Exp(-t * 0.95f);
             float envelope = attack * decay;
 
-            // Chóralny shimmer (lekkie vibrato 4.5 Hz)
             float vibrato = 1f + 0.006f * Mathf.Sin(2f * Mathf.PI * 4.5f * t);
 
             float totalWave = 0f;
@@ -499,7 +549,6 @@ public class CinematicEffectsManager : MonoBehaviour
                 totalWave += Mathf.Sin(2f * Mathf.PI * freq * t) * weights[f];
             }
 
-            // Dodaj delikatny kryształowy dzwoneczek (high crystal chime)
             float chimeEnv = Mathf.Exp(-t * 3.5f) * Mathf.SmoothStep(0f, 1f, t * 40f);
             float chime = Mathf.Sin(2f * Mathf.PI * 2093f * t) * chimeEnv * 0.15f;
 
@@ -507,35 +556,6 @@ public class CinematicEffectsManager : MonoBehaviour
         }
 
         AudioClip clip = AudioClip.Create("SFX_Procedural_Heavenly_Divine_Chord", sampleCount, 1, sampleRate, false);
-        clip.SetData(samples, 0);
-        return clip;
-    }
-
-    public static AudioClip GenerateProceduralConcussionClip()
-    {
-        const int sampleRate = 44100;
-        const float duration = 2.4f;
-        int sampleCount = Mathf.FloorToInt(sampleRate * duration);
-        float[] samples = new float[sampleCount];
-
-        for (int i = 0; i < sampleCount; i++)
-        {
-            float t = (float)i / sampleRate;
-
-            float bassFreq = Mathf.Lerp(60f, 32f, t * 1.5f);
-            float bassEnv = Mathf.Exp(-t * 4.5f);
-            float bassWave = Mathf.Sin(2f * Mathf.PI * bassFreq * t) * bassEnv * 0.75f;
-
-            float tinnitusEnv = Mathf.Exp(-t * 1.2f) * Mathf.SmoothStep(0f, 1f, t * 20f);
-            float tinnitusWave = Mathf.Sin(2f * Mathf.PI * 3250f * t) * (tinnitusEnv * 0.22f);
-
-            float noiseEnv = Mathf.Exp(-t * 18f);
-            float noise = (UnityEngine.Random.value * 2f - 1f) * noiseEnv * 0.25f;
-
-            samples[i] = Mathf.Clamp(bassWave + tinnitusWave + noise, -1f, 1f);
-        }
-
-        AudioClip clip = AudioClip.Create("SFX_Procedural_Concussion_Obuch", sampleCount, 1, sampleRate, false);
         clip.SetData(samples, 0);
         return clip;
     }

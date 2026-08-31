@@ -109740,9 +109740,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CinematicEffectsManager
   defaultFlashColor: {r: 0.65, g: 0.08, b: 0.08, a: 0.85}
   defaultDivineGlowColor: {r: 1, g: 0.94, b: 0.72, a: 0.85}
-  cinematicFov: 45
-  focusInDuration: 0.8
-  focusOutDuration: 0.6
+  defaultDollySettings:
+    usePhysicalPush: 1
+    targetDistance: 0.42
+    targetOffset: {x: 0, y: -0.05, z: 0}
+    targetFov: 35
+    approachDuration: 0.85
+    holdDuration: 2
+    returnDuration: 0.75
+    approachEase: 9
+    returnEase: 7
+    lockPlayerMovement: 1
   cinemaAudioSource: {fileID: 0}
   customConcussionClip: {fileID: 0}
   customHeavenlyClip: {fileID: 0}
@@ -165012,30 +165020,6 @@ PrefabInstance:
     - target: {fileID: 2113103184896907328, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_Name
       value: Crucifix_Interactable
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: focusZoomFov
-      value: 49.58
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: triggerOnLookAt
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: divineGlowColor.b
-      value: 0.3443396
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: divineGlowColor.g
-      value: 0.86148024
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: divineGlowColor.r
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: triggerOnInteract
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalPosition.x
