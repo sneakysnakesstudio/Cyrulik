@@ -48,22 +48,54 @@ public class HeadBobbing : MonoBehaviour
     [Tooltip("Im wyższy, tym szybciej kamera wraca do centrum, gdy gracz stanie. 0.1 = bardzo leniwie, 12 = natychmiastowo.")]
     [SerializeField] private float returnSpeed = 8f;
 
+    [Header("Concussion / Drunk Sway (Wstrząs po obuchu)")]
+    [Tooltip("Maksymalny kąt przechyłu głowy na boki (Roll w stopniach) podczas stanu obucha.")]
+    [SerializeField] private float concussionMaxRollAngle = 3.0f;
+    [Tooltip("Częstotliwość pływania kamery podczas wstrząsu.")]
+    [SerializeField] private float concussionFrequency = 1.8f;
+    [Tooltip("Dodatkowa amplituda pozycji kamery podczas wstrząsu.")]
+    [SerializeField] private float concussionAmplitude = 0.035f;
+
+    public static HeadBobbing Instance { get; private set; }
+
     // Wewnętrzna faza sinusoidy chodu
     private float _bobTimer;
 
     // Wewnętrzna faza sinusoidy w spoczynku
     private float _idleTimer;
 
-    // Domyślna pozycja lokalna transformu (punkt bazowy, od którego liczymy offset)
+    // Stan obucha / wstrząsu
+    private float _concussionTimer = 0f;
+    private float _concussionDuration = 1f;
+    private float _concussionIntensity = 1f;
+
+    // Domyślna pozycja i rotacja lokalna transformu (punkt bazowy)
     private Vector3 _defaultLocalPosition;
+    private Quaternion _defaultLocalRotation;
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
 
     private void Awake()
     {
+        Instance = this;
         _defaultLocalPosition = transform.localPosition;
+        _defaultLocalRotation = transform.localRotation;
         if (playerMovement == null)
         {
             playerMovement = GetComponentInParent<PlayerMovement>();
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 
     private void OnDisable()
@@ -71,18 +103,50 @@ public class HeadBobbing : MonoBehaviour
         if (_defaultLocalPosition != Vector3.zero)
         {
             transform.localPosition = _defaultLocalPosition;
+            transform.localRotation = _defaultLocalRotation;
         }
         _bobTimer = 0f;
         _idleTimer = 0f;
+        _concussionTimer = 0f;
+    }
+
+    /// <summary>
+    /// Wyzwala efekt lekkiego wstrząśnienia głowy / uderzenia obuchem (mocniejsze, leniwe gibanie kamery i przechył lewo-prawo).
+    /// </summary>
+    /// <param name="duration">Czas trwania efektu w sekundach.</param>
+    /// <param name="intensity">Mnożnik siły kołysania (domyślnie 1.0).</param>
+    public void TriggerConcussion(float duration = 3.5f, float intensity = 1.0f)
+    {
+        _concussionDuration = Mathf.Max(0.1f, duration);
+        _concussionTimer = _concussionDuration;
+        _concussionIntensity = intensity;
     }
 
     private void LateUpdate()
     {
-        // Wyłącz kiwanie głową jeśli trwa dialog, myśli, minigra lub schemat UI
+        // Obsługa stanu obucha / wstrząsu
+        float concussionFactor = 0f;
+        if (_concussionTimer > 0f)
+        {
+            _concussionTimer -= Time.deltaTime;
+            concussionFactor = Mathf.Clamp01(_concussionTimer / _concussionDuration) * _concussionIntensity;
+
+            // Pływający roll (przechył Z-axis)
+            float rollZ = Mathf.Sin(Time.time * concussionFrequency * Mathf.PI) * (concussionMaxRollAngle * concussionFactor);
+            float pitchX = Mathf.Cos(Time.time * concussionFrequency * 0.7f * Mathf.PI) * (concussionMaxRollAngle * 0.4f * concussionFactor);
+            transform.localRotation = _defaultLocalRotation * Quaternion.Euler(pitchX, 0f, rollZ);
+        }
+        else
+        {
+            // Płynny powrót rotacji do bazowej
+            transform.localRotation = Quaternion.Slerp(transform.localRotation, _defaultLocalRotation, Time.deltaTime * returnSpeed);
+        }
+
+        // Wyłącz standardowe kiwanie głową jeśli trwa dialog lub minigra (ale pozwól na lekki concussion wobble)
         if (IsDialogueOrUIActive())
         {
             _bobTimer = 0f;
-            ReturnToDefault();
+            ReturnToDefault(concussionFactor);
             return;
         }
 
@@ -90,15 +154,15 @@ public class HeadBobbing : MonoBehaviour
 
         if (isMoving)
         {
-            ApplyBob();
+            ApplyBob(concussionFactor);
         }
-        else if (enableIdleBob)
+        else if (enableIdleBob || concussionFactor > 0.01f)
         {
-            ApplyIdleBob();
+            ApplyIdleBob(concussionFactor);
         }
         else
         {
-            ReturnToDefault();
+            ReturnToDefault(concussionFactor);
         }
     }
 
@@ -122,33 +186,44 @@ public class HeadBobbing : MonoBehaviour
         return false;
     }
 
-    private void ApplyBob()
+    private void ApplyBob(float concussionFactor)
     {
         // Faza rośnie proporcjonalnie do częstotliwości i deltaTime
-        _bobTimer += Time.deltaTime * bobFrequency * (2f * Mathf.PI);
+        float speedMultiplier = Mathf.Lerp(1f, 0.75f, concussionFactor); // Obuch lekko spowalnia rytm
+        _bobTimer += Time.deltaTime * (bobFrequency * speedMultiplier) * (2f * Mathf.PI);
 
-        float offsetY = Mathf.Sin(_bobTimer) * bobAmplitudeY;
+        float extraAmp = 1f + (concussionFactor * 1.8f);
+        float offsetY = Mathf.Sin(_bobTimer) * (bobAmplitudeY * extraAmp);
+        float offsetX = Mathf.Cos(_bobTimer * 0.5f) * (bobAmplitudeX * extraAmp);
 
-        // Przesunięcie boczne — pół częstotliwości, żeby dawało naturalny chód
-        float offsetX = Mathf.Cos(_bobTimer * 0.5f) * bobAmplitudeX;
+        if (concussionFactor > 0.01f)
+        {
+            offsetY += Mathf.Sin(Time.time * concussionFrequency) * (concussionAmplitude * concussionFactor);
+            offsetX += Mathf.Cos(Time.time * concussionFrequency * 0.6f) * (concussionAmplitude * concussionFactor);
+        }
 
         Vector3 targetPos = _defaultLocalPosition + new Vector3(offsetX, offsetY, 0f);
 
         transform.localPosition = Vector3.Lerp(
             transform.localPosition,
             targetPos,
-            Time.deltaTime * returnSpeed * 4f   // szybkie śledzenie, żeby sinusoida była płynna
+            Time.deltaTime * returnSpeed * 4f
         );
     }
 
-    private void ApplyIdleBob()
+    private void ApplyIdleBob(float concussionFactor)
     {
-        // Faza rośnie proporcjonalnie do częstotliwości oddychania
         _idleTimer += Time.deltaTime * idleFrequency * (2f * Mathf.PI);
 
-        // Subtelne oddychanie pionowe i bardzo łagodne kołysanie poziome
-        float offsetY = Mathf.Sin(_idleTimer) * idleAmplitudeY;
-        float offsetX = Mathf.Cos(_idleTimer * 0.5f) * idleAmplitudeX;
+        float extraAmp = 1f + (concussionFactor * 2.5f);
+        float offsetY = Mathf.Sin(_idleTimer) * (idleAmplitudeY * extraAmp);
+        float offsetX = Mathf.Cos(_idleTimer * 0.5f) * (idleAmplitudeX * extraAmp);
+
+        if (concussionFactor > 0.01f)
+        {
+            offsetY += Mathf.Sin(Time.time * concussionFrequency) * (concussionAmplitude * concussionFactor);
+            offsetX += Mathf.Cos(Time.time * concussionFrequency * 0.7f) * (concussionAmplitude * concussionFactor);
+        }
 
         Vector3 targetPos = _defaultLocalPosition + new Vector3(offsetX, offsetY, 0f);
 
@@ -158,22 +233,26 @@ public class HeadBobbing : MonoBehaviour
             Time.deltaTime * idleSmoothSpeed
         );
 
-        // Reset timera chodu, aby kolejny krok zaczynał się płynnie
         _bobTimer = 0f;
     }
 
-    private void ReturnToDefault()
+    private void ReturnToDefault(float concussionFactor)
     {
-        // Płynny powrót do pozycji neutralnej po zatrzymaniu się
+        Vector3 targetPos = _defaultLocalPosition;
+        if (concussionFactor > 0.01f)
+        {
+            float offsetY = Mathf.Sin(Time.time * concussionFrequency) * (concussionAmplitude * concussionFactor);
+            float offsetX = Mathf.Cos(Time.time * concussionFrequency * 0.7f) * (concussionAmplitude * concussionFactor);
+            targetPos += new Vector3(offsetX, offsetY, 0f);
+        }
+
         transform.localPosition = Vector3.Lerp(
             transform.localPosition,
-            _defaultLocalPosition,
+            targetPos,
             Time.deltaTime * returnSpeed
         );
 
-        // Gdy jesteśmy bardzo blisko centrum — resetuj timer, żeby następny ruch
-        // startował zawsze od "dołu" sinusoidy, nie z losowego miejsca
-        if (Vector3.Distance(transform.localPosition, _defaultLocalPosition) < 0.0005f)
+        if (Vector3.Distance(transform.localPosition, _defaultLocalPosition) < 0.0005f && concussionFactor <= 0.01f)
         {
             _bobTimer = 0f;
         }

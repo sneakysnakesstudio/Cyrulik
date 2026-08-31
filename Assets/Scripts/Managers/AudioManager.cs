@@ -598,6 +598,26 @@ public class AudioManager : MonoBehaviour
         return CreatePooledSource();
     }
 
+    /// <summary>
+    /// Sprawdza czy w bazie dźwięków istnieje grupa o podanej nazwie i posiada co najmniej 1 klip.
+    /// </summary>
+    public bool HasGroup(string groupName)
+    {
+        if (database == null || string.IsNullOrWhiteSpace(groupName)) return false;
+        AudioClipData data = database.Get(groupName);
+        return data != null && data.clips != null && data.clips.Length > 0;
+    }
+
+    /// <summary>
+    /// Próbuje odtworzyć dźwięk z bazy. Zwraca true jeśli grupa istnieje i została odtworzona.
+    /// </summary>
+    public bool TryPlay(string groupName)
+    {
+        if (!HasGroup(groupName)) return false;
+        Play(groupName);
+        return true;
+    }
+
     public void Play(string groupName)
     {
         if (database == null)

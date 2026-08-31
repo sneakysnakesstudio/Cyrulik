@@ -72,14 +72,27 @@ public class Crosshair : MonoBehaviour
 
     [Header("Hold Interaction (Kółeczko -> Kwadrat)")]
     [SerializeField] private Image holdProgressRing;
+    public static Crosshair Instance { get; private set; }
+
     [SerializeField] private Image squareMorphFrame;
 
     private RectTransform _crosshairRect;
     private float _holdTimer = 0f;
     private bool _isHolding = false;
+    private Tween _concussionTween;
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
 
     private void Awake()
     {
+        Instance = this;
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
@@ -201,6 +214,9 @@ public class Crosshair : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (Instance == this)
+            Instance = null;
+
         KillTweens();
     }
 
@@ -645,6 +661,33 @@ public class Crosshair : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Efekt wstrząsu / uderzenia obuchem — kropka celownika drży i trzęsie się na ekranie.
+    /// </summary>
+    /// <param name="duration">Czas trwania trzęsienia w sekundach.</param>
+    /// <param name="strength">Siła przesunięcia kropki w pikselach.</param>
+    /// <param name="vibrato">Częstotliwość drgań.</param>
+    public void PlayConcussionShake(float duration = 1.5f, float strength = 14f, int vibrato = 25)
+    {
+        if (_crosshairRect == null) return;
+
+        _concussionTween?.Kill();
+        _blockedTween?.Kill();
+
+        _crosshairRect.anchoredPosition = _defaultAnchoredPosition;
+        _concussionTween = _crosshairRect
+            .DOShakeAnchorPos(duration, new Vector2(strength, strength * 0.75f), vibrato, 90, false, true)
+            .SetEase(Ease.OutQuad)
+            .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
+            .OnComplete(() =>
+            {
+                if (_crosshairRect != null)
+                {
+                    _crosshairRect.anchoredPosition = _defaultAnchoredPosition;
+                }
+            });
+    }
+
     private void KillTweens()
     {
         _pulseTween?.Kill();
@@ -653,6 +696,7 @@ public class Crosshair : MonoBehaviour
         _textTween?.Kill();
         _interactionBlinkTween?.Kill();
         _blockedTween?.Kill();
+        _concussionTween?.Kill();
 
         _pulseTween = null;
         _scaleTween = null;
@@ -660,5 +704,6 @@ public class Crosshair : MonoBehaviour
         _textTween = null;
         _interactionBlinkTween = null;
         _blockedTween = null;
+        _concussionTween = null;
     }
 }

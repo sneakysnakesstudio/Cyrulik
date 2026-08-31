@@ -76,13 +76,26 @@ public class PlayerMovement : MonoBehaviour
     private bool _isExhausted = false;
     private bool _isSprinting = false;
 
+    public static PlayerMovement Instance { get; private set; }
+
     public float CurrentStamina => _currentStamina;
     public float MaxStamina => maxStamina;
     public bool IsSprinting => _isSprinting;
     public bool IsExhausted => _isExhausted;
+    public IInteractable CurrentInteractable => _currentInteractable;
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
 
     private void Awake()
     {
+        Instance = this;
+
         _characterController =
             GetComponent<CharacterController>();
 
@@ -377,5 +390,11 @@ public class PlayerMovement : MonoBehaviour
         _currentInteractable.Interact();
 
         OnInteractionPerformed?.Invoke();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 }
