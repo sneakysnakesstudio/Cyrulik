@@ -490,8 +490,10 @@ public static class MainMenuUIBuilder
                           "<color=#E0B050><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b></color>\n" +
                           "<color=#E0B050><b>TYMCZASOWE ASSETY I PODZIĘKOWANIA DLA AUTORÓW</b></color>\n" +
                           "<size=14><color=#A8A8A8>Podziękowania dla twórców darmowych i otwartych assetów (CC / Royalty-Free),\nz których korzystamy tymczasowo w trakcie produkcji gry przed zastąpieniem ich autorskimi:</color></size>\n\n" +
-                          "1. <b>Old Lamp Lowpoly</b> – by <i>Renee B (@reneetjuhh)</i>\n" +
+                          "1. <b>Old Lamp Lowpoly</b> – by <i>Renee B (@reneetjuhh)</i> (CC BY 4.0)\n" +
                           "   Link: <color=#64B5F6><u><link=\"https://sketchfab.com/3d-models/old-lamp-lowpoly-a59d1a9dd7df43809c27ecc84e5cac32\">[Sketchfab - Old Lamp Lowpoly]</link></u></color>\n\n" +
+                          "2. <b>Lamp (Desk/Nightstand Lamp)</b> – by <i>freshlybaked (@diegoichinose)</i> (CC BY 4.0)\n" +
+                          "   Link: <color=#64B5F6><u><link=\"https://sketchfab.com/3d-models/lamp-b51691fcbec14c02a378b2d2bd13928d\">[Sketchfab - Lamp]</link></u></color>\n\n" +
                           "<b>Pozostałe używane kategorie zasobów:</b>\n" +
                           "• <b>Meble retro i wnętrze:</b> <size=15><color=#C5C0B5>Retro Furniture, Desk, Soviet Sink, Retro Fridge, Couch, Bed, Stove</color></size>\n" +
                           "   Źródła: <color=#64B5F6><u><link=\"https://sketchfab.com/\">[Sketchfab]</link></u></color> • <color=#64B5F6><u><link=\"https://www.cgtrader.com/\">[CGTrader]</link></u></color>\n" +

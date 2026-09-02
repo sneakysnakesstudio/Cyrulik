@@ -184,12 +184,193 @@ public static class HoldSpritesGenerator
             return (palm || fingers) ? Color.white : Color.clear;
         });
 
+        // 11. Question Mark Icon (Pytajnik do badania otoczenia [Inspect / Thought / Krzyż])
+        CreateAndSavePng("Icon_QuestionMark.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+            float cx = 0.5f;
+
+            // Kropka na dole (y: 0.15 .. 0.25)
+            float distDot = Vector2.Distance(new Vector2(u, v), new Vector2(cx, 0.20f));
+            if (distDot <= 0.055f) return Color.white;
+
+            // Pionowy słupek pytajnika (y: 0.35 .. 0.48)
+            if (u >= 0.44f && u <= 0.56f && v >= 0.35f && v <= 0.48f) return Color.white;
+
+            // Łuk pytajnika (y: 0.48 .. 0.85)
+            float distArc = Vector2.Distance(new Vector2(u, v), new Vector2(cx, 0.65f));
+            if (distArc >= 0.12f && distArc <= 0.23f && (v >= 0.55f || u >= 0.44f)) return Color.white;
+
+            return Color.clear;
+        });
+
+        // 12. Default Dot Icon (Domyślna kropka celownika)
+        CreateAndSavePng("Default_Dot.png", 64, 64, (x, y, w, h) =>
+        {
+            float cx = w * 0.5f, cy = h * 0.5f;
+            float dist = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+            float r = w * 0.4f;
+            float alpha = Mathf.Clamp01((r - dist + 1f) / 1.5f);
+            return new Color(1f, 1f, 1f, alpha);
+        });
+
+        // 13. Lock Icon (Kłódka)
+        CreateAndSavePng("Icon_Lock.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+
+            // Korpus kłódki
+            bool body = (u >= 0.25f && u <= 0.75f && v >= 0.15f && v <= 0.55f);
+
+            // Pałąk kłódki
+            float distShackle = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.55f));
+            bool shackle = (distShackle >= 0.14f && distShackle <= 0.24f && v >= 0.55f && v <= 0.85f);
+
+            return (body || shackle) ? Color.white : Color.clear;
+        });
+
+        // 14. Sun Rays Corona (Promyczki Słoneczka do Hold to Interact)
+        CreateAndSavePng("Hold_SunRays.png", 256, 256, (x, y, w, h) =>
+        {
+            float cx = w * 0.5f, cy = h * 0.5f;
+            Vector2 p = new Vector2(x - cx, y - cy);
+            float dist = p.magnitude;
+            float normDist = dist / (w * 0.5f);
+
+            if (normDist < 0.30f || normDist > 0.95f) return Color.clear;
+
+            float angle = Mathf.Atan2(p.y, p.x) * Mathf.Rad2Deg;
+            if (angle < 0) angle += 360f;
+
+            // 8 głównych promyków co 45 stopni + 8 mniejszych co 45 stopni (łącznie 16 promyczków)
+            float mod8 = Mathf.Abs((angle % 45f) - 22.5f);
+            float mod16 = Mathf.Abs((angle % 22.5f) - 11.25f);
+
+            // Główny promyk
+            bool isMainRay = (mod8 < 4.0f) && (normDist >= 0.32f && normDist <= 0.92f);
+            // Mniejszy promyk pośredni
+            bool isSubRay = (mod16 < 2.5f) && (normDist >= 0.35f && normDist <= 0.68f);
+
+            if (isMainRay || isSubRay)
+            {
+                float tipFade = Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(0.70f, 0.92f, normDist));
+                return new Color(1f, 1f, 1f, isMainRay ? tipFade : tipFade * 0.75f);
+            }
+
+            return Color.clear;
+        });
+
+        // 16. Exclamation Mark Icon (Wykrzyknik [!] - ważne/zagadka/uwaga)
+        CreateAndSavePng("Icon_ExclamationMark.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+            float cx = 0.5f;
+
+            // Kropka na dole (y: 0.15 .. 0.25)
+            float distDot = Vector2.Distance(new Vector2(u, v), new Vector2(cx, 0.20f));
+            if (distDot <= 0.055f) return Color.white;
+
+            // Zwężający się słupek wykrzyknika (y: 0.35 .. 0.85)
+            if (v >= 0.35f && v <= 0.85f)
+            {
+                float halfWidth = Mathf.Lerp(0.045f, 0.075f, (v - 0.35f) / 0.50f);
+                if (Mathf.Abs(u - cx) <= halfWidth) return Color.white;
+            }
+
+            return Color.clear;
+        });
+
+        // 17. Eye Icon (Oko - patrzenie/obserwacja)
+        CreateAndSavePng("Icon_Eye.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+
+            // Migdałowy kontur oka
+            float dx = Mathf.Abs(u - 0.5f) * 2f;
+            float topY = 0.5f + 0.25f * (1f - dx * dx);
+            float botY = 0.5f - 0.25f * (1f - dx * dx);
+
+            bool inEye = v >= botY && v <= topY && dx <= 0.95f;
+            bool onEdge = inEye && (v >= topY - 0.045f || v <= botY + 0.045f);
+
+            // Źrenica w środku
+            float pupilDist = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.5f));
+            bool isPupil = pupilDist <= 0.11f;
+
+            if (onEdge || isPupil) return Color.white;
+            return Color.clear;
+        });
+
+        // 18. Magnifying Glass Icon (Lupa - badanie szczegółów)
+        CreateAndSavePng("Icon_Magnifier.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+
+            // Obręcz soczewki (środek w 0.42, 0.58)
+            float distLens = Vector2.Distance(new Vector2(u, v), new Vector2(0.42f, 0.58f));
+            bool isRim = distLens >= 0.18f && distLens <= 0.25f;
+
+            // Rączka lupy pod kątem 45 stopni
+            Vector2 handleStart = new Vector2(0.58f, 0.42f);
+            Vector2 handleEnd = new Vector2(0.82f, 0.18f);
+            float distToLine = DistanceToSegment(new Vector2(u, v), handleStart, handleEnd);
+            bool isHandle = distToLine <= 0.038f;
+
+            return (isRim || isHandle) ? Color.white : Color.clear;
+        });
+
+        // 19. Key Icon (Klucz)
+        CreateAndSavePng("Icon_Key.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+
+            // Kółko główki klucza (góra)
+            float distHead = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.72f));
+            bool isHeadRing = distHead >= 0.08f && distHead <= 0.16f;
+
+            // Trzonek klucza (dół)
+            bool isShaft = (Mathf.Abs(u - 0.5f) <= 0.035f) && (v >= 0.18f && v <= 0.64f);
+
+            // Ząbki klucza
+            bool isTooth1 = (u >= 0.50f && u <= 0.65f) && (v >= 0.20f && v <= 0.27f);
+            bool isTooth2 = (u >= 0.50f && u <= 0.60f) && (v >= 0.33f && v <= 0.40f);
+
+            return (isHeadRing || isShaft || isTooth1 || isTooth2) ? Color.white : Color.clear;
+        });
+
+        // 20. Speech Bubble (Dymek myśli / rozmowy)
+        CreateAndSavePng("Icon_SpeechBubble.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+
+            // Zaokrąglony prostokąt dymka
+            bool inBody = (u >= 0.20f && u <= 0.80f) && (v >= 0.35f && v <= 0.75f);
+            // Dzióbek
+            bool inTail = (u >= 0.25f && u <= 0.42f) && (v >= 0.18f && v <= 0.35f) && (u - 0.25f <= (v - 0.18f));
+
+            return (inBody || inTail) ? Color.white : Color.clear;
+        });
+
         AssetDatabase.Refresh();
 
         // Konfiguracja Importerów na Sprite 2D
         ConfigureSprites();
 
-        Debug.Log("<color=#70FF70>[HoldSpritesGenerator] Sukces! Wygenerowano 10 krystalicznie czystych Sprite'ów w Assets/Art/UI_HoldIcons/ !</color>");
+        Debug.Log("<color=#70FF70>[HoldSpritesGenerator] Sukces! Wygenerowano pełny zestaw 20 Sprite'ów w Assets/Art/UI_HoldIcons/ !</color>");
+    }
+
+    private static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+        return Vector2.Distance(p, a + t * ab);
     }
 
     private static float SmoothBand(float dist, float inner, float outer, float feather)

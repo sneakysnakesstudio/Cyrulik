@@ -23,7 +23,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 67b16d95cf467dd469c9a27ac4ec2b1a, type: 3}
     - {fileID: 8300000, guid: fc22480479e449349b7db024c768da6f, type: 3}
     - {fileID: 8300000, guid: ff68341861b16434496035326eade3be, type: 3}
-    volume: 0.37
+    volume: 0.365
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.58
@@ -82,7 +82,7 @@ MonoBehaviour:
   - groupName: fridge_hum
     clips:
     - {fileID: 8300000, guid: 03a7489af4fd1504185e72f5d42675b1, type: 3}
-    volume: 0.149
+    volume: 0.123
     preventImmediateRepeat: 1
     randomizePitch: 0
     minPitch: 0.95
@@ -388,6 +388,12 @@ MonoBehaviour:
   - groupName: Croos_audio_sfx
     clips:
     - {fileID: 8300000, guid: 31cb49d8a1c233746a473b1a390b991e, type: 3}
+    - {fileID: 8300000, guid: aa618330068cae847820dd3ab063cd3e, type: 3}
+    - {fileID: 8300000, guid: 72b1f0e98cf39074386dbf3a3c0e95b6, type: 3}
+    - {fileID: 8300000, guid: a69f36a4ec2cc84418e76a9f3e7a4033, type: 3}
+    - {fileID: 8300000, guid: b20992514bd433f42a25d2b8c16ad55d, type: 3}
+    - {fileID: 8300000, guid: ef453692553cf1646b424b6e0a16d83e, type: 3}
+    - {fileID: 8300000, guid: 1113c313ed1ea974298bdafd1ad42487, type: 3}
     volume: 0.147
     preventImmediateRepeat: 1
     randomizePitch: 1

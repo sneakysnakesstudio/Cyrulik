@@ -70,16 +70,64 @@ public class Crosshair : MonoBehaviour
     private Tween _interactionBlinkTween;
     private Tween _blockedTween;
 
+    public enum HoldVisualMode
+    {
+        SunburstRays, // Kropka napełnia się energią i wyłaniają się obracające promyczki słoneczka
+        RingToSquare  // Kółeczko napełnia się i rozszerza w kwadratową ramkę
+    }
+
+    [Header("Hold Interaction - Styl Słoneczka / Kwadratu")]
+    [Tooltip("Styl wizualny przytrzymania: Słoneczko z promyczkami (Sunburst) lub Kółko->Kwadrat.")]
+    [SerializeField] private HoldVisualMode holdVisualMode = HoldVisualMode.SunburstRays;
+
+    [Tooltip("Czy każda standardowa interakcja (np. lampka, drzwi, włącznik) ma wymagać krótkiego przytrzymania (0.5s)?")]
+    [SerializeField] private bool requireHoldForStandardInteractions = true;
+
+    [Tooltip("Domyślny czas przytrzymania (w sekundach), np. 0.5s.")]
+    [SerializeField] private float defaultHoldDuration = 0.5f;
+
+    [Header("Sunburst Hold Visuals (Słoneczko z Promyczkami)")]
+    [Tooltip("Obiekt promyków słoneczka.")]
+    [SerializeField] private Image sunRaysImage;
+    [SerializeField] private Color sunRaysColor = new Color(1.0f, 0.86f, 0.32f, 0.95f); // Ciepły złoty
+    [SerializeField] private float maxSunRaysScale = 1.45f;
+    [SerializeField] private float sunRaysRotationSpeed = 100f;
+
     [Header("Hold Interaction (Kółeczko -> Kwadrat)")]
+    [Tooltip("Pasek kołowy ładowania przytrzymania (Image Type: Filled Radial 360).")]
     [SerializeField] private Image holdProgressRing;
     public static Crosshair Instance { get; private set; }
 
+    [Tooltip("Rozszerzająca się ramka kwadratu podczas ładowania holda.")]
     [SerializeField] private Image squareMorphFrame;
+
+    [Header("Crosshair Icons / Ikony Celownika")]
+    [Tooltip("Domyślna kropka celownika w spoczynku.")]
+    [SerializeField] private Sprite defaultDotSprite;
+
+    [Tooltip("Ikona pytajnika [?] przy badaniu otoczenia, myślach i tajemnicach (Inspect / Thought / Krzyż).")]
+    [SerializeField] private Sprite inspectQuestionSprite;
+
+    [Tooltip("Ikona dłoni przy standardowych interakcjach [E] (włącznik, proste przedmioty).")]
+    [SerializeField] private Sprite interactHandSprite;
+
+    [Tooltip("Ikona ząbkowanego kółka zegara (HoldRing_Clockwork) przy szufladach, szafach i drzwiach.")]
+    [SerializeField] private Sprite clockworkRingSprite;
+
+    [Tooltip("Ikona kłódki przy zablokowanych interakcjach wymagających klucza.")]
+    [SerializeField] private Sprite lockedKeySprite;
+
+    [Header("Rozmiary Ikon")]
+    [SerializeField] private Vector2 defaultDotSize = new Vector2(8f, 8f);
+    [SerializeField] private Vector2 inspectIconSize = new Vector2(20f, 20f);
+    [SerializeField] private Vector2 interactIconSize = new Vector2(18f, 18f);
+    [SerializeField] private Vector2 clockworkIconSize = new Vector2(24f, 24f);
 
     private RectTransform _crosshairRect;
     private float _holdTimer = 0f;
     private bool _isHolding = false;
     private Tween _concussionTween;
+    private Sprite _initialSprite;
 
 #if UNITY_EDITOR
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -125,6 +173,12 @@ public class Crosshair : MonoBehaviour
 
         _crosshairRect = crosshairImage.rectTransform;
 
+        _initialSprite = crosshairImage.sprite;
+        if (defaultDotSprite == null)
+        {
+            defaultDotSprite = _initialSprite;
+        }
+
         _defaultScale =
             crosshairImage.transform.localScale;
 
@@ -141,6 +195,32 @@ public class Crosshair : MonoBehaviour
 
     private void EnsureHoldUI()
     {
+        // 1. Promyczki Słoneczka (Sunburst Rays)
+        if (sunRaysImage == null && crosshairImage != null)
+        {
+            Transform existingSun = crosshairImage.transform.parent.Find("SunRaysImage");
+            if (existingSun != null)
+            {
+                sunRaysImage = existingSun.GetComponent<Image>();
+            }
+            else
+            {
+                GameObject sunGo = new GameObject("SunRaysImage", typeof(RectTransform), typeof(Image));
+                sunGo.transform.SetParent(crosshairImage.transform.parent, false);
+                sunGo.transform.position = crosshairImage.transform.position;
+
+                var sunRect = sunGo.GetComponent<RectTransform>();
+                sunRect.sizeDelta = new Vector2(36f, 36f);
+                sunRect.anchoredPosition = Vector2.zero;
+
+                sunRaysImage = sunGo.GetComponent<Image>();
+                sunRaysImage.color = new Color(sunRaysColor.r, sunRaysColor.g, sunRaysColor.b, 0f);
+                sunRaysImage.raycastTarget = false;
+                sunGo.SetActive(false);
+            }
+        }
+
+        // 2. Pierścień ładowania (Hold Progress Ring)
         if (holdProgressRing == null && crosshairImage != null)
         {
             GameObject ringGo = new GameObject("HoldProgressRing", typeof(RectTransform), typeof(Image));
@@ -160,6 +240,7 @@ public class Crosshair : MonoBehaviour
             holdProgressRing.raycastTarget = false;
         }
 
+        // 3. Kwadratowa ramka (Square Morph Frame)
         if (squareMorphFrame == null && crosshairImage != null)
         {
             GameObject sqGo = new GameObject("SquareMorphFrame", typeof(RectTransform), typeof(Image), typeof(Outline));
@@ -258,6 +339,9 @@ public class Crosshair : MonoBehaviour
         Color targetColor =
             GetCurrentInteractionColor();
 
+        // Dynamiczna podmiana ikony celownika na Pytajnik [?], Rękę, Kłódkę lub Kropkę
+        UpdateCrosshairIcon(interactable);
+
         _colorTween = crosshairImage
             .DOColor(
                 targetColor,
@@ -284,6 +368,79 @@ public class Crosshair : MonoBehaviour
         StartPulse();
     }
 
+    private void UpdateCrosshairIcon(IInteractable interactable)
+    {
+        if (crosshairImage == null) return;
+
+        bool isInspectOrThought = (interactable is InspectThoughtInteractable) ||
+                                  (interactable is CrucifixInteractable) ||
+                                  interactable.InteractionName.Contains("Look") ||
+                                  interactable.InteractionName.Contains("Examine") ||
+                                  interactable.InteractionName.Contains("Spójrz") ||
+                                  interactable.InteractionName.Contains("Inspect") ||
+                                  interactable.InteractionName.Contains("?");
+
+        bool isFurnitureOrDoor = (interactable is DoorInteractable) ||
+                                  interactable.InteractionName.Contains("Szuflad") ||
+                                  interactable.InteractionName.Contains("Drawer") ||
+                                  interactable.InteractionName.Contains("Szaf") ||
+                                  interactable.InteractionName.Contains("Wardrobe") ||
+                                  interactable.InteractionName.Contains("Drzwi") ||
+                                  interactable.InteractionName.Contains("Door") ||
+                                  interactable.InteractionName.Contains("Cabinet") ||
+                                  interactable.InteractionName.Contains("Cupboard") ||
+                                  interactable.InteractionName.Contains("Box") ||
+                                  interactable.InteractionName.Contains("Skrytk");
+
+        bool isLocked = (interactable is IConditionalInteractable cond && !cond.CanInteract);
+
+        Sprite targetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+        Vector2 targetSize = defaultDotSize;
+
+        if (isLocked && lockedKeySprite != null)
+        {
+            targetSprite = lockedKeySprite;
+            targetSize = interactIconSize;
+        }
+        else if (isInspectOrThought && inspectQuestionSprite != null)
+        {
+            targetSprite = inspectQuestionSprite;
+            targetSize = inspectIconSize;
+        }
+        else if (isFurnitureOrDoor && clockworkRingSprite != null)
+        {
+            // Ząbkowane kółko zegara (HoldRing_Clockwork) przy szufladach, szafach i drzwiach
+            targetSprite = clockworkRingSprite;
+            targetSize = clockworkIconSize;
+        }
+        else if (interactHandSprite != null)
+        {
+            targetSprite = interactHandSprite;
+            targetSize = interactIconSize;
+        }
+
+        // Sprawdź czy ikona faktycznie się zmienia
+        if (crosshairImage.sprite != targetSprite)
+        {
+            crosshairImage.sprite = targetSprite;
+
+            // Soczysty Pop-In / Punch (Squash & Stretch + lekkie zastanowienie pytajnika)
+            crosshairImage.transform.DOKill();
+            crosshairImage.transform.localScale = _defaultScale;
+            crosshairImage.transform.localRotation = Quaternion.identity;
+            _crosshairRect.DOKill();
+
+            _crosshairRect.DOSizeDelta(targetSize, 0.22f).SetEase(Ease.OutBack);
+            crosshairImage.transform.DOPunchScale(new Vector3(0.32f, -0.18f, 0f), 0.28f, 8, 0.8f);
+
+            if (isInspectOrThought)
+            {
+                // Lekki psychodeliczno-dociekliwy przechył pytajnika
+                crosshairImage.transform.DOPunchRotation(new Vector3(0f, 0f, 10f), 0.35f, 6, 0.6f);
+            }
+        }
+    }
+
     private void HideInteractable()
     {
         _currentInteractable = null;
@@ -301,6 +458,19 @@ public class Crosshair : MonoBehaviour
 
         _crosshairRect.anchoredPosition =
             _defaultAnchoredPosition;
+
+        // Przywrócenie domyślnej kropki celownika z miękkim zejściem rozmiaru
+        if (crosshairImage != null)
+        {
+            crosshairImage.transform.DOKill();
+            crosshairImage.transform.localScale = _defaultScale;
+            crosshairImage.transform.localRotation = Quaternion.identity;
+
+            _crosshairRect.DOKill();
+            _crosshairRect.DOSizeDelta(defaultDotSize, 0.16f).SetEase(Ease.OutQuad);
+
+            crosshairImage.sprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+        }
 
         _colorTween = crosshairImage
             .DOColor(
@@ -574,7 +744,22 @@ public class Crosshair : MonoBehaviour
 
     private void HandleHoldProgress()
     {
+        bool isHoldCandidate = false;
+        float holdDuration = defaultHoldDuration;
+
         if (_currentInteractable is IHoldInteractable holdInteractable && holdInteractable.RequiresHold)
+        {
+            isHoldCandidate = true;
+            holdDuration = holdInteractable.HoldDuration;
+        }
+        else if (_hasInteractable && requireHoldForStandardInteractions)
+        {
+            // Standardowa interakcja z przytrzymaniem (np. lampka, drzwi, włącznik)
+            isHoldCandidate = true;
+            holdDuration = defaultHoldDuration;
+        }
+
+        if (isHoldCandidate)
         {
             bool isPressing = false;
             if (UnityEngine.InputSystem.Keyboard.current != null)
@@ -590,33 +775,81 @@ public class Crosshair : MonoBehaviour
             {
                 _isHolding = true;
                 _holdTimer += Time.deltaTime;
-                float progress = Mathf.Clamp01(_holdTimer / holdInteractable.HoldDuration);
+                float progress = Mathf.Clamp01(_holdTimer / Mathf.Max(0.05f, holdDuration));
 
-                if (holdProgressRing != null)
+                bool isClockworkTarget = (crosshairImage != null && crosshairImage.sprite == clockworkRingSprite) ||
+                                         (_currentInteractable is DoorInteractable);
+
+                if (isClockworkTarget)
                 {
-                    holdProgressRing.gameObject.SetActive(true);
-                    holdProgressRing.fillAmount = progress;
+                    // ─── TRYB ZĄBKOWANEGO ZEGARA (Obrót o 360 stopni przy szufladach/szafach) ───
+                    if (crosshairImage != null)
+                    {
+                        // Kółeczko obraca się dokładnie o 360 stopni i lekko pulsuje jak nakręcany mechanizm
+                        crosshairImage.transform.localEulerAngles = new Vector3(0f, 0f, -progress * 360f);
+                        crosshairImage.transform.localScale = Vector3.Lerp(_defaultScale, _defaultScale * 1.25f, progress);
+                        crosshairImage.color = Color.Lerp(GetCurrentInteractionColor(), sunRaysColor, progress);
+                    }
+                }
+                else if (holdVisualMode == HoldVisualMode.SunburstRays)
+                {
+                    // ─── TRYB SŁONECZKA Z PROMYCZKAMI ───
+                    if (sunRaysImage != null)
+                    {
+                        sunRaysImage.gameObject.SetActive(true);
+                        sunRaysImage.color = new Color(sunRaysColor.r, sunRaysColor.g, sunRaysColor.b, Mathf.Pow(progress, 1.2f) * 0.95f);
+                        sunRaysImage.transform.localScale = Vector3.Lerp(Vector3.one * 0.15f, Vector3.one * maxSunRaysScale, progress);
+                        sunRaysImage.transform.Rotate(0f, 0f, -sunRaysRotationSpeed * Time.deltaTime);
+                    }
+
+                    if (crosshairImage != null)
+                    {
+                        // Kropka rośnie i jaśnieje słonecznym blaskiem
+                        crosshairImage.transform.localScale = Vector3.Lerp(_defaultScale, _defaultScale * 1.45f, progress);
+                        crosshairImage.color = Color.Lerp(GetCurrentInteractionColor(), sunRaysColor, progress);
+                    }
+                }
+                else
+                {
+                    // ─── TRYB KÓŁECZKO -> KWADRAT ───
+                    if (holdProgressRing != null)
+                    {
+                        holdProgressRing.gameObject.SetActive(true);
+                        holdProgressRing.fillAmount = progress;
+                    }
+
+                    if (squareMorphFrame != null)
+                    {
+                        squareMorphFrame.gameObject.SetActive(true);
+                        squareMorphFrame.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one * 1.35f, progress);
+                        squareMorphFrame.color = new Color(1f, 1f, 1f, progress * 0.9f);
+                    }
+
+                    if (crosshairImage != null)
+                    {
+                        crosshairImage.transform.localScale = Vector3.Lerp(_defaultScale, _defaultScale * 0.3f, progress);
+                    }
                 }
 
-                // Morfowanie z kółeczka w kwadrat
-                if (squareMorphFrame != null)
-                {
-                    squareMorphFrame.gameObject.SetActive(true);
-                    squareMorphFrame.transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one * 1.35f, progress);
-                    squareMorphFrame.color = new Color(1f, 1f, 1f, progress * 0.9f);
-                }
-
-                if (crosshairImage != null)
-                {
-                    crosshairImage.transform.localScale = Vector3.Lerp(_defaultScale, _defaultScale * 0.3f, progress);
-                }
-
-                // Sukces po napełnieniu
+                // Sukces po pełnym obrocie 360° / napełnieniu (100%)
                 if (progress >= 1f)
                 {
                     _holdTimer = 0f;
                     _isHolding = false;
+
+                    // Mechaniczny rozbłysk / kliknięcie
+                    if (crosshairImage != null)
+                    {
+                        crosshairImage.transform.DOPunchScale(Vector3.one * 0.45f, 0.22f, 8, 1);
+                    }
+
+                    if (sunRaysImage != null && holdVisualMode == HoldVisualMode.SunburstRays && !isClockworkTarget)
+                    {
+                        sunRaysImage.transform.DOPunchScale(Vector3.one * 0.45f, 0.22f, 8, 1);
+                    }
+
                     ResetHoldVisuals();
+
                     if (playerMovement != null)
                     {
                         playerMovement.PerformInteraction();
@@ -643,6 +876,13 @@ public class Crosshair : MonoBehaviour
 
     private void ResetHoldVisuals()
     {
+        if (sunRaysImage != null)
+        {
+            sunRaysImage.color = new Color(sunRaysColor.r, sunRaysColor.g, sunRaysColor.b, 0f);
+            sunRaysImage.transform.localScale = Vector3.zero;
+            sunRaysImage.gameObject.SetActive(false);
+        }
+
         if (holdProgressRing != null)
         {
             holdProgressRing.fillAmount = 0f;
@@ -658,6 +898,8 @@ public class Crosshair : MonoBehaviour
         if (crosshairImage != null)
         {
             crosshairImage.transform.localScale = _defaultScale;
+            crosshairImage.transform.localRotation = Quaternion.identity;
+            crosshairImage.color = GetCurrentInteractionColor();
         }
     }
 

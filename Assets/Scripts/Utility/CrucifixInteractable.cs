@@ -29,8 +29,8 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
     [Tooltip("Czy sekwencja ma się odpalać automatycznie przy samym najechaniu wzrokiem?")]
     [SerializeField] private bool triggerOnLookAt = false;
 
-    [Tooltip("Minimalny odstęp czasowy (w sekundach) między kolejnymi modlitwami.")]
-    [SerializeField] private float cooldown = 3.5f;
+    [Tooltip("Minimalny odstęp czasowy (w sekundach) liczony PO zakończeniu sekwencji najazdu kamery.")]
+    [SerializeField] private float cooldown = 3.0f;
 
     [Header("Kinowy Najazd Kamery (Zoom z gracza na rzecz i powrót)")]
     [Tooltip("Parametry fizycznego przelotu kamery z pozycji gracza pod krzyż i powrotu.")]
@@ -82,12 +82,19 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
     [Tooltip("Opóźnienie pojawienia się okienka z napisem po dotarciu kamery przed krzyż (w sekundach). 0 = natychmiast po dojechaniu.")]
     [SerializeField] private float textAppearanceDelay = 0.4f;
 
+    [Header("Zasięg i Widoczność")]
+    [Tooltip("Maksymalna odległość (w metrach), z jakiej gracz może spojrzeć na krzyż.")]
+    [SerializeField] private float maxInteractionDistance = 3.0f;
+    [Tooltip("Czy wymagać czystej linii wzroku (brak ścian/drzwi między graczem a krzyżem)?")]
+    [SerializeField] private bool requireLineOfSight = true;
+
     [Header("Zdarzenia")]
     [SerializeField] private UnityEvent onCinematicTriggered;
 
-    private float _lastTriggerTime = -999f;
+    private float _cooldownUntilTime = -999f;
     private bool _isCurrentlyTargeted = false;
 
+    public bool IsOnCooldown => Time.time < _cooldownUntilTime;
     public string InteractionName => interactionName;
     public string AudioGroupName { get => audioGroupName; set => audioGroupName = value; }
     public string PrayerText { get => prayerText; set => prayerText = value; }
@@ -96,17 +103,20 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
 
     public void OnLookAt()
     {
-        _isCurrentlyTargeted = true;
-
-        if (triggerOnLookAt)
+        if (IsInRangeAndVisible())
         {
-            TryTriggerCinematic();
+            _isCurrentlyTargeted = true;
+
+            if (triggerOnLookAt)
+            {
+                TryTriggerCinematic();
+            }
         }
     }
 
     public void Interact()
     {
-        if (triggerOnInteract)
+        if (triggerOnInteract && IsInRangeAndVisible())
         {
             TryTriggerCinematic();
         }
@@ -114,9 +124,9 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
 
     private void Update()
     {
-        // Sprawdź czy gracz celuje w krzyż
-        bool isFocused = _isCurrentlyTargeted ||
-            (PlayerMovement.Instance != null && (object)PlayerMovement.Instance.CurrentInteractable == this);
+        // Sprawdź czy gracz faktycznie stoi blisko, patrzy w krzyż i nie ma ściany pomiędzy
+        bool isFocused = IsInRangeAndVisible() && (_isCurrentlyTargeted ||
+            (PlayerMovement.Instance != null && (object)PlayerMovement.Instance.CurrentInteractable == this));
 
         if (isFocused && triggerOnRightClick)
         {
@@ -141,12 +151,60 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
         _isCurrentlyTargeted = false;
     }
 
+    /// <summary>
+    /// Sprawdza czy gracz znajduje się w dozwolonym zasięgu (np. max 3m), patrzy w stronę krzyża i nie ma ścian pomiędzy.
+    /// </summary>
+    private bool IsInRangeAndVisible()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return false;
+
+        // 1. Sprawdź fizyczną odległość gracza od krzyża
+        float distance = Vector3.Distance(cam.transform.position, transform.position);
+        if (distance > maxInteractionDistance)
+        {
+            return false;
+        }
+
+        // 2. Sprawdź kąt patrzenia (gracz musi patrzeć w stronę krzyża, a nie w tył)
+        Vector3 dirToCross = (transform.position - cam.transform.position).normalized;
+        float dot = Vector3.Dot(cam.transform.forward, dirToCross);
+        if (dot < 0.65f) // min. ~50 stopni w stożku wzroku
+        {
+            return false;
+        }
+
+        // 3. Sprawdź czy między kamerą a krzyżem nie ma ściany (Line of Sight)
+        if (requireLineOfSight)
+        {
+            Vector3 startPos = cam.transform.position;
+            Vector3 targetPos = transform.position;
+            Vector3 rayDir = targetPos - startPos;
+            float rayDist = rayDir.magnitude;
+
+            if (Physics.Raycast(startPos, rayDir.normalized, out RaycastHit hit, rayDist + 0.1f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                // Jeśli trafiliśmy w coś, co nie jest nami ani naszym dzieckiem/rodzicem
+                if (hit.transform != transform && !hit.transform.IsChildOf(transform) && hit.transform != transform.parent)
+                {
+                    // Ściana lub mebel zasłania widok!
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     public void TryTriggerCinematic()
     {
-        if (Time.time - _lastTriggerTime < cooldown) return;
+        if (IsOnCooldown) return;
         if (CinematicEffectsManager.Instance != null && CinematicEffectsManager.Instance.IsDollyActive) return;
 
-        _lastTriggerTime = Time.time;
+        // Blokujemy wyzwalanie na czas trwania animacji + cooldown
+        float totalSeqDuration = dollySettings.approachDuration + dollySettings.holdDuration + dollySettings.returnDuration;
+        _cooldownUntilTime = Time.time + totalSeqDuration + cooldown;
+
         TriggerCinematic();
     }
 
@@ -216,6 +274,11 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
                 }
 
                 onCinematicTriggered?.Invoke();
+            },
+            onComplete: () =>
+            {
+                // Liczymy pełny cooldown (min. 3 sekundy) od momentu gdy kamera wróciła do gracza
+                _cooldownUntilTime = Time.time + cooldown;
             }
         );
     }
