@@ -13,8 +13,10 @@ using UnityEngine.InputSystem;
 /// 4. Odtworzenie playlisty "Croos_audio_sfx" z AudioManager
 /// 5. Wyświetlenie napisu / myśli: "LORD HAVE MERCY" z konfigurowalnym opóźnieniem w ujęciu
 /// </summary>
-public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
+public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler, ICrosshairSymbolProvider
 {
+    public ReticleSymbolType CrosshairSymbol => ReticleSymbolType.QuestionMark;
+
     [Header("Interakcja")]
     [Tooltip("Napis wyświetlany na celowniku gracza.")]
     [SerializeField] private string interactionName = "[PPM] Spójrz na Krzyż";

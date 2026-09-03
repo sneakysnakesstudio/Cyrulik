@@ -358,12 +358,32 @@ public static class HoldSpritesGenerator
             return (inBody || inTail) ? Color.white : Color.clear;
         });
 
+        // 21. Ellipsis Icon (Wielokropek [...] - dialog, mowa, nasłuch, radio, czekanie)
+        CreateAndSavePng("Icon_Ellipsis.png", 256, 256, (x, y, w, h) =>
+        {
+            float u = (float)x / w;
+            float v = (float)y / h;
+            float cy = 0.50f;
+            float r = 0.070f;
+            float feather = 0.007f;
+
+            // 3 kropki w poziomie: u = 0.24, 0.50, 0.76
+            float d1 = Vector2.Distance(new Vector2(u, v), new Vector2(0.24f, cy));
+            float d2 = Vector2.Distance(new Vector2(u, v), new Vector2(0.50f, cy));
+            float d3 = Vector2.Distance(new Vector2(u, v), new Vector2(0.76f, cy));
+
+            float minDist = Mathf.Min(d1, Mathf.Min(d2, d3));
+            float alpha = Mathf.Clamp01((r + feather - minDist) / (2f * feather));
+            alpha = alpha * alpha * (3f - 2f * alpha);
+            return new Color(1f, 1f, 1f, alpha);
+        });
+
         AssetDatabase.Refresh();
 
         // Konfiguracja Importerów na Sprite 2D
         ConfigureSprites();
 
-        Debug.Log("<color=#70FF70>[HoldSpritesGenerator] Sukces! Wygenerowano pełny zestaw 20 Sprite'ów w Assets/Art/UI_HoldIcons/ !</color>");
+        Debug.Log("<color=#70FF70>[HoldSpritesGenerator] Sukces! Wygenerowano pełny zestaw Sprite'ów w Assets/Art/UI_HoldIcons/ !</color>");
     }
 
     private static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)

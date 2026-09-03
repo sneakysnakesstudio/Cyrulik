@@ -6,8 +6,10 @@ using UnityEngine;
 /// Interaktywne radio w klimacie retro horroru.
 /// Gracz podchodzi, klika E, a radio płynnie włącza/wyłącza sączącą się w przestrzeni 3D muzykę.
 /// </summary>
-public class RadioInteractable : MonoBehaviour, IConditionalInteractable
+public class RadioInteractable : MonoBehaviour, IConditionalInteractable, ICrosshairSymbolProvider
 {
+    public ReticleSymbolType CrosshairSymbol => ReticleSymbolType.Ellipsis;
+
     public event Action<bool> OnRadioStateChanged;
 
     [Header("Interaction Prompts (English)")]

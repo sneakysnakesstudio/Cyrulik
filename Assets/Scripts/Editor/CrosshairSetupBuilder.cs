@@ -32,6 +32,8 @@ public static class CrosshairSetupBuilder
         Sprite clockworkSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/HoldRing_Clockwork.png");
         Sprite squareSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/SquareMorph_RoundedBox.png");
         Sprite questionSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_QuestionMark.png");
+        Sprite exclamationSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_ExclamationMark.png");
+        Sprite ellipsisSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Ellipsis.png");
         Sprite dotSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Default_Dot.png");
         Sprite handSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_HandGrip.png");
         Sprite lockSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Lock.png");
@@ -110,13 +112,36 @@ public static class CrosshairSetupBuilder
         }
         sqTransform.gameObject.SetActive(false);
 
-        // 6. Przypisz referencje do pól komponentu Crosshair
+        // 6. Skonfiguruj lub stwórz CrosshairFadeTransition (płynny dwuwarstwowy crossfade)
+        Transform fadeTransform = canvasTransform.Find("CrosshairFadeTransition");
+        if (fadeTransform == null)
+        {
+            GameObject fadeGo = new GameObject("CrosshairFadeTransition", typeof(RectTransform), typeof(Image));
+            fadeGo.transform.SetParent(canvasTransform, false);
+            fadeGo.transform.SetSiblingIndex(crosshair.transform.GetSiblingIndex() + 1);
+            fadeGo.transform.position = crosshair.transform.position;
+            fadeTransform = fadeGo.transform;
+        }
+
+        var fadeRect = fadeTransform.GetComponent<RectTransform>();
+        fadeRect.sizeDelta = new Vector2(8f, 8f);
+        fadeRect.anchoredPosition = Vector2.zero;
+
+        var fadeImg = fadeTransform.GetComponent<Image>();
+        fadeImg.color = new Color(1f, 1f, 1f, 0f);
+        fadeImg.raycastTarget = false;
+        fadeTransform.gameObject.SetActive(false);
+
+        // 7. Przypisz referencje do pól komponentu Crosshair
         so.FindProperty("sunRaysImage").objectReferenceValue = sunImg;
         so.FindProperty("holdProgressRing").objectReferenceValue = ringImg;
         so.FindProperty("squareMorphFrame").objectReferenceValue = sqImg;
+        so.FindProperty("fadeTransitionImage").objectReferenceValue = fadeImg;
 
         so.FindProperty("defaultDotSprite").objectReferenceValue = dotSprite;
         so.FindProperty("inspectQuestionSprite").objectReferenceValue = questionSprite;
+        so.FindProperty("exclamationSprite").objectReferenceValue = exclamationSprite;
+        so.FindProperty("ellipsisSprite").objectReferenceValue = ellipsisSprite;
         so.FindProperty("interactHandSprite").objectReferenceValue = handSprite;
         so.FindProperty("clockworkRingSprite").objectReferenceValue = clockworkSprite;
         so.FindProperty("lockedKeySprite").objectReferenceValue = lockSprite;
@@ -132,7 +157,7 @@ public static class CrosshairSetupBuilder
         Selection.activeGameObject = crosshair.gameObject;
         EditorGUIUtility.PingObject(crosshair.gameObject);
 
-        Debug.Log("<color=#70FF70>[CrosshairSetupBuilder] Pomyślnie skonfigurowano celownik ze Słoneczkiem z promyczkami (0.5s Hold), Pytajnikiem [?] i kropką!</color>");
+        Debug.Log("<color=#70FF70>[CrosshairSetupBuilder] Pomyślnie skonfigurowano celownik: oddychanie kropki w idlu, płynne przejścia (?, !, ...) oraz Słoneczko Hold!</color>");
     }
 }
 #endif

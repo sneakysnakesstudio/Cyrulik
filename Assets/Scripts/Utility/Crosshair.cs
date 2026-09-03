@@ -26,9 +26,13 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private Color blockedColor =
         new Color(0.851f, 0.361f, 0.361f, 1f); // #D95C5C
 
-    [Header("Interactable Pulse")]
-    [SerializeField] private float pulseScale = 1.15f;
-    [SerializeField] private float pulseDuration = 0.35f;
+    [Header("Idle Breathing (Spokojny Oddech Kropki w Idlu)")]
+    [Tooltip("Czy domyślna kropka celownika ma spokojnie oddychać w stanie spoczynku (gdy gracz nie patrzy na żaden przedmiot)?")]
+    [SerializeField] private bool enableIdleBreathing = true;
+    [Tooltip("Maksymalna skala powiększenia kropki w szczycie wdechu (np. 1.16x).")]
+    [SerializeField] private float idleBreathScale = 1.16f;
+    [Tooltip("Czas trwania połowy cyklu oddechu w sekundach (wdech/wydech np. 2.0s).")]
+    [SerializeField] private float idleBreathDuration = 2.0f;
 
     [Header("Interaction Blink")]
     [SerializeField] private float blinkScale = 1.5f;
@@ -56,6 +60,16 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private float textFadeInDuration = 0.2f;
     [SerializeField] private float textFadeOutDuration = 0.15f;
 
+    [Header("Transition Fade / Płynne Przejście")]
+    [Tooltip("Czas trwania płynnego przejścia (fade in) w znak po najechaniu na obiekt.")]
+    [SerializeField] private float transitionFadeInDuration = 0.22f;
+
+    [Tooltip("Czas trwania płynnego powrotu do kropki po odwróceniu wzroku.")]
+    [SerializeField] private float transitionFadeOutDuration = 0.18f;
+
+    [Tooltip("Dedykowany obrazek do płynnego przenikania (crossfade) bez żadnego migotania.")]
+    [SerializeField] private Image fadeTransitionImage;
+
     private Vector3 _defaultScale;
     private Vector2 _defaultAnchoredPosition;
 
@@ -69,6 +83,9 @@ public class Crosshair : MonoBehaviour
     private Tween _textTween;
     private Tween _interactionBlinkTween;
     private Tween _blockedTween;
+    private Tween _idleBreathTween;
+    private Tween _transitionTween;
+    private Sprite _currentTargetSprite;
 
     public enum HoldVisualMode
     {
@@ -108,6 +125,12 @@ public class Crosshair : MonoBehaviour
     [Tooltip("Ikona pytajnika [?] przy badaniu otoczenia, myślach i tajemnicach (Inspect / Thought / Krzyż).")]
     [SerializeField] private Sprite inspectQuestionSprite;
 
+    [Tooltip("Ikona wykrzyknika [!] przy bezpośrednich akcjach, zadaniach i manipulacji otoczeniem.")]
+    [SerializeField] private Sprite exclamationSprite;
+
+    [Tooltip("Ikona wielokropka [...] przy dialogach, nasłuchiwaniu, radiu i oczekiwaniu.")]
+    [SerializeField] private Sprite ellipsisSprite;
+
     [Tooltip("Ikona dłoni przy standardowych interakcjach [E] (włącznik, proste przedmioty).")]
     [SerializeField] private Sprite interactHandSprite;
 
@@ -120,6 +143,8 @@ public class Crosshair : MonoBehaviour
     [Header("Rozmiary Ikon")]
     [SerializeField] private Vector2 defaultDotSize = new Vector2(8f, 8f);
     [SerializeField] private Vector2 inspectIconSize = new Vector2(20f, 20f);
+    [SerializeField] private Vector2 exclamationIconSize = new Vector2(18f, 22f);
+    [SerializeField] private Vector2 ellipsisIconSize = new Vector2(22f, 12f);
     [SerializeField] private Vector2 interactIconSize = new Vector2(18f, 18f);
     [SerializeField] private Vector2 clockworkIconSize = new Vector2(24f, 24f);
 
@@ -179,6 +204,21 @@ public class Crosshair : MonoBehaviour
             defaultDotSprite = _initialSprite;
         }
 
+#if UNITY_EDITOR
+        if (inspectQuestionSprite == null)
+        {
+            inspectQuestionSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_QuestionMark.png");
+        }
+        if (exclamationSprite == null)
+        {
+            exclamationSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_ExclamationMark.png");
+        }
+        if (ellipsisSprite == null)
+        {
+            ellipsisSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Ellipsis.png");
+        }
+#endif
+
         _defaultScale =
             crosshairImage.transform.localScale;
 
@@ -191,6 +231,9 @@ public class Crosshair : MonoBehaviour
         interactionNameText.alpha = 0f;
 
         EnsureHoldUI();
+
+        _currentTargetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+        StartIdleBreathing();
     }
 
     private void EnsureHoldUI()
@@ -259,10 +302,38 @@ public class Crosshair : MonoBehaviour
             outline.effectDistance = new Vector2(1.5f, -1.5f);
             squareMorphFrame.gameObject.SetActive(false);
         }
+
+        // 4. Obrazek do płynnego przejścia fade-in (Fade Transition Image)
+        if (fadeTransitionImage == null && crosshairImage != null)
+        {
+            Transform existingFade = crosshairImage.transform.parent.Find("CrosshairFadeTransition");
+            if (existingFade != null)
+            {
+                fadeTransitionImage = existingFade.GetComponent<Image>();
+            }
+            else
+            {
+                GameObject fadeGo = new GameObject("CrosshairFadeTransition", typeof(RectTransform), typeof(Image));
+                fadeGo.transform.SetParent(crosshairImage.transform.parent, false);
+                fadeGo.transform.SetSiblingIndex(crosshairImage.transform.GetSiblingIndex() + 1);
+                fadeGo.transform.position = crosshairImage.transform.position;
+
+                var fRect = fadeGo.GetComponent<RectTransform>();
+                fRect.sizeDelta = defaultDotSize;
+                fRect.anchoredPosition = _defaultAnchoredPosition;
+
+                fadeTransitionImage = fadeGo.GetComponent<Image>();
+                fadeTransitionImage.color = new Color(1f, 1f, 1f, 0f);
+                fadeTransitionImage.raycastTarget = false;
+                fadeGo.SetActive(false);
+            }
+        }
     }
 
     private void OnEnable()
     {
+        StartIdleBreathing();
+
         if (playerMovement == null)
             return;
 
@@ -278,6 +349,8 @@ public class Crosshair : MonoBehaviour
 
     private void OnDisable()
     {
+        StopIdleBreathing(true);
+
         if (playerMovement != null)
         {
             playerMovement.OnInteractableChanged -=
@@ -330,6 +403,8 @@ public class Crosshair : MonoBehaviour
         _interactionBlinkTween?.Kill();
         _blockedTween?.Kill();
 
+        StopIdleBreathing(false);
+
         _crosshairRect.anchoredPosition =
             _defaultAnchoredPosition;
 
@@ -339,18 +414,8 @@ public class Crosshair : MonoBehaviour
         Color targetColor =
             GetCurrentInteractionColor();
 
-        // Dynamiczna podmiana ikony celownika na Pytajnik [?], Rękę, Kłódkę lub Kropkę
-        UpdateCrosshairIcon(interactable);
-
-        _colorTween = crosshairImage
-            .DOColor(
-                targetColor,
-                colorFadeDuration
-            )
-            .SetLink(
-                crosshairImage.gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
+        // Płynne przejście w odpowiedni znak (?, !, ...) z miękkim fade-in
+        TransitionToInteractableIcon(interactable, targetColor);
 
         interactionNameText.alpha = 0f;
 
@@ -365,79 +430,195 @@ public class Crosshair : MonoBehaviour
                 LinkBehaviour.KillOnDestroy
             );
 
-        StartPulse();
+        // Kropka NIE mruga już ciągle w pętli – pozostaje stabilna i czytelna
     }
 
-    private void UpdateCrosshairIcon(IInteractable interactable)
+    private void TransitionToInteractableIcon(IInteractable interactable, Color targetColor)
     {
         if (crosshairImage == null) return;
 
-        bool isInspectOrThought = (interactable is InspectThoughtInteractable) ||
-                                  (interactable is CrucifixInteractable) ||
-                                  interactable.InteractionName.Contains("Look") ||
-                                  interactable.InteractionName.Contains("Examine") ||
-                                  interactable.InteractionName.Contains("Spójrz") ||
-                                  interactable.InteractionName.Contains("Inspect") ||
-                                  interactable.InteractionName.Contains("?");
+        Sprite targetSprite;
+        Vector2 targetSize;
+        GetSymbolInfo(interactable, out targetSprite, out targetSize);
 
-        bool isFurnitureOrDoor = (interactable is DoorInteractable) ||
-                                  interactable.InteractionName.Contains("Szuflad") ||
-                                  interactable.InteractionName.Contains("Drawer") ||
-                                  interactable.InteractionName.Contains("Szaf") ||
-                                  interactable.InteractionName.Contains("Wardrobe") ||
-                                  interactable.InteractionName.Contains("Drzwi") ||
-                                  interactable.InteractionName.Contains("Door") ||
-                                  interactable.InteractionName.Contains("Cabinet") ||
-                                  interactable.InteractionName.Contains("Cupboard") ||
-                                  interactable.InteractionName.Contains("Box") ||
-                                  interactable.InteractionName.Contains("Skrytk");
+        if (targetSprite == null)
+        {
+            targetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+            targetSize = defaultDotSize;
+        }
 
+        // Jeśli już wyświetlamy ten symbol, aktualizujemy tylko kolor bez restartowania przejścia
+        if (_currentTargetSprite == targetSprite && crosshairImage.sprite == targetSprite)
+        {
+            _colorTween?.Kill();
+            _colorTween = crosshairImage
+                .DOColor(targetColor, colorFadeDuration)
+                .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+            return;
+        }
+
+        _currentTargetSprite = targetSprite;
+
+        // Płynne dwuwarstwowe przejście fade-in (dissolve) bez nagłego przeskoku i bez mrugania
+        PerformCrossfade(targetSprite, targetSize, targetColor, transitionFadeInDuration);
+    }
+
+    public void GetSymbolInfo(IInteractable interactable, out Sprite targetSprite, out Vector2 targetSize)
+    {
+        ReticleSymbolType symbolType = ReticleSymbolType.Auto;
+
+        if (interactable is ICrosshairSymbolProvider provider)
+        {
+            symbolType = provider.CrosshairSymbol;
+        }
+
+        // Sprawdzenie stanu zablokowania
         bool isLocked = (interactable is IConditionalInteractable cond && !cond.CanInteract);
-
-        Sprite targetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
-        Vector2 targetSize = defaultDotSize;
-
         if (isLocked && lockedKeySprite != null)
         {
             targetSprite = lockedKeySprite;
             targetSize = interactIconSize;
-        }
-        else if (isInspectOrThought && inspectQuestionSprite != null)
-        {
-            targetSprite = inspectQuestionSprite;
-            targetSize = inspectIconSize;
-        }
-        else if (isFurnitureOrDoor && clockworkRingSprite != null)
-        {
-            // Ząbkowane kółko zegara (HoldRing_Clockwork) przy szufladach, szafach i drzwiach
-            targetSprite = clockworkRingSprite;
-            targetSize = clockworkIconSize;
-        }
-        else if (interactHandSprite != null)
-        {
-            targetSprite = interactHandSprite;
-            targetSize = interactIconSize;
+            return;
         }
 
-        // Sprawdź czy ikona faktycznie się zmienia
-        if (crosshairImage.sprite != targetSprite)
+        if (symbolType == ReticleSymbolType.Auto)
         {
-            crosshairImage.sprite = targetSprite;
+            symbolType = DetectSymbolType(interactable);
+        }
 
-            // Soczysty Pop-In / Punch (Squash & Stretch + lekkie zastanowienie pytajnika)
-            crosshairImage.transform.DOKill();
-            crosshairImage.transform.localScale = _defaultScale;
-            crosshairImage.transform.localRotation = Quaternion.identity;
-            _crosshairRect.DOKill();
+        switch (symbolType)
+        {
+            case ReticleSymbolType.QuestionMark:
+                targetSprite = inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite;
+                targetSize = inspectIconSize;
+                break;
 
-            _crosshairRect.DOSizeDelta(targetSize, 0.22f).SetEase(Ease.OutBack);
-            crosshairImage.transform.DOPunchScale(new Vector3(0.32f, -0.18f, 0f), 0.28f, 8, 0.8f);
+            case ReticleSymbolType.ExclamationMark:
+                targetSprite = exclamationSprite != null ? exclamationSprite : (interactHandSprite != null ? interactHandSprite : defaultDotSprite);
+                targetSize = exclamationIconSize;
+                break;
 
-            if (isInspectOrThought)
+            case ReticleSymbolType.Ellipsis:
+                targetSprite = ellipsisSprite != null ? ellipsisSprite : (inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite);
+                targetSize = ellipsisIconSize;
+                break;
+
+            case ReticleSymbolType.Dot:
+            default:
+                targetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+                targetSize = defaultDotSize;
+                break;
+        }
+    }
+
+    private ReticleSymbolType DetectSymbolType(IInteractable interactable)
+    {
+        if (interactable == null) return ReticleSymbolType.Dot;
+
+        string name = interactable.InteractionName ?? string.Empty;
+
+        // 1. Pytajnik [?] – Badanie, rozmyślanie, oglądanie, tajemnice, krzyż, notatki
+        bool isInspectOrThought = (interactable is InspectThoughtInteractable) ||
+                                  (interactable is CrucifixInteractable) ||
+                                  name.Contains("?") ||
+                                  name.IndexOf("Look", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Examine", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Spójrz", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Zbadaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Inspect", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Obejrzyj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Oglądaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Co to", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Pomyśl", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Myśl", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Read", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Czytaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Notatk", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  name.IndexOf("Note", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+        if (isInspectOrThought)
+        {
+            return ReticleSymbolType.QuestionMark;
+        }
+
+        // 2. Wielokropek [...] – Mowa, dialog, nasłuchiwanie, radio, chwile skupienia/oczekiwania
+        bool isDialogueOrListening = (interactable is RadioInteractable) ||
+                                     name.Contains("...") ||
+                                     name.IndexOf("Talk", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Rozmawiaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Mów", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Speak", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Listen", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Słuchaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Posłuchaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Radio", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Dialog", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Klient", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Client", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Czekaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     name.IndexOf("Wait", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+        if (isDialogueOrListening)
+        {
+            return ReticleSymbolType.Ellipsis;
+        }
+
+        // 3. Wykrzyknik [!] – Akcje bezpośrednie, zadania, narzędzia, szafa, drzwi, zlew, brzytwa
+        return ReticleSymbolType.ExclamationMark;
+    }
+
+    private void PerformCrossfade(Sprite newSprite, Vector2 newSize, Color newColor, float duration)
+    {
+        _transitionTween?.Kill();
+        _colorTween?.Kill();
+        _scaleTween?.Kill();
+
+        if (fadeTransitionImage != null)
+        {
+            // Dwuwarstwowy miękki crossfade: stary sprite łagodnie cichnie, nowy wchodzi z lekkim fade-inem i subtelnym zoomem
+            fadeTransitionImage.DOKill();
+            fadeTransitionImage.gameObject.SetActive(true);
+            fadeTransitionImage.sprite = newSprite;
+            fadeTransitionImage.rectTransform.sizeDelta = newSize;
+            fadeTransitionImage.transform.localScale = _defaultScale * 0.86f;
+            fadeTransitionImage.color = new Color(newColor.r, newColor.g, newColor.b, 0f);
+
+            Sequence seq = DOTween.Sequence();
+            seq.Join(crosshairImage.DOFade(0f, duration * 0.7f).SetEase(Ease.InQuad));
+            seq.Join(fadeTransitionImage.DOFade(newColor.a, duration).SetEase(Ease.OutQuad));
+            seq.Join(fadeTransitionImage.transform.DOScale(_defaultScale, duration).SetEase(Ease.OutCubic));
+
+            seq.OnComplete(() =>
             {
-                // Lekki psychodeliczno-dociekliwy przechył pytajnika
-                crosshairImage.transform.DOPunchRotation(new Vector3(0f, 0f, 10f), 0.35f, 6, 0.6f);
-            }
+                if (crosshairImage != null)
+                {
+                    crosshairImage.sprite = newSprite;
+                    crosshairImage.rectTransform.sizeDelta = newSize;
+                    crosshairImage.color = newColor;
+                    crosshairImage.transform.localScale = _defaultScale;
+                }
+                if (fadeTransitionImage != null)
+                {
+                    fadeTransitionImage.gameObject.SetActive(false);
+                }
+            });
+            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            _transitionTween = seq;
+        }
+        else
+        {
+            // Jednowarstwowy płynny fallback
+            Sequence seq = DOTween.Sequence();
+            seq.Append(crosshairImage.DOFade(0.2f, duration * 0.35f).SetEase(Ease.InQuad));
+            seq.AppendCallback(() =>
+            {
+                crosshairImage.sprite = newSprite;
+                _crosshairRect.sizeDelta = newSize;
+            });
+            seq.Append(crosshairImage.DOColor(newColor, duration * 0.65f).SetEase(Ease.OutQuad));
+            seq.Join(crosshairImage.transform.DOScale(_defaultScale, duration * 0.65f).From(_defaultScale * 0.86f).SetEase(Ease.OutCubic));
+            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            _transitionTween = seq;
         }
     }
 
@@ -445,53 +626,26 @@ public class Crosshair : MonoBehaviour
     {
         _currentInteractable = null;
 
-        _pulseTween?.Kill();
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
         _blockedTween?.Kill();
         _colorTween?.Kill();
         _textTween?.Kill();
 
-        _pulseTween = null;
         _interactionBlinkTween = null;
         _blockedTween = null;
 
         _crosshairRect.anchoredPosition =
             _defaultAnchoredPosition;
 
-        // Przywrócenie domyślnej kropki celownika z miękkim zejściem rozmiaru
+        Sprite dotSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+        _currentTargetSprite = dotSprite;
+
+        // Płynne przejście z powrotem do kropki
         if (crosshairImage != null)
         {
-            crosshairImage.transform.DOKill();
-            crosshairImage.transform.localScale = _defaultScale;
-            crosshairImage.transform.localRotation = Quaternion.identity;
-
-            _crosshairRect.DOKill();
-            _crosshairRect.DOSizeDelta(defaultDotSize, 0.16f).SetEase(Ease.OutQuad);
-
-            crosshairImage.sprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+            PerformCrossfade(dotSprite, defaultDotSize, normalColor, transitionFadeOutDuration);
         }
-
-        _colorTween = crosshairImage
-            .DOColor(
-                normalColor,
-                colorFadeDuration
-            )
-            .SetLink(
-                crosshairImage.gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
-
-        _scaleTween = crosshairImage.transform
-            .DOScale(
-                _defaultScale,
-                0.15f
-            )
-            .SetEase(Ease.OutQuad)
-            .SetLink(
-                crosshairImage.gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
 
         _textTween = interactionNameText
             .DOFade(
@@ -511,32 +665,50 @@ public class Crosshair : MonoBehaviour
                 interactionNameText.gameObject,
                 LinkBehaviour.KillOnDestroy
             );
+
+        // Po wygaszeniu symbolu kropka spokojnie wznawia oddychanie w idlu
+        DOVirtual.DelayedCall(transitionFadeOutDuration, () =>
+        {
+            if (!_hasInteractable && !_isHolding)
+            {
+                StartIdleBreathing();
+            }
+        }).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+    }
+
+    private void StartIdleBreathing()
+    {
+        if (!enableIdleBreathing || _hasInteractable || _isHolding)
+            return;
+
+        _idleBreathTween?.Kill();
+
+        if (crosshairImage != null)
+        {
+            crosshairImage.transform.localScale = _defaultScale;
+
+            _idleBreathTween = crosshairImage.transform
+                .DOScale(_defaultScale * idleBreathScale, idleBreathDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+    }
+
+    private void StopIdleBreathing(bool resetScale = false)
+    {
+        _idleBreathTween?.Kill();
+        _idleBreathTween = null;
+
+        if (resetScale && crosshairImage != null)
+        {
+            crosshairImage.transform.localScale = _defaultScale;
+        }
     }
 
     private void StartPulse()
     {
-        if (!_hasInteractable)
-            return;
-
-        _pulseTween?.Kill();
-
-        crosshairImage.transform.localScale =
-            _defaultScale;
-
-        _pulseTween = crosshairImage.transform
-            .DOScale(
-                _defaultScale * pulseScale,
-                pulseDuration
-            )
-            .SetEase(Ease.InOutSine)
-            .SetLoops(
-                -1,
-                LoopType.Yoyo
-            )
-            .SetLink(
-                crosshairImage.gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
+        // Pętla ciągłego pulsowania została wyłączona – celownik jest stabilny
     }
 
     private void HandleInteractionPerformed()
@@ -611,9 +783,9 @@ public class Crosshair : MonoBehaviour
         {
             _interactionBlinkTween = null;
 
-            if (_hasInteractable)
+            if (!_hasInteractable && !_isHolding)
             {
-                StartPulse();
+                StartIdleBreathing();
             }
         });
 
@@ -695,9 +867,9 @@ public class Crosshair : MonoBehaviour
             _crosshairRect.anchoredPosition =
                 _defaultAnchoredPosition;
 
-            if (_hasInteractable)
+            if (!_hasInteractable && !_isHolding)
             {
-                StartPulse();
+                StartIdleBreathing();
             }
         });
 
@@ -773,7 +945,16 @@ public class Crosshair : MonoBehaviour
 
             if (isPressing)
             {
-                _isHolding = true;
+                if (!_isHolding)
+                {
+                    _isHolding = true;
+                    StopIdleBreathing(false);
+                    _transitionTween?.Kill();
+                    if (fadeTransitionImage != null)
+                    {
+                        fadeTransitionImage.gameObject.SetActive(false);
+                    }
+                }
                 _holdTimer += Time.deltaTime;
                 float progress = Mathf.Clamp01(_holdTimer / Mathf.Max(0.05f, holdDuration));
 
@@ -876,6 +1057,11 @@ public class Crosshair : MonoBehaviour
 
     private void ResetHoldVisuals()
     {
+        if (fadeTransitionImage != null)
+        {
+            fadeTransitionImage.gameObject.SetActive(false);
+        }
+
         if (sunRaysImage != null)
         {
             sunRaysImage.color = new Color(sunRaysColor.r, sunRaysColor.g, sunRaysColor.b, 0f);
@@ -900,6 +1086,11 @@ public class Crosshair : MonoBehaviour
             crosshairImage.transform.localScale = _defaultScale;
             crosshairImage.transform.localRotation = Quaternion.identity;
             crosshairImage.color = GetCurrentInteractionColor();
+        }
+
+        if (!_hasInteractable && !_isHolding)
+        {
+            StartIdleBreathing();
         }
     }
 
@@ -933,6 +1124,8 @@ public class Crosshair : MonoBehaviour
     private void KillTweens()
     {
         _pulseTween?.Kill();
+        _idleBreathTween?.Kill();
+        _transitionTween?.Kill();
         _scaleTween?.Kill();
         _colorTween?.Kill();
         _textTween?.Kill();
@@ -941,6 +1134,8 @@ public class Crosshair : MonoBehaviour
         _concussionTween?.Kill();
 
         _pulseTween = null;
+        _idleBreathTween = null;
+        _transitionTween = null;
         _scaleTween = null;
         _colorTween = null;
         _textTween = null;

@@ -7,8 +7,10 @@ using UnityEngine.Events;
 /// 1. Po najechaniu celownikiem (Trigger On Look At)
 /// 2. Po naciśnięciu interakcji [E / LPM] (bez podnoszenia do rąk)
 /// </summary>
-public class InspectThoughtInteractable : MonoBehaviour, IInteractable, ILookAtHandler
+public class InspectThoughtInteractable : MonoBehaviour, IInteractable, ILookAtHandler, ICrosshairSymbolProvider
 {
+    public ReticleSymbolType CrosshairSymbol => ReticleSymbolType.QuestionMark;
+
     [Header("Interakcja")]
     [Tooltip("Napis wyświetlany na celowniku (np. 'Examine', 'Look at', 'Read note', 'Inspect').")]
     [SerializeField] private string interactionName = "Examine";

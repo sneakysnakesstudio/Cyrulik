@@ -1,7 +1,9 @@
 using UnityEngine;
 
-public class PreparationTaskTrigger : MonoBehaviour, IInteractable
+public class PreparationTaskTrigger : MonoBehaviour, IInteractable, ICrosshairSymbolProvider
 {
+    public ReticleSymbolType CrosshairSymbol => ReticleSymbolType.ExclamationMark;
+
     [Header("Interaction")]
     [SerializeField] private string interactionName = "Use";
 
