@@ -718,4 +718,66 @@ public class AudioManager : MonoBehaviour
         _musicFadeTween?.Kill();
         _ambientFadeTween?.Kill();
     }
+
+    // ─── Debug API (wywoływane przez GameManager) ─────────────────────────────
+
+    private float _savedSfxVolume     = 1f;
+    private float _savedMusicVolume   = -1f; // -1 = nie cachowane
+    private float _savedAmbientVolume = -1f;
+
+    /// <summary>Wycisz/odkryj SFX pool (clock_tick, footsteps, item sounds itp.).</summary>
+    public void SetSfxMuted(bool muted)
+    {
+        if (sfxSource != null)
+        {
+            if (muted)
+            {
+                _savedSfxVolume = sfxSource.volume > 0f ? sfxSource.volume : 1f;
+                sfxSource.volume = 0f;
+            }
+            else
+            {
+                sfxSource.volume = _savedSfxVolume;
+            }
+        }
+
+        // Wycisz też wszystkie sourcey w poolu
+        foreach (var src in _sourcePool)
+        {
+            if (src != null)
+                src.volume = muted ? 0f : 1f;
+        }
+    }
+
+    /// <summary>Wycisz/odkryj muzykę w tle.</summary>
+    public void SetMusicMuted(bool muted)
+    {
+        if (musicSource == null) return;
+
+        if (muted)
+        {
+            _savedMusicVolume = musicSource.volume;
+            musicSource.volume = 0f;
+        }
+        else
+        {
+            musicSource.volume = _savedMusicVolume >= 0f ? _savedMusicVolume : musicVolume;
+        }
+    }
+
+    /// <summary>Wycisz/odkryj ambient.</summary>
+    public void SetAmbientMuted(bool muted)
+    {
+        if (ambientSource == null) return;
+
+        if (muted)
+        {
+            _savedAmbientVolume = ambientSource.volume;
+            ambientSource.volume = 0f;
+        }
+        else
+        {
+            ambientSource.volume = _savedAmbientVolume >= 0f ? _savedAmbientVolume : ambientVolume;
+        }
+    }
 }

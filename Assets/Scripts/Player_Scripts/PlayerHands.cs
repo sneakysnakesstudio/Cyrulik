@@ -209,16 +209,36 @@ public class PlayerHands : MonoBehaviour
             Debug.Log($"[PlayerHands] Attaching physical item to socket: '{socket.name}'");
             item.transform.SetParent(socket);
 
-            if (pickup != null)
+            if (pickup != null && (pickup.InHandPosition != Vector3.zero || pickup.InHandRotation != Vector3.zero))
             {
+                // Ręczne ustawienia z komponentu PickupItem
                 item.transform.localPosition = pickup.InHandPosition;
                 item.transform.localRotation = Quaternion.Euler(pickup.InHandRotation);
                 item.transform.localScale = pickup.InHandScale;
             }
             else
             {
-                item.transform.localPosition = Vector3.zero;
+                // Automatyczne dopasowanie i centrowanie:
+                // Sprawdzamy czy model ma przesunięty pivot (np. importowany mesh ze środkiem poza zerem).
+                // Kompensujemy to przesunięcie, aby przedmiot leżał dokładnie w dłoniach/przed kamerą!
+                Vector3 centerOffset = Vector3.zero;
+                Collider col = item.GetComponent<BoxCollider>() ?? item.GetComponent<Collider>() ?? item.GetComponentInChildren<Collider>();
+                if (col is BoxCollider boxCol)
+                {
+                    centerOffset = boxCol.center;
+                }
+                else if (col != null)
+                {
+                    centerOffset = item.transform.InverseTransformPoint(col.bounds.center);
+                }
+
+                Vector3 targetScale = (pickup != null && pickup.InHandScale != Vector3.zero) ? pickup.InHandScale : Vector3.one;
+                item.transform.localScale = targetScale;
                 item.transform.localRotation = Quaternion.identity;
+
+                // Odpowiednio kompensujemy pivot geometryczny
+                Vector3 scaledOffset = new Vector3(centerOffset.x * targetScale.x, centerOffset.y * targetScale.y, centerOffset.z * targetScale.z);
+                item.transform.localPosition = Vector3.zero - scaledOffset;
             }
 
             SetRenderersEnabled(item, true);

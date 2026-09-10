@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 public class RazorMinigame : MonoBehaviour, IInteractable, ICrosshairSymbolProvider
 {
-    public ReticleSymbolType CrosshairSymbol => ReticleSymbolType.ExclamationMark;
+    public ReticleSymbolType CrosshairSymbol => ReticleSymbolType.Razor;
 
     public string InteractionName => "Sharpen Razor";
     public void Interact() => StartMinigame();

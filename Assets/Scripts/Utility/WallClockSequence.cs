@@ -162,17 +162,16 @@ public class WallClockSequence : MonoBehaviour
 
     private void PlayLoudTick()
     {
-        if (_audioSource != null)
+        // UWAGA: NIE wołamy AudioManager.Play("clock_tick") – to robi już GameTimeController co sekundę!
+        // Tutaj używamy TYLKO lokalnego AudioSource z dedykowanym, głośniejszym clipem suspense.
+        // Dzięki temu nie ma podwojonego dźwięku.
+        if (_audioSource == null) return;
+
+        if (customLoudTickClip != null)
         {
-            if (customLoudTickClip != null)
-            {
-                _audioSource.PlayOneShot(customLoudTickClip, loudVolume);
-            }
-            else if (AudioManager.Instance != null && !string.IsNullOrEmpty(loudTickSound))
-            {
-                AudioManager.Instance.Play(loudTickSound);
-            }
+            _audioSource.PlayOneShot(customLoudTickClip, loudVolume);
         }
+        // Jeśli nie przypisano customLoudTickClip, tykanie i tak leci z GameTimeController – nic nie rób.
     }
 
     /// <summary>
@@ -187,5 +186,22 @@ public class WallClockSequence : MonoBehaviour
             CustomerJurek.Instance.SetVisualsActive(true);
             CustomerJurek.Instance.TriggerArrival();
         }
+    }
+
+    // ─── Publiczne API dla GameManager / Debug ──────────────────────────────
+
+    /// <summary>Wyłącz/włącz całą sekwencję zegara ściennego (tykanie + przyjazd Jurka).</summary>
+    public void SetSequenceEnabled(bool enabled)
+    {
+        this.enabled = enabled;
+        if (!enabled && _audioSource != null)
+            _audioSource.Stop();
+    }
+
+    /// <summary>Włącz/wyłącz animację wahadła.</summary>
+    public void SetPendulumEnabled(bool enabled)
+    {
+        if (pendulumTransform != null)
+            pendulumTransform.gameObject.SetActive(enabled);
     }
 }

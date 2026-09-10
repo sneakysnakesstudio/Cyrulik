@@ -140,13 +140,53 @@ public class Crosshair : MonoBehaviour
     [Tooltip("Ikona kłódki przy zablokowanych interakcjach wymagających klucza.")]
     [SerializeField] private Sprite lockedKeySprite;
 
-    [Header("Rozmiary Ikon")]
-    [SerializeField] private Vector2 defaultDotSize = new Vector2(8f, 8f);
-    [SerializeField] private Vector2 inspectIconSize = new Vector2(20f, 20f);
-    [SerializeField] private Vector2 exclamationIconSize = new Vector2(18f, 22f);
-    [SerializeField] private Vector2 ellipsisIconSize = new Vector2(22f, 12f);
-    [SerializeField] private Vector2 interactIconSize = new Vector2(18f, 18f);
-    [SerializeField] private Vector2 clockworkIconSize = new Vector2(24f, 24f);
+    [Header("Crosshair Icons — Kontekstowe")]
+    [Tooltip("Ikona chwytu/podnoszenia przedmiotu (Icon_HandGrip.png).")]
+    [SerializeField] private Sprite pickupHandSprite;
+
+    [Tooltip("Ikona oka do oglądania z bliska bez podnoszenia (Icon_Eye.png).")]
+    [SerializeField] private Sprite eyeSprite;
+
+    [Tooltip("Ikona brzytwy do golenia/ostrzenia (Icon_Razor.png).")]
+    [SerializeField] private Sprite razorSprite;
+
+    [Tooltip("Ikona chmurki rozmowy z NPC (Icon_SpeechBubble.png).")]
+    [SerializeField] private Sprite speechBubbleSprite;
+
+    [Tooltip("Ikona lupy do szczegółowej inspekcji (Icon_Magnifier.png).")]
+    [SerializeField] private Sprite magnifierSprite;
+
+    [Tooltip("Ikona klucza do użycia klucza (Icon_Key.png).")]
+    [SerializeField] private Sprite keySprite;
+
+    [Header("Globalna Skala Ikon Celownika")]
+    [Tooltip("Mnożnik skali dla wszystkich ikon akcji (1.0 = domyślny powiększony, 1.2+ = jeszcze większy).")]
+    [Range(0.5f, 3.0f)]
+    [SerializeField] private float iconScaleMultiplier = 1.0f;
+
+    [Header("Rozmiary Ikon (Powiększone dla czytelności)")]
+    [SerializeField] private Vector2 defaultDotSize       = new Vector2(10f, 10f);
+    [SerializeField] private Vector2 inspectIconSize      = new Vector2(46f, 46f);
+    [SerializeField] private Vector2 exclamationIconSize  = new Vector2(40f, 50f);
+    [SerializeField] private Vector2 ellipsisIconSize     = new Vector2(50f, 26f);
+    [SerializeField] private Vector2 interactIconSize     = new Vector2(44f, 44f);
+    [SerializeField] private Vector2 clockworkIconSize    = new Vector2(52f, 52f);
+    [SerializeField] private Vector2 pickupHandIconSize   = new Vector2(48f, 48f);
+    [SerializeField] private Vector2 eyeIconSize          = new Vector2(52f, 36f);
+    [SerializeField] private Vector2 razorIconSize        = new Vector2(50f, 50f);
+    [SerializeField] private Vector2 speechBubbleIconSize = new Vector2(50f, 46f);
+    [SerializeField] private Vector2 magnifierIconSize    = new Vector2(48f, 48f);
+    [SerializeField] private Vector2 keyIconSize          = new Vector2(46f, 46f);
+
+    [Header("Kolory Per-Symbol")]
+    [Tooltip("Kolor ikony podnoszenia – miętowo-zielony.")]
+    [SerializeField] private Color pickupColor  = new Color(0.45f, 0.87f, 0.55f, 1f);
+    [Tooltip("Kolor ikony brzytwy – ciepła złota stalówka.")]
+    [SerializeField] private Color razorColor   = new Color(0.95f, 0.82f, 0.35f, 1f);
+    [Tooltip("Kolor chmurki dialogu – błękitno-szarawy.")]
+    [SerializeField] private Color speechColor  = new Color(0.55f, 0.78f, 0.95f, 1f);
+    [Tooltip("Kolor lupy i oka – liliowo-fioletowy.")]
+    [SerializeField] private Color inspectColor = new Color(0.75f, 0.55f, 0.95f, 1f);
 
     private RectTransform _crosshairRect;
     private float _holdTimer = 0f;
@@ -206,17 +246,31 @@ public class Crosshair : MonoBehaviour
 
 #if UNITY_EDITOR
         if (inspectQuestionSprite == null)
-        {
             inspectQuestionSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_QuestionMark.png");
-        }
         if (exclamationSprite == null)
-        {
-            exclamationSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_ExclamationMark.png");
-        }
+            exclamationSprite     = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_ExclamationMark.png");
         if (ellipsisSprite == null)
-        {
-            ellipsisSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Ellipsis.png");
-        }
+            ellipsisSprite        = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Ellipsis.png");
+        if (interactHandSprite == null)
+            interactHandSprite    = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_HandGrip.png");
+        if (pickupHandSprite == null)
+            pickupHandSprite      = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_HandGrip.png");
+        if (eyeSprite == null)
+            eyeSprite             = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Eye.png");
+        if (razorSprite == null)
+            razorSprite           = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Razor.png");
+        if (speechBubbleSprite == null)
+            speechBubbleSprite    = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_SpeechBubble.png");
+        if (magnifierSprite == null)
+            magnifierSprite       = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Magnifier.png");
+        if (lockedKeySprite == null)
+            lockedKeySprite       = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Lock.png");
+        if (keySprite == null)
+            keySprite             = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Icon_Key.png");
+        if (clockworkRingSprite == null)
+            clockworkRingSprite   = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/HoldRing_Clockwork.png");
+        if (defaultDotSprite == null)
+            defaultDotSprite      = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/UI_HoldIcons/Default_Dot.png");
 #endif
 
         _defaultScale =
@@ -230,7 +284,32 @@ public class Crosshair : MonoBehaviour
         interactionNameText.text = string.Empty;
         interactionNameText.alpha = 0f;
 
-        EnsureHoldUI();
+        // Wymuszenie czytelnych, powiększonych rozmiarów (nadpisuje ewentualne stare małe wartości ze sceny)
+        if (defaultDotSize.x < 14f) defaultDotSize = new Vector2(14f, 14f);
+        if (inspectIconSize.x < 48f) inspectIconSize = new Vector2(48f, 48f);
+        if (exclamationIconSize.x < 42f) exclamationIconSize = new Vector2(42f, 52f);
+        if (ellipsisIconSize.x < 52f) ellipsisIconSize = new Vector2(52f, 28f);
+        if (interactIconSize.x < 46f) interactIconSize = new Vector2(46f, 46f);
+        if (clockworkIconSize.x < 54f) clockworkIconSize = new Vector2(54f, 54f);
+        if (pickupHandIconSize.x < 50f) pickupHandIconSize = new Vector2(50f, 50f);
+        if (eyeIconSize.x < 54f) eyeIconSize = new Vector2(54f, 38f);
+        if (razorIconSize.x < 52f) razorIconSize = new Vector2(52f, 52f);
+        if (speechBubbleIconSize.x < 52f) speechBubbleIconSize = new Vector2(52f, 48f);
+        if (magnifierIconSize.x < 50f) magnifierIconSize = new Vector2(50f, 50f);
+        if (keyIconSize.x < 48f) keyIconSize = new Vector2(48f, 48f);
+
+        if (textFadeInDuration > 0.25f) textFadeInDuration = 0.15f;
+        if (textFadeOutDuration > 0.2f) textFadeOutDuration = 0.12f;
+
+        if (interactionNameText != null)
+        {
+            interactionNameText.fontSize = Mathf.Max(interactionNameText.fontSize, 30f);
+        }
+
+        if (iconScaleMultiplier < 1.15f)
+        {
+            iconScaleMultiplier = 1.25f;
+        }
 
         _currentTargetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
         StartIdleBreathing();
@@ -417,18 +496,25 @@ public class Crosshair : MonoBehaviour
         // Płynne przejście w odpowiedni znak (?, !, ...) z miękkim fade-in
         TransitionToInteractableIcon(interactable, targetColor);
 
-        interactionNameText.alpha = 0f;
+        if (interactionNameText != null)
+        {
+            if (string.IsNullOrEmpty(interactionNameText.text) || interactionNameText.alpha <= 0.05f)
+            {
+                interactionNameText.alpha = 0f;
+            }
+            interactionNameText.text = interactable.InteractionName;
 
-        _textTween = interactionNameText
-            .DOFade(
-                1f,
-                textFadeInDuration
-            )
-            .SetEase(Ease.OutQuad)
-            .SetLink(
-                interactionNameText.gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
+            _textTween = interactionNameText
+                .DOFade(
+                    1f,
+                    textFadeInDuration
+                )
+                .SetEase(Ease.OutQuad)
+                .SetLink(
+                    interactionNameText.gameObject,
+                    LinkBehaviour.KillOnDestroy
+                );
+        }
 
         // Kropka NIE mruga już ciągle w pętli – pozostaje stabilna i czytelna
     }
@@ -447,8 +533,9 @@ public class Crosshair : MonoBehaviour
             targetSize = defaultDotSize;
         }
 
-        // Jeśli już wyświetlamy ten symbol, aktualizujemy tylko kolor bez restartowania przejścia
-        if (_currentTargetSprite == targetSprite && crosshairImage.sprite == targetSprite)
+        // Jeśli już wyświetlamy ten symbol lub jesteśmy w trakcie jego pokazywania,
+        // aktualizujemy tylko kolor bez restartowania całego przejścia (zapobiega migotaniu)
+        if (_currentTargetSprite == targetSprite)
         {
             _colorTween?.Kill();
             _colorTween = crosshairImage
@@ -472,12 +559,12 @@ public class Crosshair : MonoBehaviour
             symbolType = provider.CrosshairSymbol;
         }
 
-        // Sprawdzenie stanu zablokowania
+        // ── Zablokowane: zawsze kłódka, priorytet ponad reszta ──────────────
         bool isLocked = (interactable is IConditionalInteractable cond && !cond.CanInteract);
-        if (isLocked && lockedKeySprite != null)
+        if (isLocked)
         {
-            targetSprite = lockedKeySprite;
-            targetSize = interactIconSize;
+            targetSprite = lockedKeySprite != null ? lockedKeySprite : defaultDotSprite;
+            targetSize   = interactIconSize;
             return;
         }
 
@@ -488,26 +575,92 @@ public class Crosshair : MonoBehaviour
 
         switch (symbolType)
         {
+            // ── Podnoszenie przedmiotu ──────────────────────────────────────
+            case ReticleSymbolType.PickupHand:
+                targetSprite = pickupHandSprite != null ? pickupHandSprite
+                             : (interactHandSprite != null ? interactHandSprite : defaultDotSprite);
+                targetSize   = pickupHandIconSize;
+                break;
+
+            // ── Interakcja dłonią (ogólna) ─────────────────────────────────
+            case ReticleSymbolType.Hand:
+                targetSprite = interactHandSprite != null ? interactHandSprite : defaultDotSprite;
+                targetSize   = interactIconSize;
+                break;
+
+            // ── Tylko patrzenie / oglądanie (bez podnoszenia) ──────────────
+            case ReticleSymbolType.Eye:
+                targetSprite = eyeSprite != null ? eyeSprite
+                             : (inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite);
+                targetSize   = eyeIconSize;
+                break;
+
+            // ── Szczegółowa inspekcja z lupą ───────────────────────────────
+            case ReticleSymbolType.Magnifier:
+                targetSprite = magnifierSprite != null ? magnifierSprite
+                             : (inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite);
+                targetSize   = magnifierIconSize;
+                break;
+
+            // ── Pytajnik [?] – badanie, myśli, tajemnice ───────────────────
             case ReticleSymbolType.QuestionMark:
                 targetSprite = inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite;
-                targetSize = inspectIconSize;
+                targetSize   = inspectIconSize;
                 break;
 
-            case ReticleSymbolType.ExclamationMark:
-                targetSprite = exclamationSprite != null ? exclamationSprite : (interactHandSprite != null ? interactHandSprite : defaultDotSprite);
-                targetSize = exclamationIconSize;
+            // ── Golenie / brzytwa ───────────────────────────────────────────
+            case ReticleSymbolType.Razor:
+                targetSprite = razorSprite != null ? razorSprite
+                             : (exclamationSprite != null ? exclamationSprite : defaultDotSprite);
+                targetSize   = razorIconSize;
                 break;
 
+            // ── Dialog z NPC ────────────────────────────────────────────────
+            case ReticleSymbolType.SpeechBubble:
+                targetSprite = speechBubbleSprite != null ? speechBubbleSprite
+                             : (ellipsisSprite != null ? ellipsisSprite : defaultDotSprite);
+                targetSize   = speechBubbleIconSize;
+                break;
+
+            // ── Wielokropek [...] ────────────────────────────────────────────
             case ReticleSymbolType.Ellipsis:
-                targetSprite = ellipsisSprite != null ? ellipsisSprite : (inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite);
-                targetSize = ellipsisIconSize;
+                targetSprite = ellipsisSprite != null ? ellipsisSprite
+                             : (inspectQuestionSprite != null ? inspectQuestionSprite : defaultDotSprite);
+                targetSize   = ellipsisIconSize;
                 break;
 
+            // ── Klucz ────────────────────────────────────────────────────────
+            case ReticleSymbolType.Key:
+                targetSprite = keySprite != null ? keySprite
+                             : (lockedKeySprite != null ? lockedKeySprite : defaultDotSprite);
+                targetSize   = keyIconSize;
+                break;
+
+            // ── Kłódka (zablokowane przez skrypt zewnętrzny) ────────────────
+            case ReticleSymbolType.Lock:
+                targetSprite = lockedKeySprite != null ? lockedKeySprite : defaultDotSprite;
+                targetSize   = interactIconSize;
+                break;
+
+            // ── Wykrzyknik [!] – akcje bezpośrednie ─────────────────────────
+            case ReticleSymbolType.ExclamationMark:
+                targetSprite = exclamationSprite != null ? exclamationSprite
+                             : (interactHandSprite != null ? interactHandSprite : defaultDotSprite);
+                targetSize   = exclamationIconSize;
+                break;
+
+            // ── Domyślna kropka ──────────────────────────────────────────────
             case ReticleSymbolType.Dot:
             default:
                 targetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
-                targetSize = defaultDotSize;
+                targetSize   = defaultDotSize;
                 break;
+        }
+
+        // Skalowanie globalne z Inspektora (dla wszystkich ikon oprócz domyślnej małej kropki)
+        if (symbolType != ReticleSymbolType.Dot)
+        {
+            targetSize *= Mathf.Max(0.2f, iconScaleMultiplier);
         }
     }
 
@@ -517,53 +670,64 @@ public class Crosshair : MonoBehaviour
 
         string name = interactable.InteractionName ?? string.Empty;
 
-        // 1. Pytajnik [?] – Badanie, rozmyślanie, oglądanie, tajemnice, krzyż, notatki
-        bool isInspectOrThought = (interactable is InspectThoughtInteractable) ||
-                                  (interactable is CrucifixInteractable) ||
-                                  name.Contains("?") ||
-                                  name.IndexOf("Look", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Examine", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Spójrz", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Zbadaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Inspect", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Obejrzyj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Oglądaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Co to", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Pomyśl", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Myśl", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Read", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Czytaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Notatk", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                  name.IndexOf("Note", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        // ── 1. Podnoszenie przedmiotu z ziemi/blatu ──────────────────────────
+        bool isPickup = (interactable is PickupItem) ||
+                        name.IndexOf("Pick up",   System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Podnieś",   System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Take",      System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Grab",      System.StringComparison.OrdinalIgnoreCase) >= 0;
+        if (isPickup) return ReticleSymbolType.PickupHand;
 
-        if (isInspectOrThought)
-        {
-            return ReticleSymbolType.QuestionMark;
-        }
+        // ── 2. Golenie / brzytwa ─────────────────────────────────────────────
+        bool isRazor = (interactable is RazorMinigame) ||
+                       (interactable is RazorStropInteractable) ||
+                       name.IndexOf("Shave",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       name.IndexOf("Sharpen",  System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       name.IndexOf("Strop",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       name.IndexOf("Golenie",  System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       name.IndexOf("Brzytwa",  System.StringComparison.OrdinalIgnoreCase) >= 0;
+        if (isRazor) return ReticleSymbolType.Razor;
 
-        // 2. Wielokropek [...] – Mowa, dialog, nasłuchiwanie, radio, chwile skupienia/oczekiwania
-        bool isDialogueOrListening = (interactable is RadioInteractable) ||
-                                     name.Contains("...") ||
-                                     name.IndexOf("Talk", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Rozmawiaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Mów", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Speak", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Listen", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Słuchaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Posłuchaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Radio", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Dialog", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Klient", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Client", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Czekaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     name.IndexOf("Wait", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        // ── 3. Dialog / rozmowa z NPC ────────────────────────────────────────
+        bool isNpcTalk = (interactable is CustomerJurek) ||
+                         name.IndexOf("Talk",      System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Speak",     System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Jurek",     System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Give",      System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Podaj",     System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Klient",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Client",    System.StringComparison.OrdinalIgnoreCase) >= 0;
+        if (isNpcTalk) return ReticleSymbolType.SpeechBubble;
 
-        if (isDialogueOrListening)
-        {
-            return ReticleSymbolType.Ellipsis;
-        }
+        // ── 4. Radio / dźwięk / nasłuch / czekanie ──────────────────────────
+        bool isListening = (interactable is RadioInteractable) ||
+                           name.Contains("...") ||
+                           name.IndexOf("Radio",     System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           name.IndexOf("Listen",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           name.IndexOf("Słuchaj",   System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           name.IndexOf("Posłuchaj", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           name.IndexOf("Dialog",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           name.IndexOf("Czekaj",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           name.IndexOf("Wait",      System.StringComparison.OrdinalIgnoreCase) >= 0;
+        if (isListening) return ReticleSymbolType.Ellipsis;
 
-        // 3. Wykrzyknik [!] – Akcje bezpośrednie, zadania, narzędzia, szafa, drzwi, zlew, brzytwa
+        // ── 5. Inspect / Thought / oglądanie bez podnoszenia ────────────────
+        bool isInspect = (interactable is InspectThoughtInteractable) ||
+                         (interactable is CrucifixInteractable) ||
+                         name.Contains("?") ||
+                         name.IndexOf("Look",      System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Examine",   System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Inspect",   System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Zbadaj",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Spójrz",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Obejrzyj",  System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Read",      System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Czytaj",    System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Myśl",      System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         name.IndexOf("Note",      System.StringComparison.OrdinalIgnoreCase) >= 0;
+        if (isInspect) return ReticleSymbolType.QuestionMark;
+
+        // ── 6. Fallback – akcja bezpośrednia (!, drzwi, piec, szuflada…) ────
         return ReticleSymbolType.ExclamationMark;
     }
 
@@ -573,53 +737,18 @@ public class Crosshair : MonoBehaviour
         _colorTween?.Kill();
         _scaleTween?.Kill();
 
-        if (fadeTransitionImage != null)
-        {
-            // Dwuwarstwowy miękki crossfade: stary sprite łagodnie cichnie, nowy wchodzi z lekkim fade-inem i subtelnym zoomem
-            fadeTransitionImage.DOKill();
-            fadeTransitionImage.gameObject.SetActive(true);
-            fadeTransitionImage.sprite = newSprite;
-            fadeTransitionImage.rectTransform.sizeDelta = newSize;
-            fadeTransitionImage.transform.localScale = _defaultScale * 0.86f;
-            fadeTransitionImage.color = new Color(newColor.r, newColor.g, newColor.b, 0f);
+        if (crosshairImage == null) return;
 
-            Sequence seq = DOTween.Sequence();
-            seq.Join(crosshairImage.DOFade(0f, duration * 0.7f).SetEase(Ease.InQuad));
-            seq.Join(fadeTransitionImage.DOFade(newColor.a, duration).SetEase(Ease.OutQuad));
-            seq.Join(fadeTransitionImage.transform.DOScale(_defaultScale, duration).SetEase(Ease.OutCubic));
+        // Natychmiast podmieniamy sprite bez wygaszania (brak migotania / stroboskopu)
+        crosshairImage.sprite = newSprite;
 
-            seq.OnComplete(() =>
-            {
-                if (crosshairImage != null)
-                {
-                    crosshairImage.sprite = newSprite;
-                    crosshairImage.rectTransform.sizeDelta = newSize;
-                    crosshairImage.color = newColor;
-                    crosshairImage.transform.localScale = _defaultScale;
-                }
-                if (fadeTransitionImage != null)
-                {
-                    fadeTransitionImage.gameObject.SetActive(false);
-                }
-            });
-            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
-            _transitionTween = seq;
-        }
-        else
-        {
-            // Jednowarstwowy płynny fallback
-            Sequence seq = DOTween.Sequence();
-            seq.Append(crosshairImage.DOFade(0.2f, duration * 0.35f).SetEase(Ease.InQuad));
-            seq.AppendCallback(() =>
-            {
-                crosshairImage.sprite = newSprite;
-                _crosshairRect.sizeDelta = newSize;
-            });
-            seq.Append(crosshairImage.DOColor(newColor, duration * 0.65f).SetEase(Ease.OutQuad));
-            seq.Join(crosshairImage.transform.DOScale(_defaultScale, duration * 0.65f).From(_defaultScale * 0.86f).SetEase(Ease.OutCubic));
-            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
-            _transitionTween = seq;
-        }
+        // Płynna, solidna transformacja rozmiaru i koloru BEZ znikania kropki
+        Sequence seq = DOTween.Sequence();
+        seq.Join(_crosshairRect.DOSizeDelta(newSize, duration).SetEase(Ease.OutQuad));
+        seq.Join(crosshairImage.DOColor(newColor, duration).SetEase(Ease.OutQuad));
+        seq.Join(crosshairImage.transform.DOScale(_defaultScale, duration).SetEase(Ease.OutQuad));
+        seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+        _transitionTween = seq;
     }
 
     private void HideInteractable()
@@ -902,11 +1031,43 @@ public class Crosshair : MonoBehaviour
     private Color GetCurrentInteractionColor()
     {
         if (_currentInteractable == null)
-        {
             return normalColor;
-        }
 
-        return interactableColor;
+        // Zablokowane – kolor ostrzeżenia (pomarańczowy)
+        if (_currentInteractable is IConditionalInteractable cond && !cond.CanInteract)
+            return requirementMissingColor;
+
+        // Pobierz aktualny symbol żeby dobrać kolor
+        ReticleSymbolType sym = ReticleSymbolType.Auto;
+        if (_currentInteractable is ICrosshairSymbolProvider provider)
+            sym = provider.CrosshairSymbol;
+        if (sym == ReticleSymbolType.Auto)
+            sym = DetectSymbolType(_currentInteractable);
+
+        switch (sym)
+        {
+            case ReticleSymbolType.PickupHand:
+            case ReticleSymbolType.Hand:
+                return pickupColor;
+
+            case ReticleSymbolType.Razor:
+                return razorColor;
+
+            case ReticleSymbolType.SpeechBubble:
+            case ReticleSymbolType.Ellipsis:
+                return speechColor;
+
+            case ReticleSymbolType.Eye:
+            case ReticleSymbolType.Magnifier:
+            case ReticleSymbolType.QuestionMark:
+                return inspectColor;
+
+            case ReticleSymbolType.Lock:
+                return requirementMissingColor;
+
+            default:
+                return interactableColor;
+        }
     }
 
     private void Update()

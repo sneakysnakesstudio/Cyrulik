@@ -23,7 +23,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 67b16d95cf467dd469c9a27ac4ec2b1a, type: 3}
     - {fileID: 8300000, guid: fc22480479e449349b7db024c768da6f, type: 3}
     - {fileID: 8300000, guid: ff68341861b16434496035326eade3be, type: 3}
-    volume: 0.365
+    volume: 0.033
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.58
@@ -277,6 +277,17 @@ MonoBehaviour:
     volume: 1
     preventImmediateRepeat: 1
     randomizePitch: 1
+    minPitch: 0.95
+    maxPitch: 1.05
+    randomizeVolume: 0
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
+  - groupName: clock_tick
+    clips:
+    - {fileID: 8300000, guid: d4cf712dbf4db5940bbd12cd316b6379, type: 3}
+    volume: 0.386
+    preventImmediateRepeat: 1
+    randomizePitch: 0
     minPitch: 0.95
     maxPitch: 1.05
     randomizeVolume: 0

@@ -61,9 +61,11 @@ public class PlayerMovement : MonoBehaviour
 
     private IInteractable _currentInteractable;
 
-    // Cache dla CheckForInteractable — unikamy GetComponentInParent() każdą klatkę
-    private Collider _lastHitCollider;
-    private IInteractable _lastHitInteractable;
+    // Cache dla CheckForInteractable — zero GC i eliminacja migotania
+    private readonly RaycastHit[] _interactionRaycastHits = new RaycastHit[10];
+    private float _lostInteractableTimer = 0f;
+    [Tooltip("Czas w sekundach podtrzymywania wykrytego obiektu przy mikro-przesunięciach kamery (eliminuje migotanie).")]
+    [SerializeField] private float interactableGracePeriod = 0.09f;
 
     /// <summary>Czy gracz aktualnie się porusza (uwzględnia input oraz velocity CC).</summary>
     public bool IsMoving =>
@@ -324,26 +326,57 @@ public class PlayerMovement : MonoBehaviour
 
         IInteractable foundInteractable = null;
 
-        if (Physics.Raycast(
-                ray,
-                out RaycastHit hit,
-                interactionDistance,
-                interactionLayerMask,
-                QueryTriggerInteraction.Ignore
-            ))
+        int hitCount = Physics.RaycastNonAlloc(
+            ray,
+            _interactionRaycastHits,
+            interactionDistance,
+            interactionLayerMask,
+            QueryTriggerInteraction.Ignore
+        );
+
+        if (hitCount > 0)
         {
-            // Keszujemy GetComponentInParent — wywołujemy tylko gdy hit collider się zmienił
-            if (hit.collider != _lastHitCollider)
+            float closestDistance = float.MaxValue;
+
+            for (int i = 0; i < hitCount; i++)
             {
-                _lastHitCollider = hit.collider;
-                _lastHitInteractable = hit.collider.GetComponentInParent<IInteractable>();
+                RaycastHit hit = _interactionRaycastHits[i];
+                if (hit.collider == null) continue;
+
+                // 1. Sprawdź czy sam collider lub jego rodzic to interactable
+                IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
+
+                // 2. Jeśli nie znaleziono w rodzicach, sprawdź dzieci (częsty przypadek np. lodówki, gdzie collider jest na root obudowy)
+                if (interactable == null)
+                {
+                    interactable = hit.collider.GetComponentInChildren<IInteractable>();
+                }
+
+                if (interactable != null)
+                {
+                    if (hit.distance < closestDistance)
+                    {
+                        closestDistance = hit.distance;
+                        foundInteractable = interactable;
+                    }
+                }
             }
-            foundInteractable = _lastHitInteractable;
         }
-        else
+
+        // Histereza / Anti-flicker: jeśli chwilowo zgubiono promień (np. mikroruch kamery lub krawędź lodówki),
+        // podtrzymujemy dotychczasowy interactable przez krótki bufor czasowy (interactableGracePeriod)
+        if (foundInteractable != null)
         {
-            _lastHitCollider = null;
-            _lastHitInteractable = null;
+            _lostInteractableTimer = 0f;
+        }
+        else if (_currentInteractable != null)
+        {
+            _lostInteractableTimer += Time.deltaTime;
+            if (_lostInteractableTimer < interactableGracePeriod)
+            {
+                // Podtrzymaj poprzedni obiekt, zapobiegając migotaniu
+                return;
+            }
         }
 
         if (foundInteractable == _currentInteractable)

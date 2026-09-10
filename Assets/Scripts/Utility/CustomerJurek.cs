@@ -11,7 +11,7 @@ using UnityEngine.InputSystem;
 /// wejściem po schodach, otwarciem drzwi z dźwiękiem dzwoneczka, wejściem do salonu
 /// oraz dialogiem powitalnym i reakcją na mysz.
 /// </summary>
-public class CustomerJurek : MonoBehaviour, IConditionalInteractable
+public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshairSymbolProvider
 {
     public static CustomerJurek Instance { get; private set; }
 
@@ -252,6 +252,20 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable
         }
     }
     public string BlockedMessage => null;
+
+    /// <summary>Dynamicznie dobiera ikonę crosshaira w zależności od etapu obsługi Jurka.</summary>
+    public ReticleSymbolType CrosshairSymbol
+    {
+        get
+        {
+            // Faza golenia brzytwą – ikona brzytwy
+            if (_isSeated && _hasReceivedWater && _hasReceivedTowel && !_isShavingDone)
+                return ReticleSymbolType.Razor;
+
+            // Faza dialogu / podawania – ikona chmurki rozmowy
+            return ReticleSymbolType.SpeechBubble;
+        }
+    }
 
     private void Awake()
     {
