@@ -19,11 +19,24 @@ public class DialogueManager : MonoBehaviour
     [Tooltip("Komponent prostokątnej ramki dialogowej klienta / NPC.")]
     [SerializeField] private ClientDialogueUI clientDialogueUI;
 
+    [Header("Visual Style (5 Wersji Graficznych Ramek)")]
+    [SerializeField] private DialogueFrameStyle activeStyle = DialogueFrameStyle.BarberBrass;
+    public DialogueFrameStyle ActiveStyle => activeStyle;
+
     public bool IsAnyDialogueActive =>
         (clientDialogueUI != null && clientDialogueUI.IsDialogueActive) ||
         (innerThoughtsUI != null && innerThoughtsUI.IsDialogueActive) ||
         (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive) ||
         (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive);
+
+    /// <summary>
+    /// Ustawia wybrany styl graficzny (1 z 5) dla wszystkich okien w scenie.
+    /// </summary>
+    public void SetGlobalDialogueStyle(DialogueFrameStyle style)
+    {
+        activeStyle = style;
+        DialogueStyleController.ApplyGlobalStyle(style);
+    }
 
 #if UNITY_EDITOR
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

@@ -6995,7 +6995,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HeadBobbing
   playerMovement: {fileID: 361643060}
-  bobAmplitudeY: 0.04
+  bobAmplitudeY: 0.03
   bobAmplitudeX: 0.02
   bobFrequency: 2
   enableIdleBob: 1
@@ -96042,6 +96042,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DialogueManager
   innerThoughtsUI: {fileID: 2029976161}
   clientDialogueUI: {fileID: 2069995838}
+  activeStyle: 0
   jurekArrivalDialogue:
   - speakerName: Jurek
     text: Good day, I'd like a shave...
@@ -112800,6 +112801,7 @@ MonoBehaviour:
   punctuationExtraDelay: 0.12
   fadeInDuration: 0.2
   fadeOutDuration: 0.35
+  currentStyle: 0
   textColor: {r: 0.92, g: 0.92, b: 0.92, a: 1}
   useItalic: 1
   textAlignment: 4097
@@ -114853,6 +114855,7 @@ MonoBehaviour:
   speakerNameText: {fileID: 1697454416}
   speakerBadgeContainer: {fileID: 1204239143}
   dialogueText: {fileID: 1171828600}
+  currentStyle: 0
   textAlignment: 513
   continuePromptGroup: {fileID: 2003359449}
   arrowTransform: {fileID: 1341107626}
@@ -158433,7 +158436,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: dollySettings.targetOffset.y
-      value: -0.53
+      value: -0.23
+      objectReference: {fileID: 0}
+    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
+      propertyPath: dollySettings.targetOffset.z
+      value: -0.12
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalPosition.x

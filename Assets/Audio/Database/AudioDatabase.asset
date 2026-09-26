@@ -405,7 +405,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: b20992514bd433f42a25d2b8c16ad55d, type: 3}
     - {fileID: 8300000, guid: ef453692553cf1646b424b6e0a16d83e, type: 3}
     - {fileID: 8300000, guid: 1113c313ed1ea974298bdafd1ad42487, type: 3}
-    volume: 0.147
+    volume: 0.238
     preventImmediateRepeat: 1
     randomizePitch: 1
     minPitch: 0.95

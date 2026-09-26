@@ -18148,96 +18148,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1273958325}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &524466957
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 524466958}
-  - component: {fileID: 524466960}
-  - component: {fileID: 524466959}
-  m_Layer: 0
-  m_Name: Glass_1
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &524466958
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 524466957}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.741, y: -1.311, z: -0.27}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 543848195}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!23 &524466959
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 524466957}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: -9132007388713882251, guid: d12075922b920a84c858bc9b6763dd2a, type: 3}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &524466960
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 524466957}
-  m_Mesh: {fileID: -9146618070568788744, guid: d12075922b920a84c858bc9b6763dd2a, type: 3}
 --- !u!1 &526802956
 GameObject:
   m_ObjectHideFlags: 0
@@ -18663,7 +18573,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1570363989}
-  - {fileID: 524466958}
   m_Father: {fileID: 888931210}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &545180914
@@ -100140,37 +100049,6 @@ MonoBehaviour:
   customAudioSource: {fileID: 0}
   avatarImage: {fileID: 1123003985}
   defaultAvatarSprite: {fileID: 21300000, guid: 0e5f6446f5af81c469f1cf41c1170621, type: 3}
---- !u!1 &1316321427 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2113103184896907328, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-  m_PrefabInstance: {fileID: 6062217653860104305}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1316321431
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1316321427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d576d842d1c425546a40320ed0e741df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ProximityGlow
-  highlightMode: 0
-  glowColor: {r: 1.7, g: 1.25, b: 0.4, a: 1}
-  outlineThickness: 0.018
-  glowIntensity: 1.6
-  gleamPulseSpeed: 3.2
-  areaRadius: 0.7
-  groundLayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  fadeDuration: 0.18
-  activateOnAim: 1
-  activateOnProximity: 1
-  proximityRange: 1.02
-  targetRenderers: []
 --- !u!1 &1326191223
 GameObject:
   m_ObjectHideFlags: 0
@@ -128519,7 +128397,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!23 &1652398211132764294
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -149225,7 +149103,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProximityGlow
   highlightMode: 0
-  glowColor: {r: 1.7, g: 1.25, b: 0.4, a: 1}
+  glowColor: {r: 0.5882354, g: 0, b: 1.019608, a: 1}
   outlineThickness: 0.018
   glowIntensity: 1.6
   gleamPulseSpeed: 3.2
@@ -158400,44 +158278,12 @@ PrefabInstance:
       value: Crucifix_Interactable
       objectReference: {fileID: 0}
     - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: cooldown
-      value: 1.52
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: prayerText
-      value: LORD HAVE MERCY...
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: audioGroupName
       value: Croos_audio_sfx
       objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: interactionName
-      value: Crucifix
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: textAppearanceDelay
-      value: 1.0343
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: dollySettings.targetFov
-      value: 19.6
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: dollySettings.holdDuration
-      value: 2.39
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: dollySettings.targetDistance
-      value: 1.54
-      objectReference: {fileID: 0}
-    - target: {fileID: 5674664026001825590, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      propertyPath: dollySettings.targetOffset.y
-      value: -0.53
-      objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.113
+      value: 1.109
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalPosition.y
@@ -158445,27 +158291,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 22.388
+      value: 22.402
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.13019176
+      value: 0.13051452
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.009172686
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.9889948
+      value: 0.99144644
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.06967983
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: -8.06
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8930525654758476728, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
@@ -158478,10 +158324,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 2113103184896907328, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1316321431}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 17a01edecd7457a4f81f1360f329eea0, type: 3}
 --- !u!4 &6073347255095434502
 Transform:
@@ -164224,11 +164067,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d576d842d1c425546a40320ed0e741df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProximityGlow
-  highlightMode: 0
+  highlightMode: 1
   glowColor: {r: 1.4, g: 1, b: 0.35, a: 1}
   outlineThickness: 0.018
   glowIntensity: 1.8
-  gleamPulseSpeed: 3.2
+  gleamPulseSpeed: 1.95
   areaRadius: 0.7
   groundLayerMask:
     serializedVersion: 2

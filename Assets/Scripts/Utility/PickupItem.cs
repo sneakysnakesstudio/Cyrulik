@@ -34,6 +34,31 @@ public class PickupItem : MonoBehaviour, IConditionalInteractable, ILookAtHandle
 
     private bool _hasShownPickupThought = false;
 
+    [Header("3D Item Showcase (Inspekcja w stylu Resident Evil)")]
+    [Tooltip("Czy po kliknięciu interakcji ma się otworzyć widok inspekcji (tytuł na górze, obracający się model 3D na środku, komentarz na dole)?")]
+    [SerializeField] private bool enableShowcaseOnPickup = false;
+
+    [Tooltip("Tytuł wyświetlany na górze ekranu inspekcji (np. 'SCISSORS', 'STRAIGHT RAZOR'). Jeśli puste, użyje itemId lub nazwy obiektu.")]
+    [SerializeField] private string showcaseTitle = "";
+
+    [Tooltip("Komentarz / myśl fryzjera wyświetlana na dole ekranu inspekcji. Jeśli puste, użyje pola thoughtText.")]
+    [TextArea(2, 4)]
+    [SerializeField] private string showcaseComment = "";
+
+    [Tooltip("Opcjonalny model lub prefab wyświetlany w widoku 3D. Jeśli puste, użyje wizualnego mesha tego obiektu.")]
+    [SerializeField] private GameObject showcaseModelOverride;
+
+    [Tooltip("Mnożnik skali modelu w widoku 3D.")]
+    [SerializeField] private float showcaseModelScale = 1.0f;
+
+    [Tooltip("Początkowa rotacja modelu w widoku 3D (stopnie Euler).")]
+    [SerializeField] private Vector3 showcaseModelRotation = Vector3.zero;
+
+    [Tooltip("Czy pokazywać inspekcję 3D tylko za pierwszym podniesieniem tego przedmiotu?")]
+    [SerializeField] private bool showShowcaseOnlyOnce = true;
+
+    private bool _hasShownShowcase = false;
+
     [Header("In-Hand Transform (Optional)")]
     [Tooltip("Lokalna pozycja w ręku.")]
     [SerializeField] private Vector3 inHandPosition = Vector3.zero;
@@ -178,6 +203,13 @@ public class PickupItem : MonoBehaviour, IConditionalInteractable, ILookAtHandle
         }
     }
 
+    public bool EnableShowcaseOnPickup { get => enableShowcaseOnPickup; set => enableShowcaseOnPickup = value; }
+    public string ShowcaseTitle { get => showcaseTitle; set => showcaseTitle = value; }
+    public string ShowcaseComment { get => showcaseComment; set => showcaseComment = value; }
+    public GameObject ShowcaseModelOverride { get => showcaseModelOverride; set => showcaseModelOverride = value; }
+    public float ShowcaseModelScale { get => showcaseModelScale; set => showcaseModelScale = value; }
+    public Vector3 ShowcaseModelRotation { get => showcaseModelRotation; set => showcaseModelRotation = value; }
+
     public void Interact()
     {
         // Blokada podniesienia brzytwy przed podaniem ręcznika Jurkowi
@@ -190,16 +222,46 @@ public class PickupItem : MonoBehaviour, IConditionalInteractable, ILookAtHandle
             return;
         }
 
-        // 1. Zawsze wywołaj myśl jeśli jest ustawiona
+        // 1. Sprawdź, czy uruchomić 3D Item Showcase
+        if (enableShowcaseOnPickup && (!_hasShownShowcase || !showShowcaseOnlyOnce) && ItemShowcaseUI.Instance != null)
+        {
+            _hasShownShowcase = true;
+
+            string title = !string.IsNullOrEmpty(showcaseTitle) ? showcaseTitle : (!string.IsNullOrEmpty(itemId) ? itemId : name);
+            string comment = !string.IsNullOrEmpty(showcaseComment) ? showcaseComment : ThoughtText;
+            GameObject model = showcaseModelOverride != null ? showcaseModelOverride : gameObject;
+
+            ItemShowcaseUI.Instance.Show(
+                title: title,
+                comment: comment,
+                modelSource: model,
+                modelScale: showcaseModelScale,
+                customRotation: showcaseModelRotation,
+                actionPrompt: onlyShowThoughtDoNotPickup ? "Continue" : "Take",
+                onClose: () =>
+                {
+                    if (!onlyShowThoughtDoNotPickup)
+                    {
+                        DoActualPickup();
+                    }
+                }
+            );
+            return;
+        }
+
+        // 2. Standardowy flow (jeśli brak showcase)
         TriggerThought();
 
-        // 2. Jeśli zaznaczono 'onlyShowThoughtDoNotPickup', to NIE podnoś przedmiotu do rąk
         if (onlyShowThoughtDoNotPickup)
         {
             return;
         }
 
-        // 3. W przeciwnym razie podnieś do rąk gracza
+        DoActualPickup();
+    }
+
+    private void DoActualPickup()
+    {
         if (_playerHands == null)
         {
             _playerHands = FindAnyObjectByType<PlayerHands>();

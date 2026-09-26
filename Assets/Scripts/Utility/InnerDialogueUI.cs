@@ -81,6 +81,9 @@ public class InnerDialogueUI : MonoBehaviour
     [SerializeField] private float fadeOutDuration = 0.35f;
 
     [Header("Style")]
+    [Tooltip("Wersja graficzna ramki i tła (5 stylów).")]
+    [SerializeField] private DialogueFrameStyle currentStyle = DialogueFrameStyle.BarberBrass;
+
     [Tooltip("Kolor tekstu wewnętrznego dialogu.")]
     [SerializeField] private Color textColor = new Color(0.92f, 0.92f, 0.92f, 1f);
 
@@ -229,7 +232,25 @@ public class InnerDialogueUI : MonoBehaviour
             promptArrowText.text = "▼";
         }
 
+        SetStyle(currentStyle);
         HideAllInstant();
+    }
+
+    public DialogueFrameStyle CurrentStyle => currentStyle;
+
+    [ContextMenu("Apply Current Style")]
+    public void ApplyCurrentStyle()
+    {
+        SetStyle(currentStyle);
+    }
+
+    /// <summary>
+    /// Zmienia wersję graficzną ramki i stylistyki myśli (1 z 5 stylów).
+    /// </summary>
+    public void SetStyle(DialogueFrameStyle style)
+    {
+        currentStyle = style;
+        DialogueStyleController.ApplyStyleToInnerThought(this, style);
     }
 
     private void OnEnable()

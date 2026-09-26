@@ -1135,6 +1135,29 @@ public class DebugOverlay : MonoBehaviour
         _dialogueScrollPos = GUILayout.BeginScrollView(_dialogueScrollPos, GUILayout.ExpandHeight(true));
 
         // ══════════════════════════════════════════════════════════
+        // 5 WERSJI GRAFICZNYCH RAMEK (STYL UI)
+        // ══════════════════════════════════════════════════════════
+        GUILayout.Label("── WYBIERZ WERSJĘ GRAFICZNĄ RAMEK (5 STYLÓW) ──", _headerStyle);
+        GUILayout.Space(2);
+        GUILayout.BeginVertical(_panelBoxStyle);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("1. Barber Brass", _buttonStyle, GUILayout.Height(28)))
+            DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.BarberBrass);
+        if (GUILayout.Button("2. Retro Noir", _buttonStyle, GUILayout.Height(28)))
+            DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.RetroNoir);
+        if (GUILayout.Button("3. Vintage Ledger", _buttonStyle, GUILayout.Height(28)))
+            DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.VintageLedger);
+        if (GUILayout.Button("4. Crimson Razor", _buttonStyle, GUILayout.Height(28)))
+            DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.CrimsonRazor);
+        if (GUILayout.Button("5. Smoked Velvet", _buttonStyle, GUILayout.Height(28)))
+            DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.SmokedVelvet);
+        GUILayout.EndHorizontal();
+
+        GUILayout.EndVertical();
+        GUILayout.Space(8);
+
+        // ══════════════════════════════════════════════════════════
         // 1. DIALOGI Z KLIENTAMI / NPC (ClientDialogueUI)
         // ══════════════════════════════════════════════════════════
         GUILayout.Label("── 1. ROZMOWY Z KLIENTAMI / NPC (ClientDialogueUI) ──", _headerStyle);

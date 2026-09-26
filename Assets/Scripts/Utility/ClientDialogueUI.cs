@@ -52,6 +52,10 @@ public class ClientDialogueUI : MonoBehaviour
     [Tooltip("Główne pole tekstowe wypowiedzi klienta/mówcy.")]
     [SerializeField] private TextMeshProUGUI dialogueText;
 
+    [Header("UI - Styl Wizualny")]
+    [Tooltip("Wersja graficzna ramki i tła (5 stylów).")]
+    [SerializeField] private DialogueFrameStyle currentStyle = DialogueFrameStyle.BarberBrass;
+
     [Tooltip("Wyrównanie tekstu dialogu klienta (domyślnie TopLeft / MidlineLeft).")]
     [SerializeField] private TextAlignmentOptions textAlignment = TextAlignmentOptions.TopLeft;
 
@@ -208,7 +212,25 @@ public class ClientDialogueUI : MonoBehaviour
             audioSource.spatialBlend = 0f;
         }
 
+        SetStyle(currentStyle);
         HideAllInstant();
+    }
+
+    public DialogueFrameStyle CurrentStyle => currentStyle;
+
+    [ContextMenu("Apply Current Style")]
+    public void ApplyCurrentStyle()
+    {
+        SetStyle(currentStyle);
+    }
+
+    /// <summary>
+    /// Zmienia wersję graficzną ramki i stylistyki dialogu klienta (1 z 5 stylów).
+    /// </summary>
+    public void SetStyle(DialogueFrameStyle style)
+    {
+        currentStyle = style;
+        DialogueStyleController.ApplyStyleToClientDialogue(this, style);
     }
 
     private void OnDestroy()

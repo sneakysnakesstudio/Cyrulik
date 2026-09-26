@@ -205,16 +205,25 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private Transform GetCameraTransform()
+    {
+        if (Camera.main != null)
+            return Camera.main.transform;
+
+        if (cameraTransform != null)
+            return cameraTransform;
+
+        return transform;
+    }
+
     private void HandleMovement()
     {
-        if (cameraTransform == null)
+        Transform cam = GetCameraTransform();
+        if (cam == null)
             return;
 
-        Vector3 forward =
-            cameraTransform.forward;
-
-        Vector3 right =
-            cameraTransform.right;
+        Vector3 forward = cam.forward;
+        Vector3 right = cam.right;
 
         forward.y = 0f;
         right.y = 0f;
@@ -222,16 +231,21 @@ public class PlayerMovement : MonoBehaviour
         forward.Normalize();
         right.Normalize();
 
+        Vector2 input = _moveInput;
+        // Deadzone dla ruchu — zapobiega znoszeniu postaci w bok przy stick drifcie pada lub minimalnym odchyleniu
+        if (Mathf.Abs(input.x) < 0.08f) input.x = 0f;
+        if (Mathf.Abs(input.y) < 0.08f) input.y = 0f;
+
         Vector3 moveDirection =
-            forward * _moveInput.y +
-            right * _moveInput.x;
+            forward * input.y +
+            right * input.x;
 
         if (moveDirection.sqrMagnitude > 1f)
         {
             moveDirection.Normalize();
         }
 
-        bool wantsToSprint = speedAction.action.IsPressed() && _moveInput.sqrMagnitude > 0.01f;
+        bool wantsToSprint = speedAction.action.IsPressed() && input.sqrMagnitude > 0.01f;
 
         if (useStamina)
         {
@@ -316,12 +330,13 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckForInteractable()
     {
-        if (cameraTransform == null)
+        Transform cam = GetCameraTransform();
+        if (cam == null)
             return;
 
         Ray ray = new Ray(
-            cameraTransform.position,
-            cameraTransform.forward
+            cam.position,
+            cam.forward
         );
 
         IInteractable foundInteractable = null;

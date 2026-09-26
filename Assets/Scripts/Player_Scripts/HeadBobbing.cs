@@ -131,14 +131,14 @@ public class HeadBobbing : MonoBehaviour
             _concussionTimer -= Time.deltaTime;
             concussionFactor = Mathf.Clamp01(_concussionTimer / _concussionDuration) * _concussionIntensity;
 
-            // Pływający roll (przechył Z-axis)
+            // Pływający roll (przechył Z-axis) i lekki pitch
             float rollZ = Mathf.Sin(Time.time * concussionFrequency * Mathf.PI) * (concussionMaxRollAngle * concussionFactor);
             float pitchX = Mathf.Cos(Time.time * concussionFrequency * 0.7f * Mathf.PI) * (concussionMaxRollAngle * 0.4f * concussionFactor);
             transform.localRotation = _defaultLocalRotation * Quaternion.Euler(pitchX, 0f, rollZ);
         }
-        else
+        else if (_concussionDuration > 0f && Quaternion.Angle(transform.localRotation, _defaultLocalRotation) > 0.05f)
         {
-            // Płynny powrót rotacji do bazowej
+            // Płynny powrót rotacji do bazowej TYLKO przez moment po zakończeniu obucha
             transform.localRotation = Quaternion.Slerp(transform.localRotation, _defaultLocalRotation, Time.deltaTime * returnSpeed);
         }
 
@@ -194,12 +194,12 @@ public class HeadBobbing : MonoBehaviour
 
         float extraAmp = 1f + (concussionFactor * 1.8f);
         float offsetY = Mathf.Sin(_bobTimer) * (bobAmplitudeY * extraAmp);
-        float offsetX = Mathf.Cos(_bobTimer * 0.5f) * (bobAmplitudeX * extraAmp);
+        float offsetX = Mathf.Sin(_bobTimer * 0.5f) * (bobAmplitudeX * extraAmp);
 
         if (concussionFactor > 0.01f)
         {
             offsetY += Mathf.Sin(Time.time * concussionFrequency) * (concussionAmplitude * concussionFactor);
-            offsetX += Mathf.Cos(Time.time * concussionFrequency * 0.6f) * (concussionAmplitude * concussionFactor);
+            offsetX += Mathf.Sin(Time.time * concussionFrequency * 0.6f) * (concussionAmplitude * concussionFactor);
         }
 
         Vector3 targetPos = _defaultLocalPosition + new Vector3(offsetX, offsetY, 0f);
@@ -217,12 +217,12 @@ public class HeadBobbing : MonoBehaviour
 
         float extraAmp = 1f + (concussionFactor * 2.5f);
         float offsetY = Mathf.Sin(_idleTimer) * (idleAmplitudeY * extraAmp);
-        float offsetX = Mathf.Cos(_idleTimer * 0.5f) * (idleAmplitudeX * extraAmp);
+        float offsetX = Mathf.Sin(_idleTimer * 0.5f) * (idleAmplitudeX * extraAmp);
 
         if (concussionFactor > 0.01f)
         {
             offsetY += Mathf.Sin(Time.time * concussionFrequency) * (concussionAmplitude * concussionFactor);
-            offsetX += Mathf.Cos(Time.time * concussionFrequency * 0.7f) * (concussionAmplitude * concussionFactor);
+            offsetX += Mathf.Sin(Time.time * concussionFrequency * 0.7f) * (concussionAmplitude * concussionFactor);
         }
 
         Vector3 targetPos = _defaultLocalPosition + new Vector3(offsetX, offsetY, 0f);

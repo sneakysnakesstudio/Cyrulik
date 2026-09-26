@@ -49,6 +49,24 @@ public static class InnerDialogueUIBuilder
         Selection.activeGameObject = clientBox;
     }
 
+    // ──────────────────────────────────────────────────────────
+    // MENU: 5 WERSJI GRAFICZNYCH RAMEK (DIALOG & MYŚLI)
+    // ──────────────────────────────────────────────────────────
+    [MenuItem("Tools/Cyrulik/Dialogue Styles/1. Barber Brass (Mosiądz & Mahoń)", false, 30)]
+    public static void ApplyStyleBarberBrass() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.BarberBrass);
+
+    [MenuItem("Tools/Cyrulik/Dialogue Styles/2. Retro Noir (PSX Stal & [ ])", false, 31)]
+    public static void ApplyStyleRetroNoir() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.RetroNoir);
+
+    [MenuItem("Tools/Cyrulik/Dialogue Styles/3. Vintage Ledger (PRL Akta 1993)", false, 32)]
+    public static void ApplyStyleVintageLedger() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.VintageLedger);
+
+    [MenuItem("Tools/Cyrulik/Dialogue Styles/4. Crimson Razor (Karmazynowa Brzytwa)", false, 33)]
+    public static void ApplyStyleCrimsonRazor() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.CrimsonRazor);
+
+    [MenuItem("Tools/Cyrulik/Dialogue Styles/5. Smoked Velvet (Dymiony Aksamit)", false, 34)]
+    public static void ApplyStyleSmokedVelvet() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.SmokedVelvet);
+
     private static Canvas GetOrCreateCanvas()
     {
         var found = GameObject.Find("Dialogue_Canvas");
@@ -144,6 +162,8 @@ public static class InnerDialogueUIBuilder
         so.FindProperty("promptKeyText").objectReferenceValue = keyTmp;
         so.FindProperty("promptArrowText").objectReferenceValue = arrowTmp;
         so.ApplyModifiedProperties();
+
+        DialogueStyleController.ApplyStyleToInnerThought(dialogueUI, DialogueFrameStyle.BarberBrass);
 
         Undo.RegisterCreatedObjectUndo(thoughtRoot, "Create Thought Bubble");
         return thoughtRoot;
@@ -261,6 +281,8 @@ public static class InnerDialogueUIBuilder
         so.FindProperty("promptKeyText").objectReferenceValue = keyTmp;
         so.FindProperty("promptArrowText").objectReferenceValue = arrowTmp;
         so.ApplyModifiedProperties();
+
+        DialogueStyleController.ApplyStyleToClientDialogue(clientUI, DialogueFrameStyle.BarberBrass);
 
         Undo.RegisterCreatedObjectUndo(clientRoot, "Create Client Dialogue Box");
         return clientRoot;
