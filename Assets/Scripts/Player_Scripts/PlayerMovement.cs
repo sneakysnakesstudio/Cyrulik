@@ -1,162 +1,461 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
+    public event Action<IInteractable> OnInteractableChanged;
+    public event Action OnInteractionPerformed;
+    public event Action<string> OnInteractionBlocked;
+
     [Header("Speed")]
     [SerializeField] private float walkSpeed = 5f;
-    [SerializeField] private float sprintSpeed = 8f;
+    [SerializeField] private float sprintSpeed = 6.5f;
+
+    [Header("Sprint Stamina (3.5 - 5s Dash)")]
+    [SerializeField] private bool useStamina = true;
+    [Tooltip("Maksymalny czas ciągłego sprintu w sekundach (3.5 - 5s).")]
+    [SerializeField] private float maxStamina = 4.0f;
+    [Tooltip("Tempo zużywania staminy na sekundę sprintu.")]
+    [SerializeField] private float staminaDrainRate = 1.0f;
+    [Tooltip("Tempo regeneracji staminy na sekundę odpoczynku.")]
+    [SerializeField] private float staminaRegenRate = 0.85f;
+    [Tooltip("Procent naładowania staminy (np. 0.25 = 25%) wymagany do wznowienia sprintu po wyczerpaniu.")]
+    [SerializeField] private float staminaResumeThreshold = 0.25f;
 
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference speedAction;
-    [SerializeField] private InputActionReference interactionAction;
+    [SerializeField] private InputActionReference interactAction;
 
     [Header("Interaction")]
-    [SerializeField] private LayerMask interactionLayerMask;
     [SerializeField] private float interactionDistance = 3f;
-    [SerializeField] private bool showInteractionRaycast = true;
+    [SerializeField] private LayerMask interactionLayerMask = ~0;
 
     [Header("Gravity")]
     [SerializeField] private float gravity = -12f;
     [SerializeField] private float groundedVelocity = -2f;
 
+    [Header("Footsteps Audio")]
+    [SerializeField] private bool enableFootsteps = true;
+    [SerializeField] private string footstepAudioGroup = "player_steps";
+    [Tooltip("Dystans w metrach między krokami podczas marszu.")]
+    [SerializeField] private float stepDistanceWalk = 1.8f;
+    [Tooltip("Dystans w metrach między krokami podczas sprintu.")]
+    [SerializeField] private float stepDistanceSprint = 1.4f;
+
+    [Header("Safety / Anti-Void")]
+    [Tooltip("Minimalna wysokość Y, poniżej której gracz jest automatycznie cofany do bezpiecznej pozycji.")]
+    [SerializeField] private float voidKillY = -4f;
+
+    private Vector3 _lastSafeGroundedPosition;
+    private bool _hasSafePosition = false;
+
     private CharacterController _characterController;
+
     private Vector2 _moveInput;
     private float _verticalVelocity;
+    private float _stepDistanceCounter;
 
     private IInteractable _currentInteractable;
 
+    // Cache dla CheckForInteractable — zero GC i eliminacja migotania
+    private readonly RaycastHit[] _interactionRaycastHits = new RaycastHit[10];
+    private float _lostInteractableTimer = 0f;
+    [Tooltip("Czas w sekundach podtrzymywania wykrytego obiektu przy mikro-przesunięciach kamery (eliminuje migotanie).")]
+    [SerializeField] private float interactableGracePeriod = 0.09f;
+
+    /// <summary>Czy gracz aktualnie się porusza (uwzględnia input oraz velocity CC).</summary>
+    public bool IsMoving =>
+        _characterController != null &&
+        (_moveInput.sqrMagnitude > 0.01f ||
+         (_characterController.velocity.x * _characterController.velocity.x +
+          _characterController.velocity.z * _characterController.velocity.z > 0.01f));
+
+    private float _currentStamina;
+    private bool _isExhausted = false;
+    private bool _isSprinting = false;
+
+    public static PlayerMovement Instance { get; private set; }
+
+    public float CurrentStamina => _currentStamina;
+    public float MaxStamina => maxStamina;
+    public bool IsSprinting => _isSprinting;
+    public bool IsExhausted => _isExhausted;
+    public IInteractable CurrentInteractable => _currentInteractable;
+    public float InteractionDistance => interactionDistance;
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
     private void Awake()
     {
-        _characterController = GetComponent<CharacterController>();
-    }
+        Instance = this;
 
-    private void Update()
-    {
-        HandleGravity();
-        HandleMovement();
-        HandleInteractionRaycast();
-    }
+        _characterController =
+            GetComponent<CharacterController>();
 
-    private void StoreMovementInput(
-        InputAction.CallbackContext context
-    )
-    {
-        _moveInput = context.ReadValue<Vector2>();
-    }
+        _lastSafeGroundedPosition = transform.position;
+        _hasSafePosition = true;
 
-    private void HandleGravity()
-    {
-        if (_characterController.isGrounded &&
-            _verticalVelocity < 0f)
-        {
-            _verticalVelocity = groundedVelocity;
-        }
-        else
-        {
-            _verticalVelocity += gravity * Time.deltaTime;
-        }
-    }
-
-    private void HandleMovement()
-    {
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
-
-        cameraForward.y = 0f;
-        cameraRight.y = 0f;
-
-        cameraForward.Normalize();
-        cameraRight.Normalize();
-
-        Vector3 moveDirection =
-            cameraRight * _moveInput.x +
-            cameraForward * _moveInput.y;
-
-        moveDirection =
-            Vector3.ClampMagnitude(moveDirection, 1f);
-
-        bool isSprinting = speedAction.action.IsPressed();
-
-        float currentSpeed = isSprinting
-            ? sprintSpeed
-            : walkSpeed;
-
-        Vector3 finalMove = moveDirection * currentSpeed;
-        finalMove.y = _verticalVelocity;
-
-        _characterController.Move(
-            finalMove * Time.deltaTime
-        );
-    }
-
-    private void HandleInteractionRaycast()
-    {
-        _currentInteractable = null;
-
-        Ray ray = new Ray(
-            cameraTransform.position,
-            cameraTransform.forward
-        );
-
-        bool hitSomething = Physics.Raycast(
-            ray,
-            out RaycastHit hit,
-            interactionDistance,
-            interactionLayerMask,
-            QueryTriggerInteraction.Collide
-        );
-
-        if (hitSomething)
-        {
-            _currentInteractable =
-                hit.collider
-                    .GetComponentInParent<IInteractable>();
-        }
-
-        if (showInteractionRaycast)
-        {
-            Debug.DrawRay(
-                ray.origin,
-                ray.direction * interactionDistance,
-                _currentInteractable != null
-                    ? Color.green
-                    : Color.red
-            );
-        }
-    }
-
-    private void HandleInteractionInput(
-        InputAction.CallbackContext context
-    )
-    {
-        _currentInteractable?.Interact();
+        _currentStamina = maxStamina;
     }
 
     private void OnEnable()
     {
         moveAction.action.Enable();
         speedAction.action.Enable();
-        interactionAction.action.Enable();
+        interactAction.action.Enable();
 
-        moveAction.action.performed += StoreMovementInput;
-        moveAction.action.canceled += StoreMovementInput;
+        // Ruch jest odczytywany co klatkę (polling) w HandleMovement — brak callbacków,
+        // więc nie ma ryzyka „zawieszonego” inputu po wyłączeniu/włączeniu komponentu.
 
-        interactionAction.action.started +=
-            HandleInteractionInput;
+        // STARTED = reakcja natychmiast po wciśnięciu E.
+        interactAction.action.started +=
+            HandleInteraction;
     }
 
     private void OnDisable()
     {
-        moveAction.action.performed -= StoreMovementInput;
-        moveAction.action.canceled -= StoreMovementInput;
-        interactionAction.action.started -= HandleInteractionInput;
+        interactAction.action.started -=
+            HandleInteraction;
 
         moveAction.action.Disable();
         speedAction.action.Disable();
-        interactionAction.action.Disable();
+        interactAction.action.Disable();
+
+        // Reset — po ponownym włączeniu postać nie może iść sama z poprzednim inputem
+        _moveInput = Vector2.zero;
+        _isSprinting = false;
+    }
+
+    private void Update()
+    {
+        HandleGravity();
+        HandleMovement();
+        CheckForInteractable();
+        CheckVoidAndSafety();
+    }
+
+    /// <summary>
+    /// Czy ruch i interakcje gracza są zablokowane (np. na ekranie jest tekst dialogu / myśli).
+    /// Jedno źródło prawdy — niezależne od tego, kto i w jakiej kolejności wyłączał komponenty/mapy inputu.
+    /// </summary>
+    public static bool IsInputBlockedByDialogue
+    {
+        get
+        {
+            if (DialogueManager.Instance != null)
+                return DialogueManager.Instance.IsAnyDialogueActive;
+
+            return (InnerDialogueUI.Instance != null && InnerDialogueUI.Instance.IsDialogueActive) ||
+                   (ClientDialogueUI.Instance != null && ClientDialogueUI.Instance.IsDialogueActive);
+        }
+    }
+
+    private void CheckVoidAndSafety()
+    {
+        if (_characterController != null && _characterController.isGrounded && transform.position.y > (voidKillY + 1f))
+        {
+            _lastSafeGroundedPosition = transform.position;
+            _hasSafePosition = true;
+        }
+
+        if (transform.position.y < voidKillY || float.IsNaN(transform.position.x) || float.IsInfinity(transform.position.x))
+        {
+            RecoverPlayerToSafePosition();
+        }
+    }
+
+    public void RecoverPlayerToSafePosition()
+    {
+        if (_characterController != null)
+        {
+            _characterController.enabled = false;
+        }
+
+        transform.position = _hasSafePosition ? (_lastSafeGroundedPosition + Vector3.up * 0.1f) : new Vector3(0f, 1f, 0f);
+        _verticalVelocity = 0f;
+
+        if (_characterController != null)
+        {
+            _characterController.enabled = true;
+        }
+
+        DevLog.LogWarning("[PlayerMovement] Wykryto wypadnięcie poza mapę! Gracz został bezpiecznie przywrócony na podłogę.");
+    }
+
+    private void HandleGravity()
+    {
+        if (_characterController.isGrounded)
+        {
+            if (_verticalVelocity < 0f)
+            {
+                _verticalVelocity =
+                    groundedVelocity;
+            }
+        }
+        else
+        {
+            _verticalVelocity +=
+                gravity * Time.deltaTime;
+        }
+    }
+
+    private Transform GetCameraTransform()
+    {
+        if (Camera.main != null)
+            return Camera.main.transform;
+
+        if (cameraTransform != null)
+            return cameraTransform;
+
+        return transform;
+    }
+
+    private void HandleMovement()
+    {
+        // Polling inputu co klatkę (zero GC). Gdy na ekranie jest tekst — brak ruchu (grawitacja działa dalej).
+        _moveInput = (!IsInputBlockedByDialogue && moveAction.action.enabled)
+            ? moveAction.action.ReadValue<Vector2>()
+            : Vector2.zero;
+
+        Transform cam = GetCameraTransform();
+        if (cam == null)
+            return;
+
+        Vector3 forward = cam.forward;
+        Vector3 right = cam.right;
+
+        forward.y = 0f;
+        right.y = 0f;
+
+        forward.Normalize();
+        right.Normalize();
+
+        Vector2 input = _moveInput;
+        // Deadzone dla ruchu — zapobiega znoszeniu postaci w bok przy stick drifcie pada lub minimalnym odchyleniu
+        if (Mathf.Abs(input.x) < 0.08f) input.x = 0f;
+        if (Mathf.Abs(input.y) < 0.08f) input.y = 0f;
+
+        Vector3 moveDirection =
+            forward * input.y +
+            right * input.x;
+
+        if (moveDirection.sqrMagnitude > 1f)
+        {
+            moveDirection.Normalize();
+        }
+
+        bool wantsToSprint = speedAction.action.IsPressed() && input.sqrMagnitude > 0.01f;
+
+        if (useStamina)
+        {
+            if (wantsToSprint && !_isExhausted && _currentStamina > 0f)
+            {
+                _isSprinting = true;
+                _currentStamina -= staminaDrainRate * Time.deltaTime;
+                if (_currentStamina <= 0f)
+                {
+                    _currentStamina = 0f;
+                    _isExhausted = true;
+                    _isSprinting = false;
+                }
+            }
+            else
+            {
+                _isSprinting = false;
+                if (_currentStamina < maxStamina)
+                {
+                    _currentStamina += staminaRegenRate * Time.deltaTime;
+                    if (_currentStamina >= maxStamina)
+                    {
+                        _currentStamina = maxStamina;
+                    }
+                }
+
+                if (_isExhausted && _currentStamina >= (maxStamina * staminaResumeThreshold))
+                {
+                    _isExhausted = false;
+                }
+            }
+
+            if (SprintStaminaUI.Instance != null)
+            {
+                SprintStaminaUI.Instance.UpdateStamina(_currentStamina, maxStamina, _isExhausted, _isSprinting);
+            }
+        }
+        else
+        {
+            _isSprinting = wantsToSprint;
+        }
+
+        float currentSpeed = _isSprinting ? sprintSpeed : walkSpeed;
+
+        Vector3 velocity =
+            moveDirection * currentSpeed;
+
+        velocity.y =
+            _verticalVelocity;
+
+        _characterController.Move(
+            velocity * Time.deltaTime
+        );
+
+        Vector3 horizontalVelocity = new Vector3(_characterController.velocity.x, 0f, _characterController.velocity.z);
+        HandleFootsteps(horizontalVelocity, _isSprinting);
+    }
+
+    private void HandleFootsteps(Vector3 horizontalVelocity, bool isSprinting)
+    {
+        if (!enableFootsteps || !_characterController.isGrounded)
+            return;
+
+        float speed = horizontalVelocity.magnitude;
+        if (speed < 0.15f)
+        {
+            return;
+        }
+
+        float stepInterval = isSprinting ? stepDistanceSprint : stepDistanceWalk;
+        _stepDistanceCounter += speed * Time.deltaTime;
+
+        if (_stepDistanceCounter >= stepInterval)
+        {
+            _stepDistanceCounter = 0f;
+            if (!string.IsNullOrEmpty(footstepAudioGroup) && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.Play(footstepAudioGroup);
+            }
+        }
+    }
+
+    private void CheckForInteractable()
+    {
+        Transform cam = GetCameraTransform();
+        if (cam == null)
+            return;
+
+        Ray ray = new Ray(
+            cam.position,
+            cam.forward
+        );
+
+        IInteractable foundInteractable = null;
+
+        int hitCount = Physics.RaycastNonAlloc(
+            ray,
+            _interactionRaycastHits,
+            interactionDistance,
+            interactionLayerMask,
+            QueryTriggerInteraction.Ignore
+        );
+
+        if (hitCount > 0)
+        {
+            float closestDistance = float.MaxValue;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = _interactionRaycastHits[i];
+                if (hit.collider == null) continue;
+
+                // 1. Sprawdź czy sam collider lub jego rodzic to interactable
+                IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
+
+                // 2. Jeśli nie znaleziono w rodzicach, sprawdź dzieci (częsty przypadek np. lodówki, gdzie collider jest na root obudowy)
+                if (interactable == null)
+                {
+                    interactable = hit.collider.GetComponentInChildren<IInteractable>();
+                }
+
+                if (interactable != null)
+                {
+                    if (hit.distance < closestDistance)
+                    {
+                        closestDistance = hit.distance;
+                        foundInteractable = interactable;
+                    }
+                }
+            }
+        }
+
+        // Histereza / Anti-flicker: jeśli chwilowo zgubiono promień (np. mikroruch kamery lub krawędź lodówki),
+        // podtrzymujemy dotychczasowy interactable przez krótki bufor czasowy (interactableGracePeriod)
+        if (foundInteractable != null)
+        {
+            _lostInteractableTimer = 0f;
+        }
+        else if (_currentInteractable != null)
+        {
+            _lostInteractableTimer += Time.deltaTime;
+            if (_lostInteractableTimer < interactableGracePeriod)
+            {
+                // Podtrzymaj poprzedni obiekt, zapobiegając migotaniu
+                return;
+            }
+        }
+
+        if (foundInteractable == _currentInteractable)
+            return;
+
+        _currentInteractable = foundInteractable;
+
+        OnInteractableChanged?.Invoke(_currentInteractable);
+
+        if (_currentInteractable is ILookAtHandler lookAtHandler)
+        {
+            lookAtHandler.OnLookAt();
+        }
+    }
+
+    private void HandleInteraction(
+        InputAction.CallbackContext context
+    )
+    {
+        if (_currentInteractable == null)
+            return;
+
+        // Jeśli obiekt wymaga przytrzymania (Hold to Open), procesem zarządza Crosshair!
+        if (_currentInteractable is IHoldInteractable holdInteractable && holdInteractable.RequiresHold)
+            return;
+
+        PerformInteraction();
+    }
+
+    public void PerformInteraction()
+    {
+        if (_currentInteractable == null)
+            return;
+
+        // Gdy na ekranie jest tekst, E służy tylko do przewijania dialogu
+        if (IsInputBlockedByDialogue)
+            return;
+
+        if (_currentInteractable is IConditionalInteractable conditional)
+        {
+            if (!conditional.CanInteract)
+            {
+                OnInteractionBlocked?.Invoke(conditional.BlockedMessage);
+                return;
+            }
+        }
+
+        _currentInteractable.Interact();
+
+        OnInteractionPerformed?.Invoke();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 }

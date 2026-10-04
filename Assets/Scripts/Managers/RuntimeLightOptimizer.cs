@@ -1,0 +1,138 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
+/// <summary>
+/// Optymalizator świateł runtime.
+/// W buildzie wyłącza kosztowne real-time shadows z Point/Spot lightów — główna przyczyna
+/// spadków FPS przy włączaniu świateł w URP (każde takie światło generuje osobną 1024x1024 shadowmapę).
+/// Na poziomie Low stosuje ForceVertex rendering dla jeszcze większego zysku FPS.
+/// Nie dotyka Directional Light (główne oświetlenie sceny).
+/// Dodaj ten komponent raz do dowolnego GameObject w scenie.
+/// </summary>
+public class RuntimeLightOptimizer : MonoBehaviour
+{
+    [Header("Shadow Settings")]
+    [Tooltip("Wyłącz cienie z Point/Spot lightów (największy zysk FPS w buildzie).")]
+    [SerializeField] private bool disableAdditionalLightShadows = true;
+
+    [Tooltip("Maksymalna odległość od gracza, przy której światło może rzucać cień (0 = wyłączone).")]
+    [SerializeField] private float shadowCastingMaxDistance = 3f;
+
+    [Tooltip("Jak często sprawdzać odległość do świateł (sekundy). Mniejsze = dokładniejsze, większe = szybsze.")]
+    [SerializeField] private float updateInterval = 0.1f;
+
+    [Header("Range Culling")]
+    [Tooltip("Wyłącz światła całkowicie gdy gracz jest dalej niż ta odległość.")]
+    [SerializeField] private float lightCullDistance = 10f;
+
+    [Tooltip("Czy włączyć distance culling świateł.")]
+    [SerializeField] private bool enableDistanceCulling = true;
+
+    // ---
+
+    private Light[] _allLights;
+    private LightShadows[] _originalShadows;
+    private Camera _playerCamera;
+    private float _timer;
+
+    // --- OPTYMALIZACJA: Pre-obliczone kwadraty odległości (unikamy sqrt w Vector3.Distance każdą klatkę) ---
+    private float _lightCullDistSqr;
+    private float _shadowMaxDistSqr;
+
+    private void Start()
+    {
+        _playerCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+
+        // OPTYMALIZACJA: Pre-oblicz kwadraty odległości raz — brak sqrt w każdej klatce Update
+        _lightCullDistSqr = lightCullDistance * lightCullDistance;
+        _shadowMaxDistSqr = shadowCastingMaxDistance * shadowCastingMaxDistance;
+
+        // Zbierz wszystkie światła w scenie
+        _allLights = FindObjectsByType<Light>(FindObjectsInactive.Include);
+        _originalShadows = new LightShadows[_allLights.Length];
+
+        for (int i = 0; i < _allLights.Length; i++)
+        {
+            _originalShadows[i] = _allLights[i].shadows;
+        }
+
+        // W buildzie aplikuj optymalizacje natychmiast
+        ApplyOptimizations();
+    }
+
+    private void ApplyOptimizations()
+    {
+        if (_allLights == null) return;
+
+        bool isLowQuality = QualitySettings.GetQualityLevel() == 0;
+
+        foreach (Light light in _allLights)
+        {
+            if (light == null) continue;
+
+            // Directional light = główne oświetlenie sceny — nie ruszamy
+            if (light.type == LightType.Directional) continue;
+
+            // Point i Spot — wyłącz kosztowne real-time shadows
+            if (disableAdditionalLightShadows)
+            {
+                light.shadows = LightShadows.None;
+            }
+
+            // Na niskim poziomie jakości — włącz vertex lighting (ogromny zysk FPS na słabym GPU)
+            if (isLowQuality)
+            {
+                light.renderMode = LightRenderMode.ForceVertex;
+            }
+        }
+
+        DevLog.Log($"[RuntimeLightOptimizer] Zoptymalizowano {_allLights.Length} świateł — wyłączono real-time shadows z Point/Spot lightów. LowQuality ForceVertex: {isLowQuality}");
+    }
+
+    private void Update()
+    {
+        // Distance culling — opcjonalne, dodatkowa oszczędność
+        if (!enableDistanceCulling || _playerCamera == null || _allLights == null) return;
+
+        _timer += Time.unscaledDeltaTime;
+        if (_timer < updateInterval) return;
+        _timer = 0f;
+
+        Vector3 playerPos = _playerCamera.transform.position;
+
+        for (int i = 0; i < _allLights.Length; i++)
+        {
+            Light light = _allLights[i];
+            if (light == null) continue;
+            if (light.type == LightType.Directional) continue;
+
+            // Światło włączone przez grę (intensity > 0) — sprawdź odległość
+            if (light.intensity > 0.01f)
+            {
+                // OPTYMALIZACJA: sqrMagnitude zamiast Vector3.Distance — brak kosztownego sqrt
+                Vector3 delta = light.transform.position - playerPos;
+                float distSqr = delta.sqrMagnitude;
+
+                if (lightCullDistance > 0)
+                {
+                    light.enabled = distSqr <= _lightCullDistSqr;
+                }
+
+                // Włącz shadow casting tylko gdy gracz jest blisko
+                if (light.enabled && disableAdditionalLightShadows && shadowCastingMaxDistance > 0)
+                {
+                    light.shadows = distSqr <= _shadowMaxDistSqr
+                        ? LightShadows.Hard
+                        : LightShadows.None;
+                }
+            }
+        }
+    }
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState() { }
+#endif
+}

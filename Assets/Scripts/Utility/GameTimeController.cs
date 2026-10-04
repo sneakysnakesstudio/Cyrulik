@@ -1,0 +1,211 @@
+using System;
+using TMPro;
+using UnityEngine;
+
+public class GameTimeController : MonoBehaviour
+{
+    [Header("Start Time")]
+    [SerializeField] private int startHour = 16;
+    [SerializeField] private int startMinute = 57;
+    [SerializeField] private int startSecond = 0;
+
+    [Header("Opening Time")]
+    [SerializeField] private int openingHour = 17;
+    [SerializeField] private int openingMinute = 0;
+
+    [Header("Time Settings")]
+    [Tooltip("1 = jedna sekunda realna to jedna sekunda w grze.")]
+    [SerializeField] private float timeScale = 1f;
+    [SerializeField] private bool isPaused = false;
+
+    [Header("UI")]
+    [SerializeField] private TMP_Text timeText;
+    
+    [Tooltip("Tekst przed czasem. Zrób tu np. 'Autumn 1986r, Polish village\nTime: '")]
+    [TextArea]
+    [SerializeField] private string prefixText = "";
+
+    [Header("Dźwięk Cykania Zegara (Clock Tick SFX)")]
+    [Tooltip("Czy odtwarzać dźwięk cykania zegara co sekundę?")]
+    [SerializeField] private bool enableTickSound = true;
+
+    [Tooltip("Nazwa grupy dźwiękowej w AudioManagerze (np. clock_tick).")]
+    [SerializeField] private string tickAudioGroup = "clock_tick";
+
+    [Tooltip("Opcjonalny bezpośredni AudioClip cyknięcia (możesz go tu wrzucić z Project).")]
+    [SerializeField] private AudioClip tickAudioClip;
+
+    [Tooltip("Głośność cyknięcia zegara.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float tickVolume = 0.6f;
+
+    [Tooltip("Czy lekko losować pitch (ton) cykania, żeby brzmiało naturalnie (tik-tak)?")]
+    [SerializeField] private bool alternatePitch = true;
+
+    private AudioSource _tickAudioSource;
+    private bool _pitchToggle = false;
+
+    public static GameTimeController Instance { get; private set; }
+
+    public event Action OnOpeningTimeReached;
+
+    public int Hour => Mathf.FloorToInt(_currentTime / 3600f) % 24;
+    public int Minute => Mathf.FloorToInt(_currentTime / 60f) % 60;
+    public int Second => Mathf.FloorToInt(_currentTime) % 60;
+
+    public bool OpeningTimeReached { get; private set; }
+
+    public float CurrentTimeInSeconds => _currentTime;
+
+    public bool HasTimeReached(int hour, int minute, int second = 0)
+    {
+        float targetTime = hour * 3600f + minute * 60f + second;
+        return _currentTime >= targetTime;
+    }
+
+    private float _currentTime;
+    private float _openingTime;
+
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        Instance = null;
+    }
+#endif
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this && Instance.gameObject != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
+
+    private void Start()
+    {
+        _currentTime =
+            startHour * 3600f +
+            startMinute * 60f +
+            startSecond;
+
+        _openingTime =
+            openingHour * 3600f +
+            openingMinute * 60f;
+
+        UpdateTimeUI();
+    }
+
+    private int _lastDisplayedSecond = -1;
+
+    private void Update()
+    {
+        if (isPaused) return;
+
+        _currentTime += Time.deltaTime * timeScale;
+
+        // Pełna doba
+        if (_currentTime >= 86400f)
+            _currentTime -= 86400f;
+
+        CheckOpeningTime();
+
+        // Aktualizuj UI tylko gdy zmieniła się sekunda — eliminuje GC alokacje stringów co klatkę
+        int currentSecond = Second;
+        if (currentSecond != _lastDisplayedSecond)
+        {
+            _lastDisplayedSecond = currentSecond;
+            UpdateTimeUI();
+            PlayTickSound();
+        }
+    }
+
+    private void PlayTickSound()
+    {
+        if (!enableTickSound) return;
+
+        // 1. Z AudioManager (jeśli istnieje taka grupa)
+        if (!string.IsNullOrWhiteSpace(tickAudioGroup) && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(tickAudioGroup);
+            return;
+        }
+
+        // 2. Z bezpośredniego AudioClip
+        if (tickAudioClip != null)
+        {
+            if (_tickAudioSource == null)
+            {
+                _tickAudioSource = GetComponent<AudioSource>();
+                if (_tickAudioSource == null)
+                {
+                    _tickAudioSource = gameObject.AddComponent<AudioSource>();
+                    _tickAudioSource.playOnAwake = false;
+                    _tickAudioSource.spatialBlend = 0f; // 2D UI sound
+                }
+            }
+
+            if (alternatePitch)
+            {
+                _pitchToggle = !_pitchToggle;
+                _tickAudioSource.pitch = _pitchToggle ? 1.03f : 0.97f;
+            }
+            else
+            {
+                _tickAudioSource.pitch = 1f;
+            }
+
+            _tickAudioSource.PlayOneShot(tickAudioClip, tickVolume);
+        }
+    }
+
+    private void CheckOpeningTime()
+    {
+        if (OpeningTimeReached)
+            return;
+
+        if (_currentTime >= _openingTime)
+        {
+            OpeningTimeReached = true;
+
+            DevLog.Log("Opening time reached!");
+
+            OnOpeningTimeReached?.Invoke();
+        }
+    }
+
+    private void UpdateTimeUI()
+    {
+        if (timeText == null)
+            return;
+
+        timeText.text = $"{prefixText}{Hour:00}:{Minute:00}:{Second:00}";
+    }
+
+    public void Pause() => isPaused = true;
+    public void Resume() => isPaused = false;
+    public void SetTickingEnabled(bool enabled) => enableTickSound = enabled;
+
+    public void SetTime(int hour, int minute, int second = 0)
+    {
+        _currentTime =
+            hour * 3600f +
+            minute * 60f +
+            second;
+
+        OpeningTimeReached = _currentTime >= _openingTime;
+
+        UpdateTimeUI();
+    }
+}

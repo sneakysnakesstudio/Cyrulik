@@ -1,0 +1,170 @@
+[
+  {
+    "id": "01_Classic_Spectrum_Vibrant",
+    "name": "Klasyczne Tęcza HSV (Enhanced Master)",
+    "description": "Ulepszona wersja oryginalnej palety 2-warstwowej. Nasycone, czyste barwy spektrum, naturalny kremowo-biały blik specularny i głęboki czarny cień.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "01_Classic_Spectrum_Vibrant_2Tier_32x64.png",
+      "01_Classic_Spectrum_Vibrant_2Tier_HD_64x128.png",
+      "01_Classic_Spectrum_Vibrant_3Tier_32x96.png",
+      "01_Classic_Spectrum_Vibrant_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "02_Oklch_Perceptual_Balanced",
+    "name": "Perceptualnie Zbalansowana Oklch",
+    "description": "Nowoczesna paleta w przestrzeni Oklch. Likwiduje wypalenia żółci i sztuczne ściemnienia błękitu, oferując idealnie jednorodną jasność każdego odcienia.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "02_Oklch_Perceptual_Balanced_2Tier_32x64.png",
+      "02_Oklch_Perceptual_Balanced_2Tier_HD_64x128.png",
+      "02_Oklch_Perceptual_Balanced_3Tier_32x96.png",
+      "02_Oklch_Perceptual_Balanced_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "03_Cyberpunk_Neon_Overdrive",
+    "name": "Cyberpunk & Synthwave Neon",
+    "description": "Ultra-energetyczne neonowe barwy (Acid Magenta, Neon Violet, Cyber Cyan, Laser Green, Electric Yellow) z głębokim nocnym granatem w cieniach.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "03_Cyberpunk_Neon_Overdrive_2Tier_32x64.png",
+      "03_Cyberpunk_Neon_Overdrive_2Tier_HD_64x128.png",
+      "03_Cyberpunk_Neon_Overdrive_3Tier_32x96.png",
+      "03_Cyberpunk_Neon_Overdrive_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "04_Cinematic_Teal_Orange",
+    "name": "Kinowy Teal & Orange (Hollywood Grade)",
+    "description": "Klasyczny hollywoodzki color grading: ciepłe, złociste odcienie w światłach (odcienie skóry) i głęboki turkusowo-morski odcień w cieniach.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "04_Cinematic_Teal_Orange_2Tier_32x64.png",
+      "04_Cinematic_Teal_Orange_2Tier_HD_64x128.png",
+      "04_Cinematic_Teal_Orange_3Tier_32x96.png",
+      "04_Cinematic_Teal_Orange_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "05_Anime_Ghibli_Pastel",
+    "name": "Anime & Studio Ghibli Pastel",
+    "description": "Stylistyka japońskiego anime i filmów Ghibli: ciepłe słoneczne światła, soczysta zieleń traw, błękity nieba i miękki cel-shading.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "05_Anime_Ghibli_Pastel_2Tier_32x64.png",
+      "05_Anime_Ghibli_Pastel_2Tier_HD_64x128.png",
+      "05_Anime_Ghibli_Pastel_3Tier_32x96.png",
+      "05_Anime_Ghibli_Pastel_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "06_Golden_Hour_Sunset",
+    "name": "Złota Godzina & Zmierzch (Sunset)",
+    "description": "Ciepła paleta zachodzącego słońca: brzoskwiniowe światła, bursztynowy ogień, purpura zmierzchu i głęboki granat w cieniach.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "06_Golden_Hour_Sunset_2Tier_32x64.png",
+      "06_Golden_Hour_Sunset_2Tier_HD_64x128.png",
+      "06_Golden_Hour_Sunset_3Tier_32x96.png",
+      "06_Golden_Hour_Sunset_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "07_Dark_Fantasy_Arcane",
+    "name": "Mroczne Fantasy & Magiczny Szmaragd",
+    "description": "Gotycki klimat dark fantasy: królewskie bordo, szmaragdowy płomień, płynne złoto, ametyst i obsydianowa czerń.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "07_Dark_Fantasy_Arcane_2Tier_32x64.png",
+      "07_Dark_Fantasy_Arcane_2Tier_HD_64x128.png",
+      "07_Dark_Fantasy_Arcane_3Tier_32x96.png",
+      "07_Dark_Fantasy_Arcane_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "08_Grimdark_Industrial_Rust",
+    "name": "Grimdark Taktyczny & Rdza Mechów",
+    "description": "Brudny, industrialny styl sci-fi: rdzawy oranż, wojskowy oliwkowy, stalowy błękit, mosiądz i grafitowy sadzowy dym.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "08_Grimdark_Industrial_Rust_2Tier_32x64.png",
+      "08_Grimdark_Industrial_Rust_2Tier_HD_64x128.png",
+      "08_Grimdark_Industrial_Rust_3Tier_32x96.png",
+      "08_Grimdark_Industrial_Rust_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "09_Vaporwave_Retro_80s",
+    "name": "Vaporwave & Retro Pastel 1986",
+    "description": "Aestetyka retro lat 80.: pastelowy róż, miękka lawenda, neonowa mięta, morela i nostalgiczny fioletowy gradient neutralny.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "09_Vaporwave_Retro_80s_2Tier_32x64.png",
+      "09_Vaporwave_Retro_80s_2Tier_HD_64x128.png",
+      "09_Vaporwave_Retro_80s_3Tier_32x96.png",
+      "09_Vaporwave_Retro_80s_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "10_Nordic_Frost_Bioluminescence",
+    "name": "Nordic Frost & Lodowa Zorza",
+    "description": "Arktyczna paleta mrozu: krystaliczny błękit, szmaragdowa zorza polarna, lodowy fiolet i głęboka polarna noc.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "10_Nordic_Frost_Bioluminescence_2Tier_32x64.png",
+      "10_Nordic_Frost_Bioluminescence_2Tier_HD_64x128.png",
+      "10_Nordic_Frost_Bioluminescence_3Tier_32x96.png",
+      "10_Nordic_Frost_Bioluminescence_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "11_Toxic_Acid_Wasteland",
+    "name": "Toksyczne Pustkowie & Biohazard",
+    "description": "Żrące, radioaktywne tony: kwasowa jaskrawa zieleń, jadowity żółty, toksyczny fiolet i popielaty pył.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "11_Toxic_Acid_Wasteland_2Tier_32x64.png",
+      "11_Toxic_Acid_Wasteland_2Tier_HD_64x128.png",
+      "11_Toxic_Acid_Wasteland_3Tier_32x96.png",
+      "11_Toxic_Acid_Wasteland_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "12_Retro_Arcade_16Bit",
+    "name": "16-Bit Super Arcade (CPS2 / Neo-Geo)",
+    "description": "Klasyczny soczysty arcade lat 90.: wyraziste, nasycone retro kolory o podbitym kontraście, idealne do dynamicznych gier 2D/3D retro.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "12_Retro_Arcade_16Bit_2Tier_32x64.png",
+      "12_Retro_Arcade_16Bit_2Tier_HD_64x128.png",
+      "12_Retro_Arcade_16Bit_3Tier_32x96.png",
+      "12_Retro_Arcade_16Bit_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "13_Thermal_Heatmap_Infrared",
+    "name": "Termowizja & Heatmap Infrared",
+    "description": "Stylizowany noktowizor i kamera termowizyjna: Biały rdzeń -> Żółty -> Czerwień -> Magenta -> Kobaltowy Błękit -> Czerń.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "13_Thermal_Heatmap_Infrared_2Tier_32x64.png",
+      "13_Thermal_Heatmap_Infrared_2Tier_HD_64x128.png",
+      "13_Thermal_Heatmap_Infrared_3Tier_32x96.png",
+      "13_Thermal_Heatmap_Infrared_5Tier_32x160.png"
+    ]
+  },
+  {
+    "id": "14_Noir_Sepia_Vintage",
+    "name": "Vintage Sepia & Kino Noir",
+    "description": "Stylowa fotografia analogowa i kino retro: szlachetna ciepła sepia, srebrzysto-szary filmowy monochromatyzm i bogate światłocienie.",
+    "recommended_for": "Saturation Layers = 2 (p2) lub 3/5",
+    "files": [
+      "14_Noir_Sepia_Vintage_2Tier_32x64.png",
+      "14_Noir_Sepia_Vintage_2Tier_HD_64x128.png",
+      "14_Noir_Sepia_Vintage_3Tier_32x96.png",
+      "14_Noir_Sepia_Vintage_5Tier_32x160.png"
+    ]
+  }
+]

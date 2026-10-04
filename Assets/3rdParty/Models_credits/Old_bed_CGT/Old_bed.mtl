@@ -1,0 +1,11 @@
+newmtl Old_bedSG
+illum 4
+Kd 0.00 0.00 0.00
+Ka 0.00 0.00 0.00
+Tf 1.00 1.00 1.00
+map_Kd Old_bed_Dif.png
+bump Old_bed_Norm.png -bm 0.68
+Ni 1.00
+Ks 0.00 0.00 0.00
+map_Ks Old_bed_Gloss.png
+Ns 26.09
