@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// </summary>
 public static class CrosshairSetupBuilder
 {
-    [MenuItem("Tools/Cyrulik/Auto-Setup Crosshair & Icons (Pytajnik, Kółko, Kwadrat)", false, 10)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Auto-Setup Crosshair & Icons", false, 7)]
     public static void SetupCrosshairAndIcons()
     {
         // 1. Upewnij się, że sprite'y w Assets/Art/UI_HoldIcons/ są wygenerowane

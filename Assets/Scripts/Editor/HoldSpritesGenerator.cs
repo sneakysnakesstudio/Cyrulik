@@ -11,7 +11,7 @@ public static class HoldSpritesGenerator
 {
     private const string FOLDER_PATH = "Assets/Art/UI_HoldIcons";
 
-    [MenuItem("Tools/Cyrulik/Generate Hold UI Sprites (10 Ikon/Ramek)", false, 20)]
+    [MenuItem("Tools/Cyrulik/Generatory Grafik/Generate Hold UI Sprites (10 Ikon/Ramek)", false, 1)]
     public static void GenerateAllSprites()
     {
         if (!Directory.Exists(FOLDER_PATH))

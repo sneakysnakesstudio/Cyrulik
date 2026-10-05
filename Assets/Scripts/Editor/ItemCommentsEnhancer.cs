@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 public static class ItemCommentsEnhancer
 {
-    [MenuItem("Tools/Cyrulik/Apply Rich Item Comments to Scene", false, 15)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Apply Rich Item Comments to Scene", false, 3)]
     public static void ApplyRichItemComments()
     {
         int modifiedCount = 0;

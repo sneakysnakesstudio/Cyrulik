@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public static class InnerDialogueUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Full Dialogue System (Thoughts + Client)", false, 1)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Full Dialogue System (Thoughts + Client)", false, 3)]
     [MenuItem("GameObject/UI/Cyrulik - Full Dialogue System", false, 10)]
     public static void CreateFullDialogueSystem()
     {
@@ -33,7 +33,7 @@ public static class InnerDialogueUIBuilder
         Debug.Log("[DialogueUIBuilder] Pomyślnie utworzono pełny system dialogów (Chmurka Myśli + Dialog Klienta + DialogueManager)!");
     }
 
-    [MenuItem("Tools/Cyrulik/Create Thought Bubble (Inner Thoughts)", false, 2)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Thought Bubble (Inner Thoughts)", false, 4)]
     public static void CreateThoughtBubbleMenu()
     {
         Canvas canvas = GetOrCreateCanvas();
@@ -41,7 +41,7 @@ public static class InnerDialogueUIBuilder
         Selection.activeGameObject = thought;
     }
 
-    [MenuItem("Tools/Cyrulik/Create Client Dialogue Box (Rectangular)", false, 3)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Client Dialogue Box (Rectangular)", false, 5)]
     public static void CreateClientDialogueBoxMenu()
     {
         Canvas canvas = GetOrCreateCanvas();
@@ -52,19 +52,19 @@ public static class InnerDialogueUIBuilder
     // ──────────────────────────────────────────────────────────
     // MENU: 5 WERSJI GRAFICZNYCH RAMEK (DIALOG & MYŚLI)
     // ──────────────────────────────────────────────────────────
-    [MenuItem("Tools/Cyrulik/Dialogue Styles/1. Barber Brass (Mosiądz & Mahoń)", false, 30)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Dialogue Styles/1. Barber Brass (Mosiądz & Mahoń)", false, 30)]
     public static void ApplyStyleBarberBrass() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.BarberBrass);
 
-    [MenuItem("Tools/Cyrulik/Dialogue Styles/2. Retro Noir (PSX Stal & [ ])", false, 31)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Dialogue Styles/2. Retro Noir (PSX Stal & [ ])", false, 31)]
     public static void ApplyStyleRetroNoir() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.RetroNoir);
 
-    [MenuItem("Tools/Cyrulik/Dialogue Styles/3. Vintage Ledger (PRL Akta 1993)", false, 32)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Dialogue Styles/3. Vintage Ledger (PRL Akta 1993)", false, 32)]
     public static void ApplyStyleVintageLedger() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.VintageLedger);
 
-    [MenuItem("Tools/Cyrulik/Dialogue Styles/4. Crimson Razor (Karmazynowa Brzytwa)", false, 33)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Dialogue Styles/4. Crimson Razor (Karmazynowa Brzytwa)", false, 33)]
     public static void ApplyStyleCrimsonRazor() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.CrimsonRazor);
 
-    [MenuItem("Tools/Cyrulik/Dialogue Styles/5. Smoked Velvet (Dymiony Aksamit)", false, 34)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Dialogue Styles/5. Smoked Velvet (Dymiony Aksamit)", false, 34)]
     public static void ApplyStyleSmokedVelvet() => DialogueStyleController.ApplyGlobalStyle(DialogueFrameStyle.SmokedVelvet);
 
     private static Canvas GetOrCreateCanvas()

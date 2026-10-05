@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public static class ControlsUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Controls UI (Klawiszologia)", false, 3)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Controls UI (Klawiszologia)", false, 6)]
     [MenuItem("GameObject/UI/Cyrulik - Controls UI (Klawiszologia)", false, 12)]
     public static void CreateControlsUI()
     {

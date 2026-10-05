@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 /// </summary>
 public class DevLogMigrator : Editor
 {
-    [MenuItem("Tools/Cyrulik/Migrate Debug.Log to DevLog (One-Time)", false, 200)]
+    [MenuItem("Tools/Cyrulik/Dev & Narzędzia/Migrate Debug.Log to DevLog (One-Time)", false, 200)]
     public static void MigrateAll()
     {
         string scriptsRoot = Path.Combine(Application.dataPath, "Scripts");

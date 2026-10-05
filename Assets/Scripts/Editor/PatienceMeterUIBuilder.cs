@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public static class PatienceMeterUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Patience Meter UI", false, 5)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Patience Meter UI", false, 11)]
     [MenuItem("GameObject/UI/Cyrulik - Patience Meter UI", false, 13)]
     public static void CreatePatienceMeterUI()
     {

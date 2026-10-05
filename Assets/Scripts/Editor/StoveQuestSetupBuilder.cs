@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public static class StoveQuestSetupBuilder
 {
-    [MenuItem("Tools/Cyrulik/3. Setup Stove Quest Visuals & References", false, 3)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Setup Stove Quest Visuals & References", false, 7)]
     public static void SetupStoveQuest()
     {
         // 1. Znajdź StoveController w scenie

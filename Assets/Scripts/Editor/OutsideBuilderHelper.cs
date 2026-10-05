@@ -1,9 +1,9 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 public static class OutsideBuilderHelper
 {
-    [MenuItem("Tools/Cyrulik/⚡ Build Quick Outside Courtyard (1-Click)", false, 50)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Build Quick Outside Courtyard", false, 30)]
     public static void BuildQuickOutside()
     {
         // 1. Root container

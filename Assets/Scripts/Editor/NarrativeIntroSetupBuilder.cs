@@ -13,7 +13,7 @@ using UnityEngine;
 /// </summary>
 public static class NarrativeIntroSetupBuilder
 {
-    [MenuItem("Tools/Cyrulik/Setup Narrative Intro & Drawers", false, 15)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Setup Narrative Intro & Drawers", false, 5)]
     public static void SetupNarrativeIntro()
     {
         // 1. Znajdź lub skonfiguruj szafę (Wardrobe)

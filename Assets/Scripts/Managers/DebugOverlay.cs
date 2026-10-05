@@ -37,7 +37,7 @@ public class DebugOverlay : MonoBehaviour
     [SerializeField] private bool pinQuestTracker = false;
 
 #if UNITY_EDITOR
-    [MenuItem("Tools/Cyrulik/Add Dev Debug Overlay to Scene", false, 50)]
+    [MenuItem("Tools/Cyrulik/Dev & Narzędzia/Add Dev Debug Overlay to Scene", false, 10)]
     public static void AddDebugOverlayToScene()
     {
         DebugOverlay existing = FindAnyObjectByType<DebugOverlay>();
@@ -55,7 +55,7 @@ public class DebugOverlay : MonoBehaviour
         }
     }
 
-    [MenuItem("Tools/Cyrulik/Fix & Optimize All UI Canvas Scalers", false, 40)]
+    [MenuItem("Tools/Cyrulik/Dev & Narzędzia/Fix & Optimize All UI Canvas Scalers", false, 20)]
     public static void FixAllSceneCanvasScalersMenu()
     {
         FixAllSceneCanvasScalers();

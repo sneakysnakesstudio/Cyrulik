@@ -14,7 +14,7 @@ public static class ItemShowcaseBuilder
     private const string CANVAS_NAME = "ItemShowcase_Canvas";
     private const string STUDIO_NAME = "ItemShowcase_Studio";
 
-    [MenuItem("Tools/Cyrulik/★ Setup All: Showcase System, Scissors & Comments", false, 0)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/★ Setup All: Showcase System, Scissors & Comments", false, 1)]
     public static void SetupAllItemShowcaseScissorsAndComments()
     {
         // 1. Studio & Canvas UI
@@ -33,7 +33,7 @@ public static class ItemShowcaseBuilder
         EditorUtility.DisplayDialog("Cyrulik - Sukces!", "Wszystko gotowe!\n\n1. System 3D Showcase (Studio + UI)\n2. Nożyczki (SCISSORS) postawione na stole z pełnym widokiem 3D\n3. Wzbogacone komentarze do obiektów w scenie!", "Super!");
     }
 
-    [MenuItem("Tools/Cyrulik/Create Full Item Showcase System", false, 5)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Create Item Showcase System", false, 2)]
     public static void CreateFullShowcaseSystem()
     {
         // 1. Stwórz lub pobierz Studio 3D

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public static class EndSummaryUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create End Summary UI (GTA Style)", false, 5)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create End Summary UI (GTA Style)", false, 9)]
     [MenuItem("GameObject/UI/Cyrulik - End Summary UI (GTA Style)", false, 13)]
     public static void CreateEndSummaryUI()
     {

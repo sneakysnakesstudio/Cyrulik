@@ -31,7 +31,7 @@ public static class DialogueFrameSpritesGenerator
         }
     }
 
-    [MenuItem("Tools/Cyrulik/Generate Dialogue Frame Sprites (5 Wersji)", false, 21)]
+    [MenuItem("Tools/Cyrulik/Generatory Grafik/Generate Dialogue Frame Sprites (5 Wersji)", false, 2)]
     public static void GenerateAllDialogueSprites()
     {
         if (!Directory.Exists(FOLDER_PATH))

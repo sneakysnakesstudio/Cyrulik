@@ -11,7 +11,7 @@ public static class ScissorsPrefabBuilder
 {
     private const string PREFAB_PATH = "Assets/Prefabs/Scissors.prefab";
 
-    [MenuItem("Tools/Cyrulik/Create Scissors Prefab", false, 11)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Create Scissors Prefab", false, 4)]
     public static GameObject CreateOrUpdateScissorsPrefab()
     {
         GameObject scissorsRoot = new GameObject("Scissors");
@@ -184,7 +184,6 @@ public static class ScissorsPrefabBuilder
         Object.DestroyImmediate(seg.GetComponent<Collider>());
     }
 
-    [MenuItem("Tools/Cyrulik/Place Scissors in Salon", false, 12)]
     public static void PlaceScissorsInSalon()
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_PATH);

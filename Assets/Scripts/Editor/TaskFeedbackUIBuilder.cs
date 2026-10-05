@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public static class TaskFeedbackUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Task Feedback UI (Amber Flash)", false, 4)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Task Feedback UI (Amber Flash)", false, 8)]
     [MenuItem("GameObject/UI/Cyrulik - Task Feedback UI", false, 12)]
     public static void CreateTaskFeedbackUI()
     {

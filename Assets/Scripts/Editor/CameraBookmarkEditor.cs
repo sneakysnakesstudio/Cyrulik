@@ -181,7 +181,7 @@ public class CameraBookmarkEditor : Editor
         Debug.Log($"<color=#FFD700>[CameraBookmark] Utworzono nową kamerę w scenie: {camGo.name}</color>");
     }
 
-    [MenuItem("Tools/Cyrulik/Create Camera Bookmark Manager", false, 30)]
+    [MenuItem("Tools/Cyrulik/Dev & Narzędzia/Create Camera Bookmark Manager", false, 30)]
     public static void CreateManagerInScene()
     {
         var existing = Object.FindAnyObjectByType<CameraBookmarkManager>();

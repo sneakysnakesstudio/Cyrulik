@@ -10,7 +10,7 @@ using TMPro;
 /// </summary>
 public static class RazorStropBuilder
 {
-    [MenuItem("Tools/Cyrulik/1. Create or Find ParticleManager in Scene", false, 1)]
+    [MenuItem("Tools/Cyrulik/Dev & Narzędzia/Create or Find ParticleManager in Scene", false, 50)]
     public static void CreateParticleManager()
     {
         ParticleManager existing = Object.FindAnyObjectByType<ParticleManager>();
@@ -29,7 +29,7 @@ public static class RazorStropBuilder
         Debug.Log("[Cyrulik] Utworzono ParticleManager w scenie!");
     }
 
-    [MenuItem("Tools/Cyrulik/2. Build PSX Razor Hanging Strop (Pas do brzytwy)", false, 2)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Razor Strop/Build PSX Razor Hanging Strop", false, 1)]
     public static void BuildRazorStrop()
     {
         // 1. Sprawdzamy czy w scenie jest już RazorMinigame_Object lub zaznaczony obiekt
@@ -125,7 +125,7 @@ public static class RazorStropBuilder
         Debug.Log("[Cyrulik] Gotowy wiszący pas (Razor Strop) z interakcją został wygenerowany w scenie!");
     }
 
-    [MenuItem("Tools/Cyrulik/3. Build & Enhance Razor Minigame UI (From Scratch)", false, 3)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Razor Strop/Build & Enhance Razor Minigame UI", false, 2)]
     public static void EnhanceRazorMinigameUI()
     {
         // 1. Szukamy GameObjectu o nazwie "RazorMinigame" lub z zaznaczenia / po typie
@@ -564,7 +564,7 @@ public static class RazorStropBuilder
         Debug.Log("[Cyrulik] Full Razor Stropping Minigame UI & 3D Strop Interaction configured successfully!");
     }
 
-    [MenuItem("Tools/Cyrulik/4. Setup 3D Razor Strop Interaction in Scene", false, 4)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Razor Strop/Setup 3D Razor Strop Interaction", false, 3)]
     public static void Setup3DStropInteraction()
     {
         GameObject hangingStropGo = GameObject.Find("RazorStrop_Hanging");

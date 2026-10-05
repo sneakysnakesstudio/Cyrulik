@@ -4,7 +4,7 @@ using UnityEngine;
 
 public static class RazorDeskSetupBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Razor Desk Spot", false, 4)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Create Razor Desk Spot", false, 20)]
     [MenuItem("GameObject/3D Object/Cyrulik - Razor Desk Spot", false, 13)]
     public static void CreateRazorDeskSpot()
     {

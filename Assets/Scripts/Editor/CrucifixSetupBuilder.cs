@@ -10,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public static class CrucifixSetupBuilder
 {
-    [MenuItem("Tools/Cyrulik/Setup Crucifix & Cinema Effects", false, 16)]
+    [MenuItem("Tools/Cyrulik/Gameplay & Scena/Setup Crucifix & Cinema Effects", false, 6)]
     public static void SetupCrucifixAndCinema()
     {
         // 1. Upewnij się, że CinematicEffectsManager istnieje w scenie

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 public static class MusicCreditUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Music Credit UI", false, 5)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Music Credit UI", false, 10)]
     [MenuItem("GameObject/UI/Cyrulik - Music Credit UI", false, 13)]
     public static void CreateMusicCreditUI()
     {
