@@ -1,0 +1,105 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e32c3a1227d1400e829d0ec8b85997bf, type: 3}
+  m_Name: DialogueStyleDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueStyleDatabase
+  styles:
+  - style: 0
+    displayName: "Klasyczny Cyrulik (Mosi\u0105dz & Maho\u0144)"
+    frameSprite: {fileID: 21300000, guid: c9279776af7845d9b1af48456ea27099, type: 3}
+    bgSprite: {fileID: 21300000, guid: d386ca94aa4e439888ac18a90d1cee36, type: 3}
+    theme:
+      styleName: "Klasyczny Cyrulik (Mosi\u0105dz & Maho\u0144)"
+      frameSpriteName: Frame_BarberBrass
+      bgSpriteName: Bg_BarberBrass
+      frameColor: {r: 1, g: 0.95, b: 0.85, a: 1}
+      bgColor: {r: 1, g: 1, b: 1, a: 1}
+      speakerBadgeBgColor: {r: 0.24, g: 0.18, b: 0.13, a: 0.96}
+      speakerBadgeTextColor: {r: 0.98, g: 0.84, b: 0.52, a: 1}
+      keyBadgeBgColor: {r: 0.26, g: 0.2, b: 0.14, a: 0.95}
+      keyBadgeTextColor: {r: 0.96, g: 0.9, b: 0.78, a: 1}
+      arrowColor: {r: 0.92, g: 0.78, b: 0.48, a: 1}
+      dialogueTextColor: {r: 0.95, g: 0.92, b: 0.87, a: 1}
+      thoughtTextColor: {r: 0.92, g: 0.9, b: 0.85, a: 1}
+      thoughtDotColor: {r: 0.24, g: 0.18, b: 0.13, a: 0.88}
+  - style: 1
+    displayName: "Retro Noir / PSX (Stal & Naro\u017cniki [ ])"
+    frameSprite: {fileID: 21300000, guid: 243eed1fb72d4c38b066536ca50950ed, type: 3}
+    bgSprite: {fileID: 21300000, guid: d74b08cf6ae7487b8a58ce163544613b, type: 3}
+    theme:
+      styleName: "Retro Noir / PSX (Stal & Naro\u017cniki [ ])"
+      frameSpriteName: Frame_RetroNoir
+      bgSpriteName: Bg_RetroNoir
+      frameColor: {r: 0.9, g: 0.95, b: 1, a: 1}
+      bgColor: {r: 1, g: 1, b: 1, a: 1}
+      speakerBadgeBgColor: {r: 0.12, g: 0.15, b: 0.18, a: 0.96}
+      speakerBadgeTextColor: {r: 0.7, g: 0.85, b: 1, a: 1}
+      keyBadgeBgColor: {r: 0.14, g: 0.17, b: 0.2, a: 0.95}
+      keyBadgeTextColor: {r: 0.9, g: 0.95, b: 1, a: 1}
+      arrowColor: {r: 0.75, g: 0.88, b: 1, a: 1}
+      dialogueTextColor: {r: 0.9, g: 0.93, b: 0.97, a: 1}
+      thoughtTextColor: {r: 0.85, g: 0.9, b: 0.95, a: 1}
+      thoughtDotColor: {r: 0.12, g: 0.15, b: 0.18, a: 0.88}
+  - style: 2
+    displayName: "Akta & Maszynopis (PRL Archiwum 1993)"
+    frameSprite: {fileID: 21300000, guid: f2ef598c1c87414bbae2ba05fb992c60, type: 3}
+    bgSprite: {fileID: 21300000, guid: 08966f3ca258430ea62d74b3784759b5, type: 3}
+    theme:
+      styleName: "Akta & Maszynopis (PRL Archiwum 1993)"
+      frameSpriteName: Frame_VintageLedger
+      bgSpriteName: Bg_VintageLedger
+      frameColor: {r: 0.95, g: 0.92, b: 0.85, a: 1}
+      bgColor: {r: 1, g: 1, b: 1, a: 1}
+      speakerBadgeBgColor: {r: 0.2, g: 0.18, b: 0.15, a: 0.96}
+      speakerBadgeTextColor: {r: 0.92, g: 0.82, b: 0.62, a: 1}
+      keyBadgeBgColor: {r: 0.22, g: 0.2, b: 0.17, a: 0.95}
+      keyBadgeTextColor: {r: 0.92, g: 0.9, b: 0.82, a: 1}
+      arrowColor: {r: 0.85, g: 0.78, b: 0.65, a: 1}
+      dialogueTextColor: {r: 0.93, g: 0.9, b: 0.84, a: 1}
+      thoughtTextColor: {r: 0.88, g: 0.86, b: 0.8, a: 1}
+      thoughtDotColor: {r: 0.2, g: 0.18, b: 0.15, a: 0.88}
+  - style: 3
+    displayName: "Karmazynowy Mrok (Szlif Brzytwy & Krew)"
+    frameSprite: {fileID: 21300000, guid: e6026a03ded44a8ea30e5b12dac95acc, type: 3}
+    bgSprite: {fileID: 21300000, guid: 5933eff3889f4ba0af979b933caf4943, type: 3}
+    theme:
+      styleName: "Karmazynowy Mrok (Szlif Brzytwy & Krew)"
+      frameSpriteName: Frame_CrimsonRazor
+      bgSpriteName: Bg_CrimsonRazor
+      frameColor: {r: 1, g: 0.92, b: 0.92, a: 1}
+      bgColor: {r: 1, g: 1, b: 1, a: 1}
+      speakerBadgeBgColor: {r: 0.22, g: 0.08, b: 0.1, a: 0.96}
+      speakerBadgeTextColor: {r: 0.95, g: 0.55, b: 0.58, a: 1}
+      keyBadgeBgColor: {r: 0.24, g: 0.09, b: 0.11, a: 0.95}
+      keyBadgeTextColor: {r: 0.96, g: 0.9, b: 0.9, a: 1}
+      arrowColor: {r: 0.9, g: 0.3, b: 0.35, a: 1}
+      dialogueTextColor: {r: 0.95, g: 0.92, b: 0.92, a: 1}
+      thoughtTextColor: {r: 0.92, g: 0.88, b: 0.88, a: 1}
+      thoughtDotColor: {r: 0.22, g: 0.08, b: 0.1, a: 0.88}
+  - style: 4
+    displayName: "Dymiony Aksamit (Beveled Glass Minimalizm)"
+    frameSprite: {fileID: 21300000, guid: cf6517ffcd8545a08dc7ebf4dc45baec, type: 3}
+    bgSprite: {fileID: 21300000, guid: 9ebc5ac34ec54f8eae5014c817e84a87, type: 3}
+    theme:
+      styleName: "Dymiony Aksamit (Beveled Glass Minimalizm)"
+      frameSpriteName: Frame_SmokedVelvet
+      bgSpriteName: Bg_SmokedVelvet
+      frameColor: {r: 0.9, g: 0.92, b: 0.95, a: 1}
+      bgColor: {r: 1, g: 1, b: 1, a: 1}
+      speakerBadgeBgColor: {r: 0.15, g: 0.16, b: 0.18, a: 0.96}
+      speakerBadgeTextColor: {r: 0.85, g: 0.88, b: 0.92, a: 1}
+      keyBadgeBgColor: {r: 0.18, g: 0.19, b: 0.21, a: 0.95}
+      keyBadgeTextColor: {r: 0.92, g: 0.94, b: 0.96, a: 1}
+      arrowColor: {r: 0.8, g: 0.82, b: 0.85, a: 1}
+      dialogueTextColor: {r: 0.92, g: 0.93, b: 0.95, a: 1}
+      thoughtTextColor: {r: 0.88, g: 0.9, b: 0.92, a: 1}
+      thoughtDotColor: {r: 0.15, g: 0.16, b: 0.18, a: 0.88}

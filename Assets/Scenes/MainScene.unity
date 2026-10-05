@@ -99032,7 +99032,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c98a8afe70773d24abab0456cf8fb733, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.632
+      value: -0.618
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c98a8afe70773d24abab0456cf8fb733, type: 3}
       propertyPath: m_LocalPosition.z
@@ -109843,7 +109843,7 @@ MonoBehaviour:
   spawnDustParticles: 1
   dustParticleEffectId: lamp_dust
   dustLocalOffset: {x: 0, y: -0.4, z: 0}
-  dustScaleMultiplier: 0.56
+  dustScaleMultiplier: 0.502
   turnOnDuration: 0.53
   turnOffDuration: 0.1
   flickering: 1
@@ -109863,9 +109863,9 @@ MonoBehaviour:
   handleMotionMode: 0
   handleAxis: 1
   pullStraightDown: 1
-  handleDistance: 0.05
-  handlePressDuration: 0.1
-  handleReturnDuration: 0.2
+  handleDistance: 0.055
+  handlePressDuration: 0.1367
+  handleReturnDuration: 0.26
   handlePressEase: 6
   handleReturnEase: 27
   lightToggleDelay: 0.1
@@ -110275,7 +110275,7 @@ Transform:
   m_GameObject: {fileID: 1780958195}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.9712386, z: -0, w: 0.23810834}
-  m_LocalPosition: {x: -0.66, y: 8.06, z: 0.08}
+  m_LocalPosition: {x: -0.182, y: 8.37, z: -0.196}
   m_LocalScale: {x: 0.89655167, y: 0.89655167, z: 0.89655167}
   m_ConstrainProportionsScale: 0
   m_Children: []

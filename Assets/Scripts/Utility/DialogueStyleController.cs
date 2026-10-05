@@ -50,8 +50,13 @@ public static class DialogueStyleController
                 {
                     bgImg.sprite = bgSprite;
                     bgImg.type = Image.Type.Sliced;
+                    bgImg.color = theme.bgColor;
                 }
-                bgImg.color = theme.bgColor;
+                else
+                {
+                    // Fallback awaryjny dla builda: ciemne hebanowe tło, żeby jasny tekst był ZAWSZE czytelny
+                    bgImg.color = new Color(0.08f, 0.07f, 0.06f, 0.95f);
+                }
             }
 
             Transform borderTrans = bgTrans.Find("Bubble_Border");
@@ -64,8 +69,12 @@ public static class DialogueStyleController
                     {
                         borderImg.sprite = frameSprite;
                         borderImg.type = Image.Type.Sliced;
+                        borderImg.color = theme.frameColor;
                     }
-                    borderImg.color = theme.frameColor;
+                    else
+                    {
+                        borderImg.color = new Color(0.85f, 0.65f, 0.25f, 0.6f);
+                    }
                 }
             }
         }
@@ -124,8 +133,12 @@ public static class DialogueStyleController
                 {
                     bgImg.sprite = bgSprite;
                     bgImg.type = Image.Type.Sliced;
+                    bgImg.color = theme.bgColor;
                 }
-                bgImg.color = theme.bgColor;
+                else
+                {
+                    bgImg.color = new Color(0.08f, 0.07f, 0.06f, 0.95f);
+                }
             }
 
             Transform borderTrans = bgTrans.Find("Box_Border");
@@ -138,8 +151,12 @@ public static class DialogueStyleController
                     {
                         borderImg.sprite = frameSprite;
                         borderImg.type = Image.Type.Sliced;
+                        borderImg.color = theme.frameColor;
                     }
-                    borderImg.color = theme.frameColor;
+                    else
+                    {
+                        borderImg.color = new Color(0.85f, 0.65f, 0.25f, 0.6f);
+                    }
                 }
             }
         }
@@ -155,8 +172,12 @@ public static class DialogueStyleController
                 {
                     badgeImg.sprite = bgSprite;
                     badgeImg.type = Image.Type.Sliced;
+                    badgeImg.color = theme.speakerBadgeBgColor;
                 }
-                badgeImg.color = theme.speakerBadgeBgColor;
+                else
+                {
+                    badgeImg.color = new Color(0.18f, 0.14f, 0.10f, 0.95f);
+                }
             }
 
             TextMeshProUGUI speakerTmp = badgeTrans.GetComponentInChildren<TextMeshProUGUI>(true);
@@ -200,8 +221,12 @@ public static class DialogueStyleController
                 {
                     keyImg.sprite = bgSprite;
                     keyImg.type = Image.Type.Sliced;
+                    keyImg.color = theme.keyBadgeBgColor;
                 }
-                keyImg.color = theme.keyBadgeBgColor;
+                else
+                {
+                    keyImg.color = new Color(0.20f, 0.17f, 0.14f, 0.95f);
+                }
             }
 
             TextMeshProUGUI keyTmp = keyBadge.GetComponentInChildren<TextMeshProUGUI>(true);
@@ -225,7 +250,7 @@ public static class DialogueStyleController
     private static Sprite LoadFrameSprite(string spriteName)
     {
         DialogueStyleDatabase db = DialogueStyleDatabase.Instance;
-        if (db != null)
+        if (db != null && db.styles != null)
         {
             for (int i = 0; i < db.styles.Length; i++)
             {
@@ -239,13 +264,16 @@ public static class DialogueStyleController
         Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
         if (s != null) return s;
 #endif
+        Sprite res = Resources.Load<Sprite>($"UI_DialogueFrames/{spriteName}");
+        if (res != null) return res;
+
         return Resources.Load<Sprite>(spriteName);
     }
 
     private static Sprite LoadBgSprite(string spriteName)
     {
         DialogueStyleDatabase db = DialogueStyleDatabase.Instance;
-        if (db != null)
+        if (db != null && db.styles != null)
         {
             for (int i = 0; i < db.styles.Length; i++)
             {
@@ -259,6 +287,9 @@ public static class DialogueStyleController
         Sprite s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
         if (s != null) return s;
 #endif
+        Sprite res = Resources.Load<Sprite>($"UI_DialogueFrames/{spriteName}");
+        if (res != null) return res;
+
         return Resources.Load<Sprite>(spriteName);
     }
 }

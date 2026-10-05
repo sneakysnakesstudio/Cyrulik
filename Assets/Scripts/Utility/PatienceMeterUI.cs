@@ -107,10 +107,15 @@ public class PatienceMeterUI : MonoBehaviour
     }
 #endif
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void AutoRunPatienceMeter()
     {
-        // Automatyczne dodanie do sceny przy uruchomieniu gry
+        // Jeśli w scenie istnieje już PatienceMeterUI, nic nie twórz
+        if (Instance != null || Object.FindAnyObjectByType<PatienceMeterUI>() != null)
+        {
+            return;
+        }
+
         GameObject go = new GameObject("PatienceMeterUI_Auto");
         go.AddComponent<PatienceMeterUI>();
         DontDestroyOnLoad(go);
@@ -120,8 +125,17 @@ public class PatienceMeterUI : MonoBehaviour
     {
         if (Instance != null && Instance != this && Instance.gameObject != null)
         {
-            Destroy(gameObject);
-            return;
+            // Jeśli istniejący obiekt to tymczasowy PatienceMeterUI_Auto, a ten to właściwy ze sceny - zastąp go
+            if (Instance.gameObject.name == "PatienceMeterUI_Auto" && gameObject.name != "PatienceMeterUI_Auto")
+            {
+                Destroy(Instance.gameObject);
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
+                return;
+            }
         }
 
         Instance = this;
@@ -133,7 +147,32 @@ public class PatienceMeterUI : MonoBehaviour
             BuildDefaultUI();
         }
 
+        EnsureAvatar();
         HideInstant();
+    }
+
+    private void EnsureAvatar()
+    {
+        if (avatarImage != null)
+        {
+            if (avatarImage.sprite == null)
+            {
+                if (defaultAvatarSprite == null)
+                {
+                    defaultAvatarSprite = Resources.Load<Sprite>("jurek avatar") ?? Resources.Load<Sprite>("jurek_avatar");
+                }
+
+                if (defaultAvatarSprite != null)
+                {
+                    avatarImage.sprite = defaultAvatarSprite;
+                }
+            }
+
+            if (avatarImage.sprite != null)
+            {
+                avatarImage.color = Color.white;
+            }
+        }
     }
 
     private void EnsureCanvasSetup()
@@ -203,7 +242,22 @@ public class PatienceMeterUI : MonoBehaviour
 
         if (avatarImage != null)
         {
-            if (defaultAvatarSprite != null) avatarImage.sprite = defaultAvatarSprite;
+            if (avatarImage.sprite == null)
+            {
+                if (defaultAvatarSprite == null)
+                {
+                    defaultAvatarSprite = Resources.Load<Sprite>("jurek avatar") ?? Resources.Load<Sprite>("jurek_avatar");
+                }
+                if (defaultAvatarSprite != null)
+                {
+                    avatarImage.sprite = defaultAvatarSprite;
+                }
+            }
+
+            if (avatarImage.sprite != null)
+            {
+                avatarImage.color = Color.white;
+            }
             
             _avatarShakeTween?.Kill();
             avatarImage.rectTransform.localRotation = Quaternion.identity;
@@ -456,6 +510,11 @@ public class PatienceMeterUI : MonoBehaviour
         avatarRect.anchoredPosition = new Vector2(-12f, 0f);
 
         avatarImage = avatarGo.GetComponent<Image>();
+        if (defaultAvatarSprite == null)
+        {
+            defaultAvatarSprite = Resources.Load<Sprite>("jurek avatar") ?? Resources.Load<Sprite>("jurek_avatar");
+        }
+
         if (defaultAvatarSprite != null)
         {
             avatarImage.sprite = defaultAvatarSprite;
