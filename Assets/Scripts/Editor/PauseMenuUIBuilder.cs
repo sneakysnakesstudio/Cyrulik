@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public static class PauseMenuUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create In-Game Pause Menu UI (ESC Menu)", false, 2)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create In-Game Pause Menu UI (ESC Menu)", false, 2)]
     [MenuItem("GameObject/UI/Cyrulik - In-Game Pause Menu UI", false, 11)]
     public static void CreatePauseMenuUI()
     {

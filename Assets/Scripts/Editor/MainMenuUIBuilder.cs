@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public static class MainMenuUIBuilder
 {
-    [MenuItem("Tools/Cyrulik/Create Main Menu UI", false, 1)]
+    [MenuItem("Tools/Cyrulik/UI Systems/Create Main Menu UI", false, 1)]
     [MenuItem("GameObject/UI/Cyrulik - Main Menu UI", false, 10)]
     public static void CreateMainMenuUI()
     {

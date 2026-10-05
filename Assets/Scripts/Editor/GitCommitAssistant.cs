@@ -61,7 +61,7 @@ public class GitCommitAssistant : EditorWindow
         };
     }
 
-    [MenuItem("Tools/Cyrulik/Git Commit Helper", false, 100)]
+    [MenuItem("Tools/Cyrulik/💾 Git Commit Helper", false, 1)]
     public static void OpenWindow()
     {
         var window = GetWindow<GitCommitAssistant>("Git Helper", true);

@@ -70,6 +70,52 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     [Tooltip("Czy dodawać sporadyczne mikro-iskrzenia / mrugnięcia żarówki?")]
     [SerializeField] private bool randomJitter = true;
 
+    [Header("Switch Handle / Cord Animation (Pociągnięcie sznurka / klamka)")]
+    [Tooltip("Czy włączyć animację pociągnięcia sznurka lub ruchu przełącznika.")]
+    [SerializeField] private bool animateHandle = false;
+
+    [Tooltip("Transform linki/sznurka/przełącznika. Jeśli puste, a animateHandle jest włączone, animuje ten obiekt (this.transform).")]
+    [SerializeField] private Transform switchHandle;
+
+    public enum HandleMotionMode
+    {
+        Slide,
+        Rotate
+    }
+
+    public enum MovementAxis
+    {
+        X,
+        Y,
+        Z
+    }
+
+    [Tooltip("Slide: przesunięcie w dół (dla linki/sznurka). Rotate: obrót kątowy (dla włącznika/dźwigni).")]
+    [SerializeField] private HandleMotionMode handleMotionMode = HandleMotionMode.Slide;
+
+    [Tooltip("Oś ruchu (dla sznurka w dół zazwyczaj Y).")]
+    [SerializeField] private MovementAxis handleAxis = MovementAxis.Y;
+
+    [Tooltip("Czy dla trybu Slide pociągać linkę zawsze pionowo w dół ku ziemi (Vector3.down)? Eliminuje problem obróconych osi z Blendera.")]
+    [SerializeField] private bool pullStraightDown = true;
+
+    [Tooltip("Dystans pociągnięcia w metrach (np. 0.08m = 8 cm) lub kąt w stopniach (dla Rotate).")]
+    [SerializeField] private float handleDistance = 0.08f;
+
+    [Tooltip("Czas ruchu w dół przy pociągnięciu (w sekundach).")]
+    [SerializeField] private float handlePressDuration = 0.12f;
+
+    [Tooltip("Czas powrotu sznurka do góry na swoje miejsce.")]
+    [SerializeField] private float handleReturnDuration = 0.18f;
+
+    [SerializeField] private Ease handlePressEase = Ease.OutQuad;
+    [SerializeField] private Ease handleReturnEase = Ease.OutBack;
+
+#pragma warning disable CS0414
+    [Tooltip("Opóźnienie przełączenia światła po pociągnięciu (zintegrowane automatycznie z ruchem w dół).")]
+    [SerializeField] private float lightToggleDelay = 0.10f;
+#pragma warning restore CS0414
+
     public string InteractionName => interactionName;
     public bool IsOn => _isOn;
 
@@ -91,10 +137,23 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
 
     private Tween _lightTween;
     private Sequence _flickerSequence;
+    private Tween _handleTween;
+    private Vector3 _handleRestPos;
+    private Vector3 _handleRestRot;
+    private bool _isPulling;
 
     private void Awake()
     {
         _pulseSeed = UnityEngine.Random.Range(0f, 1000f);
+
+        if (animateHandle || switchHandle != null)
+        {
+            if (switchHandle == null)
+                switchHandle = transform;
+
+            _handleRestPos = switchHandle.localPosition;
+            _handleRestRot = switchHandle.localEulerAngles;
+        }
 
         if (targetLights == null || targetLights.Length == 0)
         {
@@ -166,16 +225,120 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
         if (_isOn && !canTurnOff)
             return;
 
-        PlayInteractionSound();
+        if (_isPulling)
+            return;
 
-        if (_isOn)
+        bool shouldAnimate = (animateHandle || switchHandle != null) && switchHandle != null;
+        if (shouldAnimate)
         {
-            TurnOff();
+            AnimateHandleAndToggle();
         }
         else
         {
-            TurnOn();
+            PlayInteractionSound();
+            if (_isOn) TurnOff(); else TurnOn();
         }
+    }
+
+    private void AnimateHandleAndToggle()
+    {
+        if (switchHandle == null)
+            return;
+
+        _handleTween?.Kill();
+
+        // Gwarancja startu dokładnie z pozycji spoczynkowej
+        switchHandle.localPosition = _handleRestPos;
+        switchHandle.localEulerAngles = _handleRestRot;
+
+        Sequence seq = DOTween.Sequence();
+        _isPulling = true;
+
+        if (handleMotionMode == HandleMotionMode.Slide)
+        {
+            Vector3 pressedPos;
+            if (pullStraightDown)
+            {
+                float dist = Mathf.Abs(handleDistance);
+                if (dist < 0.001f) dist = 0.05f;
+
+                // Oblicz wektor przesunięcia w dół ku ziemi w lokalnym układzie rodzica
+                Vector3 worldDown = Vector3.down * dist;
+                Vector3 localOffset = switchHandle.parent != null
+                    ? switchHandle.parent.InverseTransformVector(worldDown)
+                    : worldDown;
+
+                pressedPos = _handleRestPos + localOffset;
+            }
+            else
+            {
+                pressedPos = _handleRestPos;
+                switch (handleAxis)
+                {
+                    case MovementAxis.X: pressedPos.x += handleDistance; break;
+                    case MovementAxis.Y: pressedPos.y += handleDistance; break;
+                    case MovementAxis.Z: pressedPos.z += handleDistance; break;
+                }
+            }
+
+            // 1. Ruch sznurka w dół (gracz pociąga sznurek ku dołowi)
+            seq.Append(switchHandle.DOLocalMove(pressedPos, handlePressDuration).SetEase(handlePressEase));
+
+            // W najniższym punkcie pociągnięcia: dźwięk kliknięcia i przełączenie światła
+            seq.AppendCallback(() =>
+            {
+                PlayInteractionSound();
+                if (_isOn) TurnOff(); else TurnOn();
+            });
+
+            // 2. Ruch do góry (sznurek sprężyście wraca na swoje pierwotne miejsce jak przygwożdżony)
+            seq.Append(switchHandle.DOLocalMove(_handleRestPos, handleReturnDuration).SetEase(handleReturnEase));
+
+            // Gwarancja idealnego lądowania w pozycji wyjściowej i odblokowanie pociągania
+            seq.OnComplete(() =>
+            {
+                if (switchHandle != null)
+                {
+                    switchHandle.localPosition = _handleRestPos;
+                }
+                _isPulling = false;
+            });
+        }
+        else
+        {
+            Vector3 pressedRot = _handleRestRot;
+            switch (handleAxis)
+            {
+                case MovementAxis.X: pressedRot.x += handleDistance; break;
+                case MovementAxis.Y: pressedRot.y += handleDistance; break;
+                case MovementAxis.Z: pressedRot.z += handleDistance; break;
+            }
+
+            // 1. Ruch kątowy włącznika
+            seq.Append(switchHandle.DOLocalRotate(pressedRot, handlePressDuration).SetEase(handlePressEase));
+
+            // W punkcie wciśnięcia: dźwięk i przełączenie światła
+            seq.AppendCallback(() =>
+            {
+                PlayInteractionSound();
+                if (_isOn) TurnOff(); else TurnOn();
+            });
+
+            // 2. Powrót
+            seq.Append(switchHandle.DOLocalRotate(_handleRestRot, handleReturnDuration).SetEase(handleReturnEase));
+
+            seq.OnComplete(() =>
+            {
+                if (switchHandle != null)
+                {
+                    switchHandle.localEulerAngles = _handleRestRot;
+                }
+                _isPulling = false;
+            });
+        }
+
+        seq.SetLink(switchHandle.gameObject, LinkBehaviour.KillOnDestroy);
+        _handleTween = seq;
     }
 
     private void PlayInteractionSound()
@@ -188,7 +351,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
 
     public void TurnOn()
     {
-        KillTweens();
+        KillLightTweens();
 
         bool wasOn = _isOn;
         _isOn = true;
@@ -223,7 +386,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
 
     public void TurnOff()
     {
-        KillTweens();
+        KillLightTweens();
 
         bool wasOn = _isOn;
         _isOn = false;
@@ -407,7 +570,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
         }
     }
 
-    private void KillTweens()
+    private void KillLightTweens()
     {
         _lightTween?.Kill();
         _flickerSequence?.Kill();
@@ -416,9 +579,24 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
         _flickerSequence = null;
     }
 
+    private void KillTweens()
+    {
+        KillLightTweens();
+        _handleTween?.Kill();
+
+        _handleTween = null;
+        _isPulling = false;
+    }
+
     private void OnDisable()
     {
         KillTweens();
+
+        if (switchHandle != null && (animateHandle || switchHandle != transform || _handleRestPos != Vector3.zero))
+        {
+            switchHandle.localPosition = _handleRestPos;
+            switchHandle.localEulerAngles = _handleRestRot;
+        }
     }
 
     private void OnDestroy()

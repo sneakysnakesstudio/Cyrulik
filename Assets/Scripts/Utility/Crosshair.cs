@@ -34,6 +34,14 @@ public class Crosshair : MonoBehaviour
     [Tooltip("Czas trwania połowy cyklu oddechu w sekundach (wdech/wydech np. 2.0s).")]
     [SerializeField] private float idleBreathDuration = 2.0f;
 
+    [Header("Hover Pulse (Pulsowanie po najechaniu na obiekt)")]
+    [Tooltip("Czy kropka ma pulsować po najechaniu na obiekt interaktywny?")]
+    [SerializeField] private bool enableHoverPulse = true;
+    [Tooltip("Maksymalna skala powiększenia kropki podczas pulsowania na obiekcie (np. 1.35x).")]
+    [SerializeField] private float hoverPulseScale = 1.35f;
+    [Tooltip("Czas trwania połowy cyklu pulsowania (np. 0.35s).")]
+    [SerializeField] private float hoverPulseDuration = 0.35f;
+
     [Header("Interaction Blink")]
     [SerializeField] private float blinkScale = 1.5f;
     [SerializeField] private float blinkSmallScale = 0.9f;
@@ -117,6 +125,10 @@ public class Crosshair : MonoBehaviour
 
     [Tooltip("Rozszerzająca się ramka kwadratu podczas ładowania holda.")]
     [SerializeField] private Image squareMorphFrame;
+
+    [Header("Contextual Icons (Kontekstowe Ikony Celownika)")]
+    [Tooltip("Czy celownik ma podmieniać kropkę na ikony kontekstowe (?, !, klamki itp.)? Domyślnie wyłączone – tylko kropka.")]
+    [SerializeField] private bool enableContextualIcons = false;
 
     [Header("Crosshair Icons / Ikony Celownika")]
     [Tooltip("Domyślna kropka celownika w spoczynku.")]
@@ -312,6 +324,13 @@ public class Crosshair : MonoBehaviour
         }
 
         _currentTargetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+
+        if (!enableContextualIcons && defaultDotSprite != null && crosshairImage != null)
+        {
+            crosshairImage.sprite = defaultDotSprite;
+            _crosshairRect.sizeDelta = defaultDotSize;
+        }
+
         StartIdleBreathing();
     }
 
@@ -479,6 +498,7 @@ public class Crosshair : MonoBehaviour
         _colorTween?.Kill();
         _textTween?.Kill();
         _scaleTween?.Kill();
+        _pulseTween?.Kill();
         _interactionBlinkTween?.Kill();
         _blockedTween?.Kill();
 
@@ -487,14 +507,34 @@ public class Crosshair : MonoBehaviour
         _crosshairRect.anchoredPosition =
             _defaultAnchoredPosition;
 
-        interactionNameText.text =
-            interactable.InteractionName;
-
         Color targetColor =
             GetCurrentInteractionColor();
 
-        // Płynne przejście w odpowiedni znak (?, !, ...) z miękkim fade-in
-        TransitionToInteractableIcon(interactable, targetColor);
+        if (enableContextualIcons)
+        {
+            // Płynne przejście w odpowiedni znak (?, !, ...) z miękkim fade-in
+            TransitionToInteractableIcon(interactable, targetColor);
+        }
+        else
+        {
+            // Kropka pozostaje zawsze kropką – brak podmiany na ikony/klamki
+            Sprite dotSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+            if (crosshairImage != null)
+            {
+                if (dotSprite != null && crosshairImage.sprite != dotSprite)
+                {
+                    crosshairImage.sprite = dotSprite;
+                }
+                _crosshairRect.sizeDelta = defaultDotSize;
+
+                _colorTween = crosshairImage
+                    .DOColor(targetColor, colorFadeDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+            }
+
+            StartHoverPulse();
+        }
 
         if (interactionNameText != null)
         {
@@ -515,13 +555,28 @@ public class Crosshair : MonoBehaviour
                     LinkBehaviour.KillOnDestroy
                 );
         }
-
-        // Kropka NIE mruga już ciągle w pętli – pozostaje stabilna i czytelna
     }
 
     private void TransitionToInteractableIcon(IInteractable interactable, Color targetColor)
     {
         if (crosshairImage == null) return;
+
+        if (!enableContextualIcons)
+        {
+            Sprite dot = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+            if (crosshairImage.sprite != dot && dot != null)
+            {
+                crosshairImage.sprite = dot;
+            }
+            _crosshairRect.sizeDelta = defaultDotSize;
+            _colorTween?.Kill();
+            _colorTween = crosshairImage
+                .DOColor(targetColor, colorFadeDuration)
+                .SetEase(Ease.OutQuad)
+                .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+            StartHoverPulse();
+            return;
+        }
 
         Sprite targetSprite;
         Vector2 targetSize;
@@ -552,6 +607,13 @@ public class Crosshair : MonoBehaviour
 
     public void GetSymbolInfo(IInteractable interactable, out Sprite targetSprite, out Vector2 targetSize)
     {
+        if (!enableContextualIcons)
+        {
+            targetSprite = defaultDotSprite != null ? defaultDotSprite : _initialSprite;
+            targetSize = defaultDotSize;
+            return;
+        }
+
         ReticleSymbolType symbolType = ReticleSymbolType.Auto;
 
         if (interactable is ICrosshairSymbolProvider provider)
@@ -755,6 +817,7 @@ public class Crosshair : MonoBehaviour
     {
         _currentInteractable = null;
 
+        StopHoverPulse(false);
         _scaleTween?.Kill();
         _interactionBlinkTween?.Kill();
         _blockedTween?.Kill();
@@ -773,30 +836,55 @@ public class Crosshair : MonoBehaviour
         // Płynne przejście z powrotem do kropki
         if (crosshairImage != null)
         {
-            PerformCrossfade(dotSprite, defaultDotSize, normalColor, transitionFadeOutDuration);
+            if (enableContextualIcons)
+            {
+                PerformCrossfade(dotSprite, defaultDotSize, normalColor, transitionFadeOutDuration);
+            }
+            else
+            {
+                if (crosshairImage.sprite != dotSprite && dotSprite != null)
+                {
+                    crosshairImage.sprite = dotSprite;
+                }
+                _crosshairRect.sizeDelta = defaultDotSize;
+
+                _colorTween = crosshairImage
+                    .DOColor(normalColor, colorFadeDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+
+                _scaleTween = crosshairImage.transform
+                    .DOScale(_defaultScale, colorFadeDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+            }
         }
 
-        _textTween = interactionNameText
-            .DOFade(
-                0f,
-                textFadeOutDuration
-            )
-            .SetEase(Ease.OutQuad)
-            .OnComplete(() =>
-            {
-                if (interactionNameText != null)
+        if (interactionNameText != null)
+        {
+            _textTween = interactionNameText
+                .DOFade(
+                    0f,
+                    textFadeOutDuration
+                )
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
                 {
-                    interactionNameText.text =
-                        string.Empty;
-                }
-            })
-            .SetLink(
-                interactionNameText.gameObject,
-                LinkBehaviour.KillOnDestroy
-            );
+                    if (interactionNameText != null)
+                    {
+                        interactionNameText.text =
+                            string.Empty;
+                    }
+                })
+                .SetLink(
+                    interactionNameText.gameObject,
+                    LinkBehaviour.KillOnDestroy
+                );
+        }
 
         // Po wygaszeniu symbolu kropka spokojnie wznawia oddychanie w idlu
-        DOVirtual.DelayedCall(transitionFadeOutDuration, () =>
+        float delay = enableContextualIcons ? transitionFadeOutDuration : colorFadeDuration;
+        DOVirtual.DelayedCall(delay, () =>
         {
             if (!_hasInteractable && !_isHolding)
             {
@@ -835,9 +923,37 @@ public class Crosshair : MonoBehaviour
         }
     }
 
+    private void StartHoverPulse()
+    {
+        if (!enableHoverPulse || crosshairImage == null)
+            return;
+
+        _pulseTween?.Kill();
+        crosshairImage.transform.localScale = _defaultScale;
+
+        _pulseTween = crosshairImage.transform
+            .DOScale(_defaultScale * hoverPulseScale, hoverPulseDuration)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo)
+            .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+    }
+
+    private void StopHoverPulse(bool resetScale = true)
+    {
+        _pulseTween?.Kill();
+        _pulseTween = null;
+
+        if (resetScale && crosshairImage != null)
+        {
+            crosshairImage.transform.DOScale(_defaultScale, 0.15f)
+                .SetEase(Ease.OutQuad)
+                .SetLink(crosshairImage.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+    }
+
     private void StartPulse()
     {
-        // Pętla ciągłego pulsowania została wyłączona – celownik jest stabilny
+        StartHoverPulse();
     }
 
     private void HandleInteractionPerformed()
@@ -912,7 +1028,11 @@ public class Crosshair : MonoBehaviour
         {
             _interactionBlinkTween = null;
 
-            if (!_hasInteractable && !_isHolding)
+            if (_hasInteractable && !_isHolding)
+            {
+                StartHoverPulse();
+            }
+            else if (!_hasInteractable && !_isHolding)
             {
                 StartIdleBreathing();
             }
@@ -996,7 +1116,11 @@ public class Crosshair : MonoBehaviour
             _crosshairRect.anchoredPosition =
                 _defaultAnchoredPosition;
 
-            if (!_hasInteractable && !_isHolding)
+            if (_hasInteractable && !_isHolding)
+            {
+                StartHoverPulse();
+            }
+            else if (!_hasInteractable && !_isHolding)
             {
                 StartIdleBreathing();
             }
@@ -1110,6 +1234,7 @@ public class Crosshair : MonoBehaviour
                 {
                     _isHolding = true;
                     StopIdleBreathing(false);
+                    StopHoverPulse(false);
                     _transitionTween?.Kill();
                     if (fadeTransitionImage != null)
                     {
@@ -1119,8 +1244,9 @@ public class Crosshair : MonoBehaviour
                 _holdTimer += Time.deltaTime;
                 float progress = Mathf.Clamp01(_holdTimer / Mathf.Max(0.05f, holdDuration));
 
-                bool isClockworkTarget = (crosshairImage != null && crosshairImage.sprite == clockworkRingSprite) ||
-                                         (_currentInteractable is DoorInteractable);
+                bool isClockworkTarget = enableContextualIcons && (
+                                         (crosshairImage != null && crosshairImage.sprite == clockworkRingSprite) ||
+                                         (_currentInteractable is DoorInteractable));
 
                 if (isClockworkTarget)
                 {
@@ -1249,7 +1375,11 @@ public class Crosshair : MonoBehaviour
             crosshairImage.color = GetCurrentInteractionColor();
         }
 
-        if (!_hasInteractable && !_isHolding)
+        if (_hasInteractable && !_isHolding)
+        {
+            StartHoverPulse();
+        }
+        else if (!_hasInteractable && !_isHolding)
         {
             StartIdleBreathing();
         }

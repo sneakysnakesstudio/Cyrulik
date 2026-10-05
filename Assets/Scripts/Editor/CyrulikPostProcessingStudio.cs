@@ -13,7 +13,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
     private Camera _mainCamera;
     private Vector2 _scrollPos;
 
-    [MenuItem("Tools/Cyrulik/🎨 Post-Processing Studio & Presets", false, 1)]
+    [MenuItem("Tools/Cyrulik/🎨 Post-Processing Studio", false, 2)]
     [MenuItem("Window/Cyrulik Post-Processing Studio", false, 200)]
     public static void OpenWindow()
     {
@@ -22,7 +22,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
         win.Show();
     }
 
-    [MenuItem("Tools/Cyrulik/Quick Presets/🔪 Mroczny Cyrulik (Zalecany)", false, 20)]
+    [MenuItem("Tools/Cyrulik/Post-Processing/Quick Presets/🔪 Mroczny Cyrulik (Zalecany)", false, 20)]
     public static void QuickApplyMrocznyCyrulik()
     {
         var profile = EnsureVolumeAndGetProfile();
@@ -36,7 +36,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
         }
     }
 
-    [MenuItem("Tools/Cyrulik/Quick Presets/📼 Retro PSX Horror", false, 21)]
+    [MenuItem("Tools/Cyrulik/Post-Processing/Quick Presets/📼 Retro PSX Horror", false, 21)]
     public static void QuickApplyRetroPSX()
     {
         var profile = EnsureVolumeAndGetProfile();
@@ -50,7 +50,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
         }
     }
 
-    [MenuItem("Tools/Cyrulik/Quick Presets/🕯️ Ciepły Vintage", false, 22)]
+    [MenuItem("Tools/Cyrulik/Post-Processing/Quick Presets/🕯️ Ciepły Vintage", false, 22)]
     public static void QuickApplyCieplyVintage()
     {
         var profile = EnsureVolumeAndGetProfile();
@@ -64,7 +64,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
         }
     }
 
-    [MenuItem("Tools/Cyrulik/Quick Presets/🎞️ Film Noir", false, 23)]
+    [MenuItem("Tools/Cyrulik/Post-Processing/Quick Presets/🎞️ Film Noir", false, 23)]
     public static void QuickApplyFilmNoir()
     {
         var profile = EnsureVolumeAndGetProfile();
@@ -78,7 +78,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
         }
     }
 
-    [MenuItem("Tools/Cyrulik/Quick Presets/🧼 Czysty Reset (Neutral)", false, 24)]
+    [MenuItem("Tools/Cyrulik/Post-Processing/Quick Presets/🧼 Czysty Reset (Neutral)", false, 24)]
     public static void QuickApplyClean()
     {
         var profile = EnsureVolumeAndGetProfile();
@@ -92,7 +92,7 @@ public class CyrulikPostProcessingStudio : EditorWindow
         }
     }
 
-    [MenuItem("Tools/Cyrulik/🛠️ Fix & Setup Scene Volume + Cameras", false, 10)]
+    [MenuItem("Tools/Cyrulik/Post-Processing/🛠️ Fix & Setup Scene Volume + Cameras", false, 10)]
     public static void SetupSceneVolumeAndCameras()
     {
         EnsureVolumeAndGetProfile();
