@@ -30,6 +30,8 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     [SerializeField] private Vector3 dustLocalOffset = new Vector3(0f, -0.4f, 0f);
     [Tooltip("Mnożnik skali efektu cząsteczek kurzu.")]
     [SerializeField] private float dustScaleMultiplier = 1.0f;
+    [Tooltip("Czy czyścić i usuwać cząsteczki kurzu natychmiast po zgaszeniu światła (brak lewitujących drobinek po ciemku).")]
+    [SerializeField] private bool clearDustInstantlyOnTurnOff = true;
 
     [Header("Normal Animation")]
     [SerializeField] private float turnOnDuration = 0.1f;
@@ -397,7 +399,7 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
             {
                 if (light != null)
                 {
-                    ParticleManager.Instance.DetachLoopingEffect(light.transform, $"lamp_dust_{light.GetEntityId()}");
+                    ParticleManager.Instance.DetachLoopingEffect(light.transform, $"lamp_dust_{light.GetEntityId()}", clearDustInstantlyOnTurnOff);
                 }
             }
         }
@@ -591,6 +593,17 @@ public class LampSwitch : MonoBehaviour, IConditionalInteractable
     private void OnDisable()
     {
         KillTweens();
+
+        if (targetLights != null && ParticleManager.Instance != null)
+        {
+            foreach (var light in targetLights)
+            {
+                if (light != null)
+                {
+                    ParticleManager.Instance.DetachLoopingEffect(light.transform, $"lamp_dust_{light.GetEntityId()}", true);
+                }
+            }
+        }
 
         if (switchHandle != null && (animateHandle || switchHandle != transform || _handleRestPos != Vector3.zero))
         {

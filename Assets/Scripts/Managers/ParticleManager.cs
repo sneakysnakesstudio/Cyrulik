@@ -255,6 +255,8 @@ public class ParticleManager : MonoBehaviour
 
         if (stopImmediate)
         {
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.Clear(true);
             Destroy(ps.gameObject);
         }
         else
@@ -262,7 +264,7 @@ public class ParticleManager : MonoBehaviour
             var emission = ps.emission;
             emission.enabled = false;
             ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-            Destroy(ps.gameObject, ps.main.startLifetime.constantMax + 0.5f);
+            Destroy(ps.gameObject, Mathf.Min(0.35f, ps.main.startLifetime.constantMax));
         }
     }
 
@@ -380,13 +382,13 @@ public class ParticleManager : MonoBehaviour
         }
         else if (effectId.Contains("dust") || effectId.Contains("lamp"))
         {
-            main.duration = 5f;
+            main.duration = 2f;
             main.loop = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(4.0f, 7.0f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.0f, 1.8f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.005f, 0.025f);
             main.startSize = new ParticleSystem.MinMaxCurve(0.006f, 0.022f); // Maleńkie, realistyczne pyłki kurzu
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f * Mathf.Deg2Rad);
-            emission.rateOverTime = 12; // Gęstsza chmura drobnych pyłków
+            emission.rateOverTime = 16; // Gęstsza chmura drobnych pyłków
             shape.shapeType = ParticleSystemShapeType.Box;
             shape.scale = new Vector3(0.9f, 1.2f, 0.9f); // Objętość stożka światła pod lampą
 
@@ -420,10 +422,20 @@ public class ParticleManager : MonoBehaviour
 
         // Krzywa zanikania (Fade in / Fade out)
         Gradient grad = new Gradient();
-        grad.SetKeys(
-            new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-            new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.3f), new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) }
-        );
+        if (effectId.Contains("dust") || effectId.Contains("lamp"))
+        {
+            grad.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.85f, 0.15f), new GradientAlphaKey(0.85f, 0.75f), new GradientAlphaKey(0f, 1f) }
+            );
+        }
+        else
+        {
+            grad.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.3f), new GradientAlphaKey(1f, 0.7f), new GradientAlphaKey(0f, 1f) }
+            );
+        }
         colorOverLifetime.color = grad;
 
         AnimationCurve sizeCurve = new AnimationCurve();
