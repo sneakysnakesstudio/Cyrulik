@@ -65,8 +65,12 @@ public class Crosshair : MonoBehaviour
 
     [Header("Fade")]
     [SerializeField] private float colorFadeDuration = 0.15f;
-    [SerializeField] private float textFadeInDuration = 0.2f;
-    [SerializeField] private float textFadeOutDuration = 0.15f;
+    [SerializeField] private float textFadeInDuration = 0.25f;
+    [SerializeField] private float textFadeOutDuration = 0.20f;
+
+    [Header("Font & Styling")]
+    [Tooltip("Opcjonalny customowy font dla napisów interakcji (np. Rye-Regular SDF dla retro szyldu). Jeśli przypisany, nadpisuje domyślny font.")]
+    [SerializeField] private TMP_FontAsset interactionFont;
 
     [Header("Transition Fade / Płynne Przejście")]
     [Tooltip("Czas trwania płynnego przejścia (fade in) w znak po najechaniu na obiekt.")]
@@ -85,6 +89,7 @@ public class Crosshair : MonoBehaviour
 
     private IInteractable _currentInteractable;
 
+    private CanvasGroup _textCanvasGroup;
     private Tween _pulseTween;
     private Tween _scaleTween;
     private Tween _colorTween;
@@ -293,8 +298,22 @@ public class Crosshair : MonoBehaviour
 
         crosshairImage.color = normalColor;
 
-        interactionNameText.text = string.Empty;
-        interactionNameText.alpha = 0f;
+        EnsureTextCanvasGroup();
+        if (_textCanvasGroup != null)
+        {
+            _textCanvasGroup.alpha = 0f;
+        }
+
+        if (interactionNameText != null)
+        {
+            interactionNameText.text = string.Empty;
+            interactionNameText.alpha = 1f;
+
+            if (interactionFont != null)
+            {
+                interactionNameText.font = interactionFont;
+            }
+        }
 
         // Wymuszenie czytelnych, powiększonych rozmiarów (nadpisuje ewentualne stare małe wartości ze sceny)
         if (defaultDotSize.x < 14f) defaultDotSize = new Vector2(14f, 14f);
@@ -309,9 +328,6 @@ public class Crosshair : MonoBehaviour
         if (speechBubbleIconSize.x < 52f) speechBubbleIconSize = new Vector2(52f, 48f);
         if (magnifierIconSize.x < 50f) magnifierIconSize = new Vector2(50f, 50f);
         if (keyIconSize.x < 48f) keyIconSize = new Vector2(48f, 48f);
-
-        if (textFadeInDuration > 0.25f) textFadeInDuration = 0.15f;
-        if (textFadeOutDuration > 0.2f) textFadeOutDuration = 0.12f;
 
         if (interactionNameText != null)
         {
@@ -536,25 +552,7 @@ public class Crosshair : MonoBehaviour
             StartHoverPulse();
         }
 
-        if (interactionNameText != null)
-        {
-            if (string.IsNullOrEmpty(interactionNameText.text) || interactionNameText.alpha <= 0.05f)
-            {
-                interactionNameText.alpha = 0f;
-            }
-            interactionNameText.text = interactable.InteractionName;
-
-            _textTween = interactionNameText
-                .DOFade(
-                    1f,
-                    textFadeInDuration
-                )
-                .SetEase(Ease.OutQuad)
-                .SetLink(
-                    interactionNameText.gameObject,
-                    LinkBehaviour.KillOnDestroy
-                );
-        }
+        AnimateInteractionText(interactable != null ? interactable.InteractionName : null);
     }
 
     private void TransitionToInteractableIcon(IInteractable interactable, Color targetColor)
@@ -860,26 +858,106 @@ public class Crosshair : MonoBehaviour
             }
         }
 
-        if (interactionNameText != null)
+        AnimateInteractionText(null);
+    }
+
+    private void AnimateInteractionText(string newText)
+    {
+        if (interactionNameText == null) return;
+        EnsureTextCanvasGroup();
+
+        _textTween?.Kill();
+
+        if (string.IsNullOrEmpty(newText))
         {
-            _textTween = interactionNameText
-                .DOFade(
-                    0f,
-                    textFadeOutDuration
-                )
-                .SetEase(Ease.OutQuad)
-                .OnComplete(() =>
+            // Płynne wygaszanie (Fade Out)
+            if (_textCanvasGroup != null)
+            {
+                if (_textCanvasGroup.alpha <= 0.001f)
                 {
-                    if (interactionNameText != null)
+                    interactionNameText.text = string.Empty;
+                    return;
+                }
+
+                _textTween = _textCanvasGroup
+                    .DOFade(0f, textFadeOutDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetUpdate(true)
+                    .OnComplete(() =>
                     {
-                        interactionNameText.text =
-                            string.Empty;
-                    }
-                })
-                .SetLink(
-                    interactionNameText.gameObject,
-                    LinkBehaviour.KillOnDestroy
-                );
+                        if (interactionNameText != null)
+                        {
+                            interactionNameText.text = string.Empty;
+                        }
+                    })
+                    .SetLink(interactionNameText.gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            return;
+        }
+
+        // Jeśli ten sam tekst jest już w pełni widoczny, nie przerywaj animacji
+        if (interactionNameText.text == newText && _textCanvasGroup != null && _textCanvasGroup.alpha >= 0.98f)
+        {
+            return;
+        }
+
+        if (_textCanvasGroup != null)
+        {
+            // Jeśli patrzymy z jednego obiektu na inny bez przerwy na pustą przestrzeń
+            if (_textCanvasGroup.alpha > 0.1f && interactionNameText.text != newText && !string.IsNullOrEmpty(interactionNameText.text))
+            {
+                // Szybki crossfade (0.08s ściemnienie -> podmiana -> płynne rozjaśnienie nowego)
+                _textTween = _textCanvasGroup
+                    .DOFade(0f, 0.08f)
+                    .SetEase(Ease.InQuad)
+                    .SetUpdate(true)
+                    .OnComplete(() =>
+                    {
+                        if (interactionNameText != null)
+                        {
+                            interactionNameText.text = newText;
+                            _textTween = _textCanvasGroup
+                                .DOFade(1f, textFadeInDuration)
+                                .SetEase(Ease.OutQuad)
+                                .SetUpdate(true)
+                                .SetLink(interactionNameText.gameObject, LinkBehaviour.KillOnDestroy);
+                        }
+                    })
+                    .SetLink(interactionNameText.gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            else
+            {
+                // Płynne wejście od zera (Fade In)
+                interactionNameText.text = newText;
+                if (_textCanvasGroup.alpha <= 0.05f)
+                {
+                    _textCanvasGroup.alpha = 0f;
+                }
+
+                _textTween = _textCanvasGroup
+                    .DOFade(1f, textFadeInDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetUpdate(true)
+                    .SetLink(interactionNameText.gameObject, LinkBehaviour.KillOnDestroy);
+            }
+        }
+        else
+        {
+            interactionNameText.text = newText;
+        }
+    }
+
+    private void EnsureTextCanvasGroup()
+    {
+        if (_textCanvasGroup == null && interactionNameText != null)
+        {
+            _textCanvasGroup = interactionNameText.GetComponent<CanvasGroup>();
+            if (_textCanvasGroup == null)
+            {
+                _textCanvasGroup = interactionNameText.gameObject.AddComponent<CanvasGroup>();
+            }
+            _textCanvasGroup.blocksRaycasts = false;
+            _textCanvasGroup.interactable = false;
         }
 
         // Po wygaszeniu symbolu kropka spokojnie wznawia oddychanie w idlu
