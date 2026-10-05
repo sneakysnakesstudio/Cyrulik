@@ -69,8 +69,10 @@ public class Crosshair : MonoBehaviour
     [SerializeField] private float textFadeOutDuration = 0.20f;
 
     [Header("Font & Styling")]
-    [Tooltip("Opcjonalny customowy font dla napisów interakcji (np. Rye-Regular SDF dla retro szyldu). Jeśli przypisany, nadpisuje domyślny font.")]
+    [Tooltip("Opcjonalny customowy font dla napisów interakcji (np. BarlowCondensed-SemiBold SDF dla czystego, prostego tekstu). Jeśli przypisany, nadpisuje domyślny font.")]
     [SerializeField] private TMP_FontAsset interactionFont;
+    [Tooltip("Rozmiar czcionki dla napisów interakcji (domyślnie 20, zmniejszony o ~30% dla czytelnego, subtelnego wyglądu).")]
+    [SerializeField] private float interactionTextFontSize = 20f;
 
     [Header("Transition Fade / Płynne Przejście")]
     [Tooltip("Czas trwania płynnego przejścia (fade in) w znak po najechaniu na obiekt.")]
@@ -313,6 +315,11 @@ public class Crosshair : MonoBehaviour
             {
                 interactionNameText.font = interactionFont;
             }
+
+            if (interactionTextFontSize > 0f)
+            {
+                interactionNameText.fontSize = interactionTextFontSize;
+            }
         }
 
         // Wymuszenie czytelnych, powiększonych rozmiarów (nadpisuje ewentualne stare małe wartości ze sceny)
@@ -328,11 +335,6 @@ public class Crosshair : MonoBehaviour
         if (speechBubbleIconSize.x < 52f) speechBubbleIconSize = new Vector2(52f, 48f);
         if (magnifierIconSize.x < 50f) magnifierIconSize = new Vector2(50f, 50f);
         if (keyIconSize.x < 48f) keyIconSize = new Vector2(48f, 48f);
-
-        if (interactionNameText != null)
-        {
-            interactionNameText.fontSize = Mathf.Max(interactionNameText.fontSize, 30f);
-        }
 
         if (iconScaleMultiplier < 1.15f)
         {

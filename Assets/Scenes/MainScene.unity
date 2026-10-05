@@ -18473,8 +18473,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 74c0bd1ae49f2034fb0ec54852c736b8, type: 2}
-  m_sharedMaterial: {fileID: 7144587472725215726, guid: 74c0bd1ae49f2034fb0ec54852c736b8, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f144de64c71604844be2fc2c9da645d8, type: 2}
+  m_sharedMaterial: {fileID: 2749179876447330948, guid: f144de64c71604844be2fc2c9da645d8, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -18498,8 +18498,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -110206,7 +110206,8 @@ MonoBehaviour:
   colorFadeDuration: 0.2
   textFadeInDuration: 0.35
   textFadeOutDuration: 0.25
-  interactionFont: {fileID: 11400000, guid: 74c0bd1ae49f2034fb0ec54852c736b8, type: 2}
+  interactionFont: {fileID: 11400000, guid: f144de64c71604844be2fc2c9da645d8, type: 2}
+  interactionTextFontSize: 20
   transitionFadeInDuration: 0.22
   transitionFadeOutDuration: 0.18
   fadeTransitionImage: {fileID: 0}
