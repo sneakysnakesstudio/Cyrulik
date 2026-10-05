@@ -576,8 +576,8 @@ Light:
   serializedVersion: 13
   m_Type: 2
   m_Color: {r: 0.6132076, g: 0.4488586, b: 0, a: 1}
-  m_Intensity: 1.27
-  m_Range: 6.2
+  m_Intensity: 0.67
+  m_Range: 7.25
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -9577,6 +9577,7 @@ MonoBehaviour:
   dustParticleEffectId: lamp_dust
   dustLocalOffset: {x: 0, y: -0.4, z: 0}
   dustScaleMultiplier: 1
+  clearDustInstantlyOnTurnOff: 1
   turnOnDuration: 0.15
   turnOffDuration: 0.3
   flickering: 1
@@ -79335,6 +79336,7 @@ MonoBehaviour:
   dustParticleEffectId: lamp_dust
   dustLocalOffset: {x: 0.51, y: -0.4, z: 0}
   dustScaleMultiplier: 1.18
+  clearDustInstantlyOnTurnOff: 1
   turnOnDuration: 1
   turnOffDuration: 0.1
   flickering: 1
@@ -81251,8 +81253,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProximityGlow
   highlightMode: 0
   glowColor: {r: 1.7, g: 1.25, b: 0.4, a: 1}
-  outlineThickness: 0.018
-  glowIntensity: 1.6
+  outlineThickness: 0.0153
+  glowIntensity: 1.19
   gleamPulseSpeed: 3.2
   areaRadius: 0.7
   groundLayerMask:
@@ -81284,8 +81286,9 @@ MonoBehaviour:
   interactionSound: small_lamp
   spawnDustParticles: 1
   dustParticleEffectId: lamp_dust
-  dustLocalOffset: {x: 0, y: -0.4, z: 0}
-  dustScaleMultiplier: 1
+  dustLocalOffset: {x: 0, y: -0.09, z: 0}
+  dustScaleMultiplier: 0.19
+  clearDustInstantlyOnTurnOff: 1
   turnOnDuration: 0.1
   turnOffDuration: 0.1
   flickering: 0
@@ -111605,6 +111608,7 @@ MonoBehaviour:
   dustParticleEffectId: lamp_dust
   dustLocalOffset: {x: 0, y: -0.4, z: 0}
   dustScaleMultiplier: 0.502
+  clearDustInstantlyOnTurnOff: 1
   turnOnDuration: 0.53
   turnOffDuration: 0.1
   flickering: 1
@@ -118879,6 +118883,7 @@ MonoBehaviour:
   dustParticleEffectId: lamp_dust
   dustLocalOffset: {x: 0, y: -0.4, z: 0}
   dustScaleMultiplier: 0.33
+  clearDustInstantlyOnTurnOff: 1
   turnOnDuration: 0.1
   turnOffDuration: 0.1
   flickering: 1
@@ -171772,6 +171777,7 @@ MonoBehaviour:
   dustParticleEffectId: lamp_dust
   dustLocalOffset: {x: 0, y: -0.4, z: 0}
   dustScaleMultiplier: 1
+  clearDustInstantlyOnTurnOff: 1
   turnOnDuration: 0.1
   turnOffDuration: 0.1
   flickering: 1
