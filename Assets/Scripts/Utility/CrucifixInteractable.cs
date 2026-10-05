@@ -138,10 +138,6 @@ public class CrucifixInteractable : MonoBehaviour, IInteractable, ILookAtHandler
             {
                 rightClickPressed = true;
             }
-            else if (Input.GetMouseButtonDown(1))
-            {
-                rightClickPressed = true;
-            }
 
             if (rightClickPressed)
             {

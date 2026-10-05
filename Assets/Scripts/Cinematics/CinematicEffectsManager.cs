@@ -84,6 +84,7 @@ public class CinematicEffectsManager : MonoBehaviour
     [SerializeField] private AudioClip customHeavenlyClip;
     [Tooltip("Nazwa grupy audio w AudioManager (opcjonalnie).")]
     [SerializeField] private string concussionAudioGroup = "";
+    public string ConcussionAudioGroup => concussionAudioGroup;
 
     // Elementy interfejsu winiety
     private CanvasGroup _edgeCanvasGroup;
@@ -103,7 +104,6 @@ public class CinematicEffectsManager : MonoBehaviour
     public bool IsDollyActive => _isDollyActive;
 
     // Wygenerowane proceduralne klipy audio
-    private static AudioClip _proceduralConcussionClip;
     private static AudioClip _proceduralHeavenlyClip;
 
 #if UNITY_EDITOR
@@ -111,7 +111,6 @@ public class CinematicEffectsManager : MonoBehaviour
     private static void ResetStaticState()
     {
         _instance = null;
-        _proceduralConcussionClip = null;
         _proceduralHeavenlyClip = null;
     }
 #endif

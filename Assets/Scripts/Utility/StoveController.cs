@@ -322,7 +322,7 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
             return;
         }
 
-        PickupItem[] allPickups = FindObjectsByType<PickupItem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        PickupItem[] allPickups = FindObjectsByType<PickupItem>(FindObjectsInactive.Exclude);
         foreach (var p in allPickups)
         {
             if (p != null)

@@ -16,9 +16,9 @@ public class PlayerMirrorBody : MonoBehaviour
     [Tooltip("Transform głowy do ukrycia w widoku FPP (opcjonalnie).")]
     [SerializeField] private Transform headTransform;
 
-    [Header("Layer Settings")]
     [Tooltip("Warstwa dla ciała gracza (domyślnie 'Default').")]
     [SerializeField] private string mirrorBodyLayer = "Default";
+    public string MirrorBodyLayer => mirrorBodyLayer;
 
     private GameObject _spawnedBody;
     private Animator _bodyAnimator;
@@ -66,6 +66,16 @@ public class PlayerMirrorBody : MonoBehaviour
             foreach (var smr in _spawnedBody.GetComponentsInChildren<SkinnedMeshRenderer>())
             {
                 smr.updateWhenOffscreen = true;
+            }
+
+            int layer = LayerMask.NameToLayer(mirrorBodyLayer);
+            if (layer != -1)
+            {
+                _spawnedBody.layer = layer;
+                foreach (var t in _spawnedBody.GetComponentsInChildren<Transform>(true))
+                {
+                    t.gameObject.layer = layer;
+                }
             }
 
             DevLog.Log("<color=#70FF70>[PlayerMirrorBody] Ciało gracza zostało poprawnie zainicjalizowane i jest widoczne w lustrze!</color>");

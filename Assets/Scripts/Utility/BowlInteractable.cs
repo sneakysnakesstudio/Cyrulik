@@ -23,6 +23,7 @@ public class BowlInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private string promptDipTowel = "Dip towel in hot water (Get clean towel)";
     [SerializeField] private string promptBowlReady = "Bowl has hot water (Bring a towel)";
     [SerializeField] private string promptDone = "Bowl with hot water";
+    public string PromptDone => promptDone;
 
     [Header("Wizualia")]
     [Tooltip("Obiekt tafli wody w misce.")]

@@ -106,6 +106,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     [SerializeField] private float patienceDuration = 30.0f;
     [Tooltip("Czy Jurek ma wyjść z salonu po upływie czasu oczekiwania?")]
     [SerializeField] private bool leaveOnTimeout = true;
+    public bool LeaveOnTimeout => leaveOnTimeout;
 
     [Header("Śledzenie gracza wzrokiem (Look At Player)")]
     [Tooltip("Czy Jurek podczas oczekiwania w salonie ma płynnie obracać się w stronę podchodzącego gracza?")]
@@ -126,6 +127,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     [SerializeField] private string atmosphereTaskId = "proper_atmosphere";
     [TextArea(2, 4)]
     [SerializeField] private string gloomyFailReason = "The client felt the atmosphere was too gloomy and left.";
+    public string GloomyFailReason => gloomyFailReason;
 
     [Header("3. Trasa: Po wewnętrznych schodkach do Fotela (Górny podest)")]
     [Tooltip("Punkty trasy prowadzące od Waiting Pointu, po wewnętrznych schodkach na podest (dodaj tutaj punkty schodków!).")]
@@ -1710,7 +1712,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         }
 
         // 2. Włączenie świateł i radia (atmosfera)
-        var switches = FindObjectsByType<LampSwitch>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var switches = FindObjectsByType<LampSwitch>(FindObjectsInactive.Include);
         foreach (var sw in switches)
         {
             if (sw != null && !sw.IsOn) sw.Interact();

@@ -21,8 +21,6 @@ public class WallClockSequence : MonoBehaviour
     [SerializeField] private float suspenseDuration = 7.0f;
 
     [Header("Audio")]
-    [Tooltip("Dźwięk głośnego, złowrogiego tykania zegara ściennego.")]
-    [SerializeField] private string loudTickSound = "clock_tick";
     [SerializeField] private AudioClip customLoudTickClip;
     [Range(0f, 1f)]
     [SerializeField] private float loudVolume = 1.0f;

@@ -160,6 +160,10 @@ public class WristwatchController : MonoBehaviour
         {
             AudioManager.Instance.Play(raiseSound);
         }
+        else if (!looking && AudioManager.Instance != null && !string.IsNullOrEmpty(lowerSound))
+        {
+            AudioManager.Instance.Play(lowerSound);
+        }
     }
 
     /// <summary>

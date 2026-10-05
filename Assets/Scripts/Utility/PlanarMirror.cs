@@ -2,43 +2,66 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// Zero-Lag Retro Mirror — wydajny system renderowania odbicia lustrzanego w stylu PSX.
-/// Kamera lustra NIGDY nie jest włączona automatycznie przez URP — renderujemy ją manualnie
-/// przez mirrorCamera.Render() wyłącznie gdy:
-/// 1. Lustro jest widoczne w kamerze gracza (frustum culling).
-/// 2. Gracz jest wystarczająco blisko (distance culling).
-/// 3. Upłynął wymagany czas od ostatniego renderu (FPS throttling).
-/// Dzięki temu eliminujemy główną przyczynę lagów (ciągłe przebudowywanie pipelinu URP).
+/// Ultra-Optimized Planar Mirror (URP) — maksymalnie wydajny system odbicia lustrzanego.
+/// Kluczowe optymalizacje:
+/// 1. Zero alokacji GC: zbuforowana tablica Plane[6] do Frustum Cullingu (zero garbage collection hitching).
+/// 2. Distance Culling + Frustum Culling: lustro nie renderuje się, gdy gracz jest za daleko lub nie patrzy na taflę.
+/// 3. Back-Face Culling: brak renderowania, gdy gracz stoi za ścianą / za taflą lustra.
+/// 4. Wyłączenie post-processingu, cieni, volumów, MSAA i HDR na kamerze lustra (kolosalny zysk GPU).
+/// 5. Elastyczność: obsługa stałego kadru (zdefiniowanego w prefabie) lub dynamicznego odbicia planarnego (Dynamic Reflection).
 /// </summary>
 public class PlanarMirror : MonoBehaviour
 {
     [Header("References")]
+    [Tooltip("Kamera generująca odbicie (dziecko prefabu lustra).")]
     [SerializeField] private Camera mirrorCamera;
+
+    [Tooltip("Renderer tafli lustra, na który nakładana jest tekstura odbicia.")]
     [SerializeField] private MeshRenderer mirrorRenderer;
 
     [Header("Render Texture")]
-    [Tooltip("Wysokość tekstury. 256 = PSX retro styl (4x mniej GPU niż 512).")]
+    [Tooltip("Wysokość tekstury odbicia w pikselach. 256 = styl PSX (błyskawiczny render), 384 = idealny kompromis.")]
     [SerializeField] private int textureHeight = 256;
     [SerializeField] private FilterMode filterMode = FilterMode.Bilinear;
 
-    [Header("Performance")]
-    [Tooltip("Powyżej tej odległości lustro przestaje renderować.")]
-    [SerializeField] private float maxRenderDistance = 5f;
+    [Header("Performance & Culling")]
+    [Tooltip("Powyżej tej odległości (w metrach) lustro całkowicie wyłącza renderowanie.")]
+    [SerializeField] private float maxRenderDistance = 6.0f;
 
-    [Tooltip("Ile razy na sekundę odświeżać odbicie. 15 = retro PSX, 30 = płynniej.")]
-    [SerializeField] private int mirrorTargetFPS = 15;
+    [Tooltip("Docelowy klatkaż odświeżania odbicia (FPS). 30 = płynne odbicie przy 50% oszczędności GPU, 0 = każda klatka.")]
+    [SerializeField] private int mirrorTargetFPS = 30;
 
-    [Tooltip("Maksymalny dystans renderowania kamery lustra (farClipPlane). Nie renderujemy obiektów zza ścian.")]
-    [SerializeField] private float mirrorFarClip = 6f;
+    [Tooltip("Maksymalny zasięg widzenia kamery lustra (farClipPlane). Obiekty dalej niż ten dystans nie są rysowane.")]
+    [SerializeField] private float mirrorFarClip = 6.0f;
+
+    [Tooltip("Warstwy renderowane w lustrze. Wyklucz UI i cząsteczki.")]
+    [SerializeField] private LayerMask reflectionLayers = ~0;
+
+    [Header("Reflection Mode")]
+    [Tooltip("Gdy wyłączone (domyślnie): kamera zachowuje kadr ustawiony w prefabie/scenie. Gdy włączone: kamera dynamicznie podąża za pozycją gracza.")]
+    [SerializeField] private bool dynamicReflection = false;
+
+    [Tooltip("Oś normalnej tafli lustra (w przestrzeni lokalnej renderera tafli) używana do dynamicznego odbicia.")]
+    [SerializeField] private Vector3 mirrorFacingAxis = Vector3.right;
 
     [Header("Enable / Disable Mirror")]
-    [Tooltip("Wyłącz lustro całkowicie, aby zaoszczędzić GPU na słabych maszynach.")]
+    [Tooltip("Główny włącznik lustra (np. do wyłączenia w opcjach graficznych).")]
     [SerializeField] public bool enableMirror = true;
 
     private RenderTexture _rt;
     private Camera _playerCamera;
     private float _timer;
-    private Plane[] _frustumPlanes;
+    private MaterialPropertyBlock _propBlock;
+
+    // Cache struktur — zero alokacji GC w pętli renderowania!
+    private readonly Plane[] _frustumPlanes = new Plane[6];
+    private static readonly int BaseMapPropId = Shader.PropertyToID("_BaseMap");
+    private static readonly int MainTexPropId = Shader.PropertyToID("_MainTex");
+
+    private void Awake()
+    {
+        _propBlock = new MaterialPropertyBlock();
+    }
 
     private void Start()
     {
@@ -59,8 +82,7 @@ public class PlanarMirror : MonoBehaviour
         SetupCamera();
         CreateRT();
 
-        // WAŻNE: kamera musi być zawsze wyłączona — renderujemy ją manualnie przez Render()
-        // URP nie doda jej do swojego pipelinu, więc nie będzie powodować lagów
+        // Kamera musi być wyłączona w URP — renderujemy ją ręcznie tylko gdy widać taflę!
         if (mirrorCamera != null)
             mirrorCamera.enabled = false;
     }
@@ -69,14 +91,12 @@ public class PlanarMirror : MonoBehaviour
     {
         if (mirrorCamera == null) return;
 
-        // Kamera wyłączona na stałe — manualny render
         mirrorCamera.enabled = false;
         mirrorCamera.allowHDR = false;
         mirrorCamera.allowMSAA = false;
-        mirrorCamera.useOcclusionCulling = true;
-
-        // Ograniczamy zasięg — nie renderujemy obiektów zza ścian
+        mirrorCamera.useOcclusionCulling = false; // Mniejszy narzut CPU przy małym farClip
         mirrorCamera.farClipPlane = mirrorFarClip;
+        mirrorCamera.cullingMask = reflectionLayers;
 
         var data = mirrorCamera.GetComponent<UniversalAdditionalCameraData>();
         if (data != null)
@@ -86,8 +106,7 @@ public class PlanarMirror : MonoBehaviour
             data.requiresDepthTexture = false;
             data.requiresColorTexture = false;
             data.antialiasing = AntialiasingMode.None;
-            // Wyłącz Volume/Bloom na kamerze lustra — oszczędność ~0.9 ms/klatkę
-            data.volumeLayerMask = 0;
+            data.volumeLayerMask = 0; // Brak obliczeń wolumenów post-processingu
         }
     }
 
@@ -96,15 +115,22 @@ public class PlanarMirror : MonoBehaviour
         if (mirrorCamera == null) return;
 
         float aspect = mirrorCamera.aspect > 0 ? mirrorCamera.aspect : 1f;
-        int w = Mathf.Clamp(Mathf.RoundToInt(textureHeight * aspect), 64, 2048);
+        int w = Mathf.Clamp(Mathf.RoundToInt(textureHeight * aspect), 64, 1024);
         int h = Mathf.Max(64, textureHeight);
+
+        if (_rt != null)
+        {
+            _rt.Release();
+            Destroy(_rt);
+        }
 
         _rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32)
         {
-            name       = "MirrorRT",
+            name = "MirrorRT_Runtime",
             filterMode = filterMode,
-            wrapMode   = TextureWrapMode.Clamp,
-            useMipMap  = false
+            wrapMode = TextureWrapMode.Clamp,
+            useMipMap = false,
+            autoGenerateMips = false
         };
         _rt.Create();
 
@@ -112,19 +138,55 @@ public class PlanarMirror : MonoBehaviour
 
         if (mirrorRenderer != null)
         {
-            Material mat = mirrorRenderer.material;
-            if (mat.HasProperty("_BaseMap"))
-                mat.SetTexture("_BaseMap", _rt);
-            else
-                mat.mainTexture = _rt;
+            mirrorRenderer.GetPropertyBlock(_propBlock);
+            _propBlock.SetTexture(BaseMapPropId, _rt);
+            _propBlock.SetTexture(MainTexPropId, _rt);
+            mirrorRenderer.SetPropertyBlock(_propBlock);
+
+            // Fallback na wypadek gdyby shader wymagał sharedMaterial
+            if (mirrorRenderer.sharedMaterial != null)
+            {
+                if (mirrorRenderer.sharedMaterial.HasProperty(BaseMapPropId))
+                    mirrorRenderer.sharedMaterial.SetTexture(BaseMapPropId, _rt);
+                else
+                    mirrorRenderer.sharedMaterial.mainTexture = _rt;
+            }
         }
     }
 
     private void LateUpdate()
     {
-        if (!enableMirror || mirrorCamera == null) return;
+        if (!enableMirror || mirrorCamera == null || mirrorRenderer == null) return;
 
-        // --- THROTTLING: renderuj nie częściej niż mirrorTargetFPS razy na sekundę ---
+        if (_playerCamera == null)
+        {
+            _playerCamera = Camera.main;
+            if (_playerCamera == null) return;
+        }
+
+        Vector3 mirrorPos = mirrorRenderer.bounds.center;
+        Vector3 playerPos = _playerCamera.transform.position;
+        Vector3 toPlayer = playerPos - mirrorPos;
+
+        // 1. DISTANCE CULLING — szybki test odległości
+        float distSqr = toPlayer.sqrMagnitude;
+        if (distSqr > maxRenderDistance * maxRenderDistance)
+            return;
+
+        // 2. BACK-FACE CULLING — gracz stoi za lustrem / za ścianą
+        Vector3 facing = dynamicReflection
+            ? mirrorRenderer.transform.TransformDirection(mirrorFacingAxis).normalized
+            : mirrorCamera.transform.forward;
+
+        if (Vector3.Dot(facing, toPlayer) < -0.2f)
+            return;
+
+        // 3. FRUSTUM CULLING — tafla lustra musi być widoczna na ekranie gracza (zero alokacji GC)
+        GeometryUtility.CalculateFrustumPlanes(_playerCamera, _frustumPlanes);
+        if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, mirrorRenderer.bounds))
+            return;
+
+        // 4. FPS THROTTLING (opcjonalny)
         if (mirrorTargetFPS > 0)
         {
             _timer += Time.unscaledDeltaTime;
@@ -133,31 +195,26 @@ public class PlanarMirror : MonoBehaviour
             _timer = 0f;
         }
 
-        // --- DISTANCE CULLING: nie renderuj gdy gracz jest za daleko ---
-        if (_playerCamera != null)
+        // 5. DYNAMIC PLANAR REFLECTION (jeśli włączone)
+        if (dynamicReflection)
         {
-            Vector3 mirrorPos = mirrorRenderer != null
-                ? mirrorRenderer.bounds.center
-                : transform.position;
+            Vector3 mirrorNormal = facing;
+            float planeD = -Vector3.Dot(mirrorNormal, mirrorPos);
+            Vector3 reflectedPos = playerPos - 2f * (Vector3.Dot(mirrorNormal, playerPos) + planeD) * mirrorNormal;
+            mirrorCamera.transform.position = reflectedPos;
 
-            float distSqr = (mirrorPos - _playerCamera.transform.position).sqrMagnitude;
-            if (distSqr > maxRenderDistance * maxRenderDistance) return;
+            Vector3 reflectedForward = Vector3.Reflect(_playerCamera.transform.forward, mirrorNormal);
+            Vector3 reflectedUp = Vector3.Reflect(_playerCamera.transform.up, mirrorNormal);
+            mirrorCamera.transform.rotation = Quaternion.LookRotation(reflectedForward, reflectedUp);
+            mirrorCamera.fieldOfView = _playerCamera.fieldOfView;
         }
 
-        // --- FRUSTUM CULLING: renderuj tylko gdy tafla lustra jest widoczna ---
-        if (mirrorRenderer != null && _playerCamera != null)
-        {
-            _frustumPlanes = GeometryUtility.CalculateFrustumPlanes(_playerCamera);
-            if (!GeometryUtility.TestPlanesAABB(_frustumPlanes, mirrorRenderer.bounds))
-                return;
-        }
-
-        // --- MANUALNY RENDER: tylko na żądanie, bez angażowania pipelinu URP ---
+        // 6. RENDER LUSTRA
         mirrorCamera.Render();
     }
 
     /// <summary>
-    /// Włącza lub wyłącza renderowanie lustra w czasie gry (np. z ekranu ustawień graficznych).
+    /// Włącza lub wyłącza renderowanie lustra w czasie gry (np. z menu opcji graficznych).
     /// </summary>
     public void SetEnabled(bool enabled)
     {
@@ -178,6 +235,7 @@ public class PlanarMirror : MonoBehaviour
         {
             _rt.Release();
             Destroy(_rt);
+            _rt = null;
         }
     }
 }

@@ -86,6 +86,7 @@ public class RazorMinigame : MonoBehaviour, IInteractable, ICrosshairSymbolProvi
     [Header("Gentle Wrist Flip on Return (In Place)")]
     [Tooltip("Small angle flip/tilt upon returning to the bottom (degrees, default: 18°).")]
     [SerializeField] private float returnFlipAngle = 18f;
+    public float ReturnFlipAngle => returnFlipAngle;
 
     [Tooltip("Duration of the gentle flip/tilt after returning (seconds).")]
     [SerializeField] private float flipDuration = 0.25f;

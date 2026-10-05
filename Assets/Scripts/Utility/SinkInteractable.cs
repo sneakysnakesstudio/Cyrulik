@@ -65,6 +65,7 @@ public class SinkInteractable : MonoBehaviour, IConditionalInteractable
     [SerializeField] private GameObject waterStreamVisual;
 
     [SerializeField] private float potWaterStreamDuration = 1.0f;
+    public float PotWaterStreamDuration => potWaterStreamDuration;
 
     [Header("Referencje")]
     [SerializeField] private PlayerHands playerHands;

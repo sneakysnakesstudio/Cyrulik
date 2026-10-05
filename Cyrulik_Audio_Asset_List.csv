@@ -1,0 +1,45 @@
+﻿ID / Nazwa pliku;Typ;Kategoria;Priorytet;Loop;Opis brzmienia & Wytyczne dla Twórcy;Powiązanie w Unity / Scena
+theme_main_menu;Muzyka (Main Theme);Muzyka & Motywy;MUST HAVE;Tak;Główny motyw przewodni gry. Melancholijny, intrygujący, z dawką niepokoju (stare rozstrojone pianino, wiolonczela, analogowe synth pady w stylu lat 70/80, lo-fi trzaski).;MainMenuScene / AudioManager.mainThemeClip
+music_ambient_salon;Muzyka / Dron;Muzyka & Motywy;MUST HAVE;Tak;Duszny, minimalistyczny dark ambient w salonie fryzjerskim. Subtelny niski basowy pomruk, wiatr za starym oknem, rury w ścianach. Nie może męczyć ucha przy powtarzaniu.;MainScene / AudioManager.ambientClip
+music_radio_track_1;Muzyka (Diegetic);Muzyka & Motywy;MUST HAVE;Tak;Audycja radiowa nr 1 (np. 'Licho' lub retro ballada/swing/dancing). Brzmienie monofoniczne, obcięte pasmo, filtr pasmowy starego radia lampowego + lekkie trzaski winylu.;RadioInteractable.playlist[0]
+music_radio_track_2;Muzyka (Diegetic);Muzyka & Motywy;ŚREDNI;Tak;Druga stacja/utwór w radiu. Kontrastowy klimat (np. retro big-beat, powolny walczyk salonowy z PRL-u).;RadioInteractable.playlist[1]
+radio_tuning_static;SFX;Muzyka & Motywy;WYSOKI;Nie;Szum fal radiowych, trzask potencjometru i pisk między stacjami przy włączaniu/przełączaniu radia.;RadioInteractable / AudioManager
+suspense_countdown_drone;Muzyka / SFX (Riser);Muzyka & Motywy;MUST HAVE;Nie;7-sekundowy budujący psychologiczne napięcie dron/riser (od 17:00:00 do 17:00:07) przed dzwonkiem Jurka.;WallClockSequence / GameManager
+ending_blackout_drone;Muzyka / Stinger;Muzyka & Motywy;WYSOKI;Nie;Ciężki, mroczny, przeciągły ton/akord na czarnym ekranie podczas golenia przechodzący w ekran podsumowania gry.;CustomerJurek.ShavingEndingRoutine
+stove_ignition;SFX;Piec & Kuchnia;MUST HAVE;Nie;Potarcie zapałki o draskę, syknięcie siarki i cichy zapłon rozpałki w piecu kaflowym.;StoveController.ignitionStartClip
+stove_fire_loop;SFX (Loop);Piec & Kuchnia;MUST HAVE;Tak;Przyjemne, ale głębokie trzaskanie polan drewna i buczenie ognia w żeliwnym palenisku.;StoveController.fireAudioSource
+stove_door_open;SFX;Piec & Kuchnia;WYSOKI;Nie;Ciężkie, metaliczne skrzypnięcie i odskoczenie żeliwnej zapadki drzwiczek pieca kaflowego.;StoveController.doorOpenClip
+stove_door_close;SFX;Piec & Kuchnia;WYSOKI;Nie;Głuchy, żeliwny łomot domykanych drzwiczek pieca.;StoveController.doorCloseClip
+water_tap_pour_loop;SFX (Loop);Piec & Kuchnia;MUST HAVE;Tak;Ciągły strumień wody z kranu uderzający o emaliowany metalowy garnek / zlew.;SinkInteractable.soundPourWater
+water_boil_loop;SFX (Loop);Piec & Kuchnia;MUST HAVE;Tak;Bulgotanie gotującej się wody, pęcherze na powierzchni i delikatny świst pary wodnej z garnka.;StoveController.boilingAudioSource
+towel_dip_water;SFX;Piec & Kuchnia;WYSOKI;Nie;Zanurzenie grubego frotowego ręcznika w gorącej wodzie, miękkie mlaśnięcie i nasiąkanie tkaniny.;BowlInteractable.soundCloth
+mousetrap_arm;SFX;Zadanie z Myszą;MUST HAVE;Nie;Mechaniczne odciąganie i zbrojenie sprężyny drewnianej łapki na myszy, charakterystyczny klik zapadki.;MouseTrap.soundArmTrap
+mousetrap_snap;SFX;Zadanie z Myszą;MUST HAVE;Nie;Nagły, głośny, suchy trzask metalowej sprężyny uderzającej o drewnianą podstawkę pułapki.;MouseTrap.soundSnapTrap
+mouse_squeak_scamper;SFX;Zadanie z Myszą;MUST HAVE;Nie;Krótkie przeraźliwe piśnięcie myszy połączone z szelestem i drobnym tupotem pazurków po podłodze.;MouseRunner / CustomerJurek
+trash_pedal_open;SFX;Zadanie z Myszą;WYSOKI;Nie;Naciśnięcie stopą pedału i metaliczne odskoczenie/podniesienie pokrywy kosza na śmieci.;TrashBinInteractable.lidTransform
+trash_throw_impact;SFX;Zadanie z Myszą;WYSOKI;Nie;Głuche pacnięcie wrzucanego truchła myszy na dno metalowego kubła / worka na śmieci.;TrashBinInteractable.soundThrow
+trash_lid_close;SFX;Zadanie z Myszą;ŚREDNI;Nie;Opadnięcie i metaliczny brzęk zamykającej się pokrywy kosza.;TrashBinInteractable
+jurek_door_knock;SFX;Klient Jurek;MUST HAVE;Nie;Ciężkie, pewne siebie 3-krotne zastukanie pięścią w drewniane drzwi zewnętrzne wejściowe.;CustomerJurek.soundKnock
+jurek_door_bell;SFX;Klient Jurek;MUST HAVE;Nie;Mosiężny dzwoneczek nad drzwiami fryzjerskimi, sprężysty i lekko rozstrojony, vintage rezonans.;CustomerJurek.doorBellClip
+jurek_footsteps_stairs;SFX;Klient Jurek;WYSOKI;Nie;Kroki ciężkich skórzanych męskich butów po starych zewnętrznych i wewnętrznych schodach (3-4 warianty).;CustomerJurek.footstepSoundGroup
+barber_chair_creak;SFX;Klient Jurek;MUST HAVE;Nie;Ciężkie jęknięcie skórzanej tapicerki i hydrauliki/metalu pod ciężarem siadającego klienta.;CustomerJurek (chair_move)
+wall_clock_tick_heavy;SFX;Otoczenie & Klimat;MUST HAVE;Nie;Pojedyncze, głębokie, złowrogie uderzenie wahadłowego zegara ściennego z pogłosem salonu (tik-tak).;WallClockSequence.loudTickSound
+ceiling_fan_loop;SFX (Loop);Otoczenie & Klimat;WYSOKI;Tak;Niskie, monotonne buczenie silnika elektrycznego starego wentylatora sufitowego z lekkim biciem łożyska.;CeilingFan.fanLoopClip
+crucifix_divine_whisper;SFX / Dron;Otoczenie & Klimat;MUST HAVE;Nie;Mistyczny, chorałowy, lekko psychodeliczny ton/chór anielski z subtelnym niepokojem przy spojrzeniu na Jezusa.;CrucifixInteractable / CinematicEffects
+curtain_rustle;SFX;Otoczenie & Klimat;NISKI;Nie;Subtelny szelest materiału firanki/zasłony poruszanej przeciągiem.;CurtainSway.customClip
+wood_floor_creak;SFX;Otoczenie & Klimat;ŚREDNI;Nie;Pojedyncze, suche skrzypnięcie starych desek podłogowych pod ciężarem kroków (2-3 warianty).;PlayerMovement / Otoczenie
+key_pickup_jingle;SFX;Przedmioty;WYSOKI;Nie;Brzęk starego żelaznego klucza podnoszonego ze stołu lub wyjmowanego z kieszeni.;PlayerHands / PickupItem (wardrobe_key)
+key_unlock_lock;SFX;Przedmioty;MUST HAVE;Nie;Włożenie klucza do zamka szafy, twardy obrót mechanizmu i zwolnienie rygla.;WardrobeInteractable.unlockSoundName
+glass_pickup_table;SFX;Przedmioty;ŚREDNI;Nie;Czysty, subtelny stuk szklanki odstawianej lub podnoszonej z drewnianego blatu.;PlayerHands / PickupItem (glass)
+pot_metal_clang;SFX;Przedmioty;WYSOKI;Nie;Metaliczny pogłos stawiania pustego lub ciężkiego garnka na żeliwnej płycie pieca.;StoveController / PlayerHands
+lotion_cork_splash;SFX;Przedmioty;ŚREDNI;Nie;Wyciągnięcie korka/odkręcenie szklanej buteleczki wody kolońskiej i chlupnięcie płynu.;PickupItem (lotion)
+wristwatch_raise_tick;SFX;Przedmioty;ŚREDNI;Nie;Szelest rękawa przy uniesieniu ręki [Q] i ciche, precyzyjne mechaniczne tykanie zegarka naręcznego.;WristwatchController.raiseSound
+ui_typewriter_player;SFX;UI & Narracja;MUST HAVE;Nie;Krótki, miękki vintage blip/klik lub pomruk myśli wewnętrznych fryzjera (chmurka dialogowa).;InnerDialogueUI.charAudioClip
+ui_typewriter_jurek;SFX;UI & Narracja;MUST HAVE;Nie;Niski, lekko zachrypnięty, gardłowy klik/pomruk kwestii dialogowych klienta Jurka.;ClientDialogueUI.charAudioClip
+ui_dialogue_next;SFX;UI & Narracja;WYSOKI;Nie;Subtelny klik/szelest zatwierdzenia kwestii dialogowej i przejścia dalej klawiszem [E].;InnerDialogueUI.advanceSoundGroup
+ui_task_complete_stinger;SFX;UI & Narracja;MUST HAVE;Nie;Ciepły, bursztynowy, satysfakcjonujący dzwonek/jingle retro potwierdzający zaliczenie zadania w salonie.;TaskFeedbackUI.soundTaskComplete
+ui_patience_warning_pulse;SFX;UI & Narracja;WYSOKI;Nie;Stonowany, ale nerwowy puls (jak przyspieszające bicie serca lub stłumiony dzwonek), gdy Jurek traci cierpliwość.;PatienceMeterUI.soundWarning
+ui_game_over_fail;SFX / Stinger;UI & Narracja;MUST HAVE;Nie;Ciężki, niski, ponury basowy stinger przegranej w stylu GTA (gdy klient ucieka lub przestraszy go mysz).;EndSummaryUI.soundDefeat
+ui_button_hover;SFX;UI & Narracja;ŚREDNI;Nie;Dyskretny szum/kliknięcie przy najechaniu kursorem na przyciski w menu głównym i pauzie.;MainMenu.buttonHoverSound
+ui_button_click;SFX;UI & Narracja;WYSOKI;Nie;Twardy, mechaniczny klik zatwierdzenia opcji w menu (Play, Settings, Restart, Quit).;MainMenu.buttonClickSound
+ui_action_blocked_error;SFX;UI & Narracja;WYSOKI;Nie;Tępe szarpnięcie zablokowanej klamki lub głuchy odgłos odmowy przy próbie zrobienia niedozwolonej akcji.;Crosshair.error_sound

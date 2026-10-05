@@ -10,6 +10,9 @@ public class PlayerInteraction : MonoBehaviour
     [SerializeField] private float interactDistance = 3.0f;
     [SerializeField] private LayerMask interactLayer;
 
+    public float InteractDistance => interactDistance;
+    public LayerMask InteractLayer => interactLayer;
+
     private InteractableItem currentTarget;
 
     private void Awake()

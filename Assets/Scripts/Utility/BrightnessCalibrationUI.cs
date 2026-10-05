@@ -1,4 +1,4 @@
-﻿using DG.Tweening;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -488,7 +488,7 @@ public class BrightnessCalibrationUI : MonoBehaviour
         tmp.fontStyle = style;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = color;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
     }
 
     private static void CreateSeparator(Transform parent)
