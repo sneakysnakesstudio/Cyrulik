@@ -285,14 +285,29 @@ public class ProximityGlow : MonoBehaviour
 
         if (_sharedOutlineMaterial == null)
         {
-            Shader shader = Shader.Find("Cyrulik/InteractableOutline");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
+            // 1. Bezpieczne ładowanie z folderu Resources (gwarantuje obecność w buildzie .exe)
+            _sharedOutlineMaterial = Resources.Load<Material>("InteractableOutline_Material");
 
-            _sharedOutlineMaterial = new Material(shader)
+            // 2. Fallback: znajdź shader bezpośrednio po nazwie (w Edytorze)
+            if (_sharedOutlineMaterial == null)
             {
-                name = "InteractableOutline_RuntimeSharedMat",
-                hideFlags = HideFlags.DontSave
-            };
+                Shader shader = Shader.Find("Cyrulik/InteractableOutline");
+                if (shader != null)
+                {
+                    _sharedOutlineMaterial = new Material(shader)
+                    {
+                        name = "InteractableOutline_RuntimeSharedMat",
+                        hideFlags = HideFlags.DontSave
+                    };
+                }
+            }
+        }
+
+        // NIGDY nie twórz obwódki z shaderem URP Lit, bo w buildzie zasłania cały obiekt białym/świecącym meshem!
+        if (_sharedOutlineMaterial == null)
+        {
+            DevLog.LogWarning($"[ProximityGlow] Brak shadera lub materiału 'Cyrulik/InteractableOutline' dla obiektu '{name}'. Outline pominięty.");
+            return;
         }
 
         _outlineObjects = new List<GameObject>();
@@ -354,12 +369,25 @@ public class ProximityGlow : MonoBehaviour
 
         if (_sharedAreaMaterial == null)
         {
-            Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
-            _sharedAreaMaterial = new Material(unlitShader)
+            _sharedAreaMaterial = Resources.Load<Material>("AreaZone_Material");
+            if (_sharedAreaMaterial == null)
             {
-                name = "AreaZone_RuntimeSharedMat",
-                hideFlags = HideFlags.DontSave
-            };
+                Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
+                if (unlitShader != null)
+                {
+                    _sharedAreaMaterial = new Material(unlitShader)
+                    {
+                        name = "AreaZone_RuntimeSharedMat",
+                        hideFlags = HideFlags.DontSave
+                    };
+                }
+            }
+        }
+
+        if (_sharedAreaMaterial == null)
+        {
+            DevLog.LogWarning($"[ProximityGlow] Brak materiału dla strefy (AreaZone) dla '{name}'. Strefa pominięta.");
+            return;
         }
 
         _areaZoneRenderer = _areaZoneObject.AddComponent<MeshRenderer>();
