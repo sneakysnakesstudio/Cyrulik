@@ -200,6 +200,16 @@ public class DialogueManager : MonoBehaviour
     /// </summary>
     public void StartJurekImpatientArrivalDialogue(Action onComplete = null)
     {
+        if (jurekImpatientArrivalDialogue == null || jurekImpatientArrivalDialogue.Count == 0)
+        {
+            jurekImpatientArrivalDialogue = new List<ClientDialogueUI.DialogueLine>()
+            {
+                new ClientDialogueUI.DialogueLine("Jurek", "Can't you hear the bell?! I've been banging on that door!"),
+                new ClientDialogueUI.DialogueLine("Barber", "Apologies, sir! I was just preparing the tools in the back."),
+                new ClientDialogueUI.DialogueLine("Jurek", "My throat is completely parched from waiting... Go pour me a glass of water before we start!"),
+                new ClientDialogueUI.DialogueLine("Barber", "Right away, sir! Just a moment.")
+            };
+        }
         StartClientConversation(jurekImpatientArrivalDialogue, onComplete);
     }
 
@@ -261,6 +271,13 @@ public class DialogueManager : MonoBehaviour
             new ClientDialogueUI.DialogueLine("Jurek", "I parked my car outside, nobody is going to drive out of the yard, right?"),
             new ClientDialogueUI.DialogueLine("Barber", "Not at all, sir! You can leave it there as long as you wish."),
             new ClientDialogueUI.DialogueLine("Jurek", "...")
+        };
+        jurekImpatientArrivalDialogue = new List<ClientDialogueUI.DialogueLine>()
+        {
+            new ClientDialogueUI.DialogueLine("Jurek", "Can't you hear the bell?! I've been banging on that door!"),
+            new ClientDialogueUI.DialogueLine("Barber", "Apologies, sir! I was just preparing the tools in the back."),
+            new ClientDialogueUI.DialogueLine("Jurek", "My throat is completely parched from waiting... Go pour me a glass of water before we start!"),
+            new ClientDialogueUI.DialogueLine("Barber", "Right away, sir! Just a moment.")
         };
         jurekWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
         {

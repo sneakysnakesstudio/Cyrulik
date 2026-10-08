@@ -851,7 +851,10 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
 
         if (AudioManager.Instance != null)
         {
-            AudioManager.Instance.Play(!string.IsNullOrEmpty(soundCloth) ? soundCloth : "cloth_pickup");
+            if (string.IsNullOrEmpty(soundCloth) || !AudioManager.Instance.TryPlay(soundCloth))
+            {
+                AudioManager.Instance.Play("item_pickup");
+            }
         }
 
         if (DialogueManager.Instance != null)

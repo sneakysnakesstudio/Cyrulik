@@ -70,6 +70,7 @@ public class DoorInteractable : MonoBehaviour, IConditionalInteractable, IHoldIn
 
     [Header("References")]
     [SerializeField] private Transform doorPivot;
+    public Transform DoorPivot => doorPivot != null ? doorPivot : transform;
 
     [Header("Door Handle (Opcjonalnie)")]
     [Tooltip("Osobny Transform klamki (np. dziecko skrzydła drzwi). Pozostaw puste jeśli drzwi/szuflada nie ma osobnej klamki.")]

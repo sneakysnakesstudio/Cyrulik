@@ -175,6 +175,17 @@ public class ThroatCutMinigame : MonoBehaviour
 
         Instance = this;
 
+#if UNITY_EDITOR
+        if (razorSliceLoopClip == null)
+            razorSliceLoopClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sounds/razor_minigame_sounds/ostrzenie szybkie.wav");
+        if (arterialBloodSpurtClip == null)
+            arterialBloodSpurtClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sounds/SFX/Effekt_sfx_8.ogg");
+        if (botchedCutClip == null)
+            botchedCutClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sounds/Negative/error_dound.ogg");
+        if (jurekScreamClip == null)
+            jurekScreamClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sounds/SFX/jesus_chis.ogg");
+#endif
+
         if (minigameCanvasGroup == null)
         {
             BuildRuntimeFallbackUI();
@@ -198,11 +209,39 @@ public class ThroatCutMinigame : MonoBehaviour
     {
         if (Instance == this) Instance = null;
 
+        if (_isActive)
+        {
+            CancelMinigame();
+        }
+
         _camMoveTween?.Kill();
         _camRotTween?.Kill();
         _camFovTween?.Kill();
         _uiFadeTween?.Kill();
         _sparkPulseTween?.Kill();
+    }
+
+    /// <summary>
+    /// Anuluje aktywną minigrę i przywraca kamerę oraz kontrolę gracza.
+    /// </summary>
+    public void CancelMinigame()
+    {
+        if (!_isActive) return;
+        _isActive = false;
+        _isCompleted = true;
+
+        HideInstant();
+        RestoreCamera();
+
+        if (PlayerMovement.Instance != null)
+        {
+            PlayerMovement.Instance.enabled = true;
+        }
+
+        if (InputModeManager.Instance != null)
+        {
+            InputModeManager.Instance.SwitchToPlayer();
+        }
     }
 
     // ──────────────────────────────────────────────────────────
@@ -283,25 +322,51 @@ public class ThroatCutMinigame : MonoBehaviour
         }
         else
         {
-            // Wylicz idealne ujęcie gardła siedzącego Jurka
+            // Wylicz idealne ujęcie gardła siedzącego Jurka (ujęcie z przodu na odsłoniętą krtań)
             CustomerJurek jurek = CustomerJurek.Instance != null ? CustomerJurek.Instance : FindAnyObjectByType<CustomerJurek>();
             Vector3 neckPos = new Vector3(-1.556814f, 1.42f, 4.958035f); // domyślne położenie gardła fotela
+            Vector3 jurekForward = Vector3.forward;
+            Vector3 jurekUp = Vector3.up;
+            Vector3 jurekRight = Vector3.right;
 
             if (jurek != null)
             {
-                Transform neckBone = jurek.transform.Find("mixamorig:Hips/mixamorig:Spine/mixamorig:Spine1/mixamorig:Spine2/mixamorig:Neck");
+                Transform neckBone = null;
+                var anim = jurek.GetComponentInChildren<Animator>();
+                if (anim != null && anim.isHuman)
+                {
+                    neckBone = anim.GetBoneTransform(HumanBodyBones.Neck);
+                }
+
+                if (neckBone == null)
+                {
+                    Transform[] allTransforms = jurek.GetComponentsInChildren<Transform>(true);
+                    for (int i = 0; i < allTransforms.Length; i++)
+                    {
+                        if (allTransforms[i].name.IndexOf("neck", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            neckBone = allTransforms[i];
+                            break;
+                        }
+                    }
+                }
+
                 if (neckBone != null)
                 {
                     neckPos = neckBone.position;
                 }
                 else
                 {
-                    neckPos = jurek.transform.position + new Vector3(0.12f, 1.05f, 0.05f);
+                    neckPos = jurek.transform.position + new Vector3(0f, 1.35f, 0f);
                 }
+
+                jurekForward = jurek.transform.forward;
+                jurekUp = jurek.transform.up;
+                jurekRight = jurek.transform.right;
             }
 
-            // Kamera ustawiona nieco z przodu i po skosie, patrząca prosto na szyję/krtań
-            targetPos = neckPos + new Vector3(0.48f, 0.04f, -0.22f);
+            // Kamera ustawiona Z PRZODU Jurka i delikatnie pod kątem, patrząca prosto na gardło/krtań
+            targetPos = neckPos + (jurekForward * 0.44f) + (jurekUp * 0.05f) - (jurekRight * 0.12f);
             Vector3 lookDir = (neckPos - targetPos).normalized;
             targetRot = Quaternion.LookRotation(lookDir, Vector3.up);
         }
@@ -387,21 +452,50 @@ public class ThroatCutMinigame : MonoBehaviour
     }
 
     /// <summary>
-    /// Wylicza wysokość Y sinusoidy w danym punkcie znormalizowanym t (0..1).
-    /// Zawiera wierzchołki góra-dół (harmoniczne), tworząc organiczne, chirurgiczne nacięcie gardła.
+    /// Oblicza wysokość fali dla dowolnego t (0..1) i zadanej amplitudy.
+    /// Publiczna i statyczna dla pełnej testowalności jednostkowej.
     /// </summary>
-    private float EvaluateWaveY(float t)
+    public static float EvaluateWave(float t, float amplitude)
     {
         // 1. Główna fala sinusoidalna (szeroki łuk przez szyję)
-        float wave1 = Mathf.Sin(t * Mathf.PI * 2.0f) * mainAmplitude;
+        float wave1 = Mathf.Sin(t * Mathf.PI * 2.0f) * amplitude;
 
         // 2. Druga harmoniczna (wierzchołki wznoszące i opadające)
-        float wave2 = Mathf.Sin((t * Mathf.PI * 4.0f) + 0.8f) * (mainAmplitude * 0.42f);
+        float wave2 = Mathf.Sin((t * Mathf.PI * 4.0f) + 0.8f) * (amplitude * 0.42f);
 
         // 3. Delikatna asymetria anatomiczna (krtań / jabłko Adama)
-        float adamApple = Mathf.Sin(t * Mathf.PI * 6.0f) * (mainAmplitude * 0.22f);
+        float adamApple = Mathf.Sin(t * Mathf.PI * 6.0f) * (amplitude * 0.22f);
 
         return wave1 + wave2 + adamApple;
+    }
+
+    /// <summary>
+    /// Wylicza wysokość Y sinusoidy w danym punkcie znormalizowanym t (0..1).
+    /// </summary>
+    public float EvaluateWaveY(float t)
+    {
+        return EvaluateWave(t, mainAmplitude);
+    }
+
+    /// <summary>
+    /// Wylicza znormalizowaną dokładność pojedynczej próbki (1.0 = idealnie na linii, 0.0 = poza zakresem).
+    /// </summary>
+    public static float CalculateAccuracyScore(float errorDist, float idealTolerance, float maxError)
+    {
+        if (errorDist <= idealTolerance) return 1.0f;
+        float excess = errorDist - idealTolerance;
+        float range = Mathf.Max(1f, maxError - idealTolerance);
+        return Mathf.Clamp01(1.0f - (excess / range));
+    }
+
+    /// <summary>
+    /// Wylicza ostateczny procentowy wynik cięcia, uwzględniając średnią trajektorię i pokrycie długości rany.
+    /// Zapobiega zaliczeniu cięcia, jeśli gracz wykonał tylko kawałek nacięcia lub przeskoczył myszą!
+    /// </summary>
+    public static float CalculateFinalScore(float avgTrajectoryAccuracy, float cutProgress)
+    {
+        float coverage = Mathf.Clamp01(cutProgress / 0.90f);
+        return Mathf.Clamp(avgTrajectoryAccuracy * coverage, 0f, 100f);
     }
 
     private void ClearBloodTrail()
@@ -476,17 +570,20 @@ public class ThroatCutMinigame : MonoBehaviour
             mouseScreenPos = Input.mousePosition;
         }
 
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Camera uiCamera = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay) ? (canvas.worldCamera ?? Camera.main) : null;
+
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             containerRect,
             mouseScreenPos,
-            null,
+            uiCamera,
             out Vector2 localMousePos
         );
 
         // Ogranicz ruch brzytwy do pola roboczego szyi
         float halfW = waveWidth * 0.5f;
         float clampedX = Mathf.Clamp(localMousePos.x, -halfW - 50f, halfW + 50f);
-        float clampedY = Mathf.Clamp(localMousePos.y, -mainAmplitude * 2.5f, mainAmplitude * 2.5f);
+        float clampedY = Mathf.Clamp(localMousePos.y, -mainAmplitude * 2.8f, mainAmplitude * 2.8f);
         Vector2 currentRazorPos = new Vector2(clampedX, clampedY);
 
         razorCursor.anchoredPosition = currentRazorPos;
@@ -512,8 +609,8 @@ public class ThroatCutMinigame : MonoBehaviour
         }
         else
         {
-            // Brak trzymania LPM w strefie cięcia – delikatna kara za przerwanie nacięcia
-            if (_playerProgress > 0.05f && _playerProgress < 0.95f)
+            // Brak trzymania LPM w strefie cięcia – kara za przerwanie nacięcia
+            if (_playerProgress > 0.05f && _playerProgress < 0.92f)
             {
                 RecordAccuracySample(0f);
             }
@@ -522,15 +619,22 @@ public class ThroatCutMinigame : MonoBehaviour
 
     private void HandleActiveCutMotion(Vector2 razorPos, float t)
     {
-        float halfW = waveWidth * 0.5f;
-
-        // Jeśli gracz posuwa się do przodu (z lewej do prawej)
-        if (t >= _playerProgress - 0.05f)
+        // 1. Zabezpieczenie przed teleportem/eksploitem: cięcie musi rozpocząć się przy początku fali (t <= 0.18)
+        if (_playerProgress <= 0.01f && t > 0.18f)
         {
-            _playerProgress = Mathf.Max(_playerProgress, t);
+            // Gracz kliknął za daleko od lewego brzegu szyi – kursor musi najpierw dotknąć początku nacięcia
+            return;
+        }
 
-            // 1. Dodawanie punktu do ścieżki krwi
-            if (_bloodPointsBuffer.Count == 0 || Vector2.Distance(_bloodPointsBuffer[_bloodPointsBuffer.Count - 1], razorPos) >= 6.0f)
+        // 2. Jeśli gracz posuwa się w przód
+        if (t >= _playerProgress - 0.04f)
+        {
+            // Płynny krok w przód (zapobiega jednoklatkowemu skokowi do końca)
+            float maxStepPerFrame = 0.08f;
+            _playerProgress = Mathf.Min(t, _playerProgress + maxStepPerFrame);
+
+            // Dodawanie punktu do ścieżki krwi
+            if (_bloodPointsBuffer.Count == 0 || Vector2.Distance(_bloodPointsBuffer[_bloodPointsBuffer.Count - 1], razorPos) >= 5.0f)
             {
                 _bloodPointsBuffer.Add(razorPos);
                 if (bloodCutRenderer != null)
@@ -539,32 +643,29 @@ public class ThroatCutMinigame : MonoBehaviour
                 }
             }
 
-            // 2. Obliczenie odchyłki od idealnej sinusoidy
+            // 3. Obliczenie odchyłki od idealnej sinusoidy
             float idealY = EvaluateWaveY(t);
             float errorDist = Mathf.Abs(razorPos.y - idealY);
+            float rawTrajScore = CalculateAccuracyScore(errorDist, idealTolerancePixels, maxErrorPixels);
 
-            // Obliczenie znormalizowanego wyniku dla próbki (1.0 = idealnie, 0.0 = poza zakresem)
-            float score;
-            if (errorDist <= idealTolerancePixels)
+            // 4. Synchronizacja tempa z płonącym lontem (spark)
+            float tempoDelta = t - _sparkProgress;
+            float tempoPenalty = 1.0f;
+            if (Mathf.Abs(tempoDelta) > 0.15f)
             {
-                score = 1.0f;
-            }
-            else
-            {
-                float excess = errorDist - idealTolerancePixels;
-                float range = Mathf.Max(1f, maxErrorPixels - idealTolerancePixels);
-                score = Mathf.Clamp01(1.0f - (excess / range));
+                float excess = Mathf.Abs(tempoDelta) - 0.15f;
+                tempoPenalty = Mathf.Clamp01(1.0f - (excess / 0.25f) * 0.35f);
             }
 
-            RecordAccuracySample(score);
+            float finalSampleScore = rawTrajScore * tempoPenalty;
+            RecordAccuracySample(finalSampleScore);
 
-            // 3. Efekt dźwiękowy cięcia brzytwy
-            PlaySliceSound(score);
+            PlaySliceSound(finalSampleScore);
         }
         else
         {
             // Cofanie się w naciętej ranie – spadek precyzji
-            RecordAccuracySample(0.35f);
+            RecordAccuracySample(0.3f);
         }
     }
 
@@ -594,7 +695,16 @@ public class ThroatCutMinigame : MonoBehaviour
 
         if (statusFeedbackText != null)
         {
-            if (_currentLivePrecision >= 90f)
+            float tempoLead = _playerProgress - _sparkProgress;
+            if (tempoLead < -0.20f)
+            {
+                statusFeedbackText.text = "<color=#FF8020>TOO SLOW (LAGGING BEHIND FUSE)</color>";
+            }
+            else if (tempoLead > 0.22f)
+            {
+                statusFeedbackText.text = "<color=#FFD020>TOO FAST (RUSHING AHEAD)</color>";
+            }
+            else if (_currentLivePrecision >= 90f)
             {
                 statusFeedbackText.text = "<color=#20FF80>SURGICAL TEMPO</color>";
             }
@@ -612,12 +722,12 @@ public class ThroatCutMinigame : MonoBehaviour
     private void CheckCompletionConditions()
     {
         // Cięcie kończy się gdy:
-        // 1. Gracz doprowadził cięcie do końca prawej krawędzi (postęp >= 98%).
+        // 1. Gracz doprowadził cięcie do końca prawej krawędzi (postęp >= 92%) I iskra lontu również dobiegła końca (>= 85%).
         // 2. LUB iskra lontu dopaliła się do końca (czas minął).
-        bool playerReachedEnd = _playerProgress >= 0.96f;
+        bool playerCompletedCut = _playerProgress >= 0.92f && _sparkProgress >= 0.85f;
         bool fuseBurnedOut = _sparkProgress >= 0.99f;
 
-        if (playerReachedEnd || fuseBurnedOut)
+        if (playerCompletedCut || fuseBurnedOut)
         {
             FinishMinigame();
         }
@@ -633,10 +743,10 @@ public class ThroatCutMinigame : MonoBehaviour
         _isCompleted = true;
         _isActive = false;
 
-        float finalScore = _currentLivePrecision;
-        bool isSuccess = finalScore >= successThreshold;
+        float finalScore = CalculateFinalScore(_currentLivePrecision, _playerProgress);
+        bool isSuccess = (finalScore >= successThreshold) && (_playerProgress >= 0.88f);
 
-        DevLog.Log($"[ThroatCutMinigame] Zakończono cięcie! Wynik: {finalScore:0.0}% (Wymagane: {successThreshold}%). Sukces: {isSuccess}");
+        DevLog.Log($"[ThroatCutMinigame] Zakończono cięcie! Wynik końcowy: {finalScore:0.0}% (Czysta precyzja: {_currentLivePrecision:0.0}%, Pokrycie: {_playerProgress * 100f:0}%, Wymagane: {successThreshold}%). Sukces: {isSuccess}");
 
         HideUI();
 
@@ -656,7 +766,7 @@ public class ThroatCutMinigame : MonoBehaviour
     private void ExecuteLethalSuccessSequence(float finalScore)
     {
         // 1. Dźwięk tętniczy / fontanna krwi
-        PlaySound(arterialBloodSpurtClip, "arterial_blood");
+        PlaySound(arterialBloodSpurtClip, "task_complete", "somethig_1");
 
         // 2. Rozbryzg krwi na ekranie
         TriggerBloodSplatterUI(true);
@@ -686,8 +796,8 @@ public class ThroatCutMinigame : MonoBehaviour
     private void ExecuteBotchedFailSequence(float finalScore)
     {
         // 1. Dźwięk ześlizgnięcia się brzytwy i krzyk
-        PlaySound(botchedCutClip, "botched_cut");
-        PlaySound(jurekScreamClip, "jesus_chis");
+        PlaySound(botchedCutClip, "error_sound", "sharpen_miss");
+        PlaySound(jurekScreamClip, "error_sound");
 
         // 2. Wstrząs kamery od odepchnięcia
         if (_cachedMainCamera != null)
@@ -731,11 +841,14 @@ public class ThroatCutMinigame : MonoBehaviour
         }
         else if (AudioManager.Instance != null && !audioSource.isPlaying)
         {
-            AudioManager.Instance.Play("ostrzenie szybkie");
+            if (!AudioManager.Instance.TryPlay("sharpen_good"))
+            {
+                AudioManager.Instance.TryPlay("sharpen_perfect");
+            }
         }
     }
 
-    private void PlaySound(AudioClip clip, string audioManagerGroup)
+    private void PlaySound(AudioClip clip, string audioManagerGroup, string fallbackGroup = null)
     {
         if (clip != null)
         {
@@ -743,9 +856,17 @@ public class ThroatCutMinigame : MonoBehaviour
             return;
         }
 
-        if (!string.IsNullOrEmpty(audioManagerGroup) && AudioManager.Instance != null)
+        if (AudioManager.Instance != null)
         {
-            AudioManager.Instance.Play(audioManagerGroup);
+            if (!string.IsNullOrEmpty(audioManagerGroup) && AudioManager.Instance.TryPlay(audioManagerGroup))
+            {
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(fallbackGroup))
+            {
+                AudioManager.Instance.TryPlay(fallbackGroup);
+            }
         }
     }
 

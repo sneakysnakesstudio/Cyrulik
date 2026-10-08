@@ -212,7 +212,8 @@ public class ThroatCutLineRenderer : Graphic
             Vector2 normal = new Vector2(-dir.y, dir.x) * halfWidth;
 
             float covered = 0f;
-            while (covered < segLen)
+            int iterations = 0;
+            while (covered < segLen && iterations++ < 500)
             {
                 float inPattern = currentPatternPos % dashPattern;
                 if (inPattern < dashLength)
@@ -220,6 +221,10 @@ public class ThroatCutLineRenderer : Graphic
                     // Rysujemy kreskę
                     float remainingDash = dashLength - inPattern;
                     float drawDist = Mathf.Min(segLen - covered, remainingDash);
+                    if (drawDist <= 0.0001f)
+                    {
+                        break;
+                    }
 
                     Vector2 sub0 = p0 + dir * covered;
                     Vector2 sub1 = sub0 + dir * drawDist;
@@ -243,6 +248,10 @@ public class ThroatCutLineRenderer : Graphic
                     // Przerwa
                     float remainingGap = dashPattern - inPattern;
                     float skipDist = Mathf.Min(segLen - covered, remainingGap);
+                    if (skipDist <= 0.0001f)
+                    {
+                        break;
+                    }
 
                     covered += skipDist;
                     currentPatternPos += skipDist;

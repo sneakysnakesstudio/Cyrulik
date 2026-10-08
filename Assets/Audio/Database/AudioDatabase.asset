@@ -413,4 +413,15 @@ MonoBehaviour:
     randomizeVolume: 1
     minVolumeMultiplier: 0.9
     maxVolumeMultiplier: 1.1
+  - groupName: chair_move
+    clips:
+    - {fileID: 8300000, guid: a40d398a08dff6b45859cd81ca9988d3, type: 3}
+    volume: 0.65
+    preventImmediateRepeat: 0
+    randomizePitch: 1
+    minPitch: 0.93
+    maxPitch: 1.07
+    randomizeVolume: 1
+    minVolumeMultiplier: 0.9
+    maxVolumeMultiplier: 1.1
   audioGroups: []

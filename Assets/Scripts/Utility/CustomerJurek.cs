@@ -181,6 +181,10 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     private Coroutine _doorBangingCoroutine;
     private Coroutine _chairSnapCoroutine;
 
+    [Header("Dźwięk Przesuwania Fotela (Chair Move SFX)")]
+    [Tooltip("Dedykowany klip przesunięcia fotela przy siadaniu (charmoving.ogg).")]
+    [SerializeField] private AudioClip chairMoveClip;
+
     [Header("Zniecierpliwienie przy wejściu (Door Banging Impatience)")]
     [Tooltip("Czas w sekundach od wejścia Jurka, po którym zaczyna tłuc drzwiami jeśli gracz nie podchodzi (domyślnie 6s).")]
     [SerializeField] private float entranceImpatienceDelay = 6.0f;
@@ -191,6 +195,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     // --- OPTYMALIZACJA: Cache parametrów animatora (unikamy animator.parameters GC Alloc każdą klatkę) ---
     private int  _walkBoolHash    = -1;
     private bool _walkParamIsBool = false;
+    private int  _sitBoolHash     = -1;
+    private bool _sitParamIsBool  = false;
 
     // --- OPTYMALIZACJA: Reużywalne bufory list (unikamy new List<> przy każdym marszu) ---
     private readonly List<Transform> _routeBuffer       = new List<Transform>(16);
@@ -336,6 +342,13 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
 
         // OPTYMALIZACJA: Cachuj hash i typ parametru animatora — brak foreach animator.parameters w Update
         CacheAnimatorParameters();
+
+#if UNITY_EDITOR
+        if (chairMoveClip == null)
+        {
+            chairMoveClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Sounds/chair/charmoving.ogg");
+        }
+#endif
 
         FixSittingAnchor();
     }
@@ -882,17 +895,48 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     /// </summary>
     private void CacheAnimatorParameters()
     {
-        if (animator == null || string.IsNullOrEmpty(walkingAnimBool)) return;
+        if (animator == null) return;
 
-        _walkBoolHash = Animator.StringToHash(walkingAnimBool);
-
-        // Przejdź przez parametry TYLKO raz (w Awake), żeby ustalić typ bool/float
-        foreach (var param in animator.parameters)
+        if (!string.IsNullOrEmpty(walkingAnimBool))
         {
-            if (param.name == walkingAnimBool)
+            _walkBoolHash = Animator.StringToHash(walkingAnimBool);
+            foreach (var param in animator.parameters)
             {
-                _walkParamIsBool = (param.type == AnimatorControllerParameterType.Bool);
-                break;
+                if (param.name == walkingAnimBool)
+                {
+                    _walkParamIsBool = (param.type == AnimatorControllerParameterType.Bool);
+                    break;
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(sittingAnimBool))
+        {
+            bool found = false;
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == sittingAnimBool)
+                {
+                    _sitBoolHash = Animator.StringToHash(sittingAnimBool);
+                    _sitParamIsBool = (param.type == AnimatorControllerParameterType.Bool);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                foreach (var param in animator.parameters)
+                {
+                    if (param.name.Equals("IsSitting", StringComparison.OrdinalIgnoreCase) ||
+                        param.name.Equals("IsSeated", StringComparison.OrdinalIgnoreCase) ||
+                        param.name.Equals("Sitting", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sitBoolHash = Animator.StringToHash(param.name);
+                        _sitParamIsBool = (param.type == AnimatorControllerParameterType.Bool);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -1223,8 +1267,18 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
         {
             string id = pickup.ItemId != null ? pickup.ItemId.Trim().ToLowerInvariant() : "";
-            return id == "clean_towel" || id == "hot_towel" || id == "towel_prepared";
+            if (id == "clean_towel" || id == "hot_towel" || id == "towel_prepared")
+                return true;
         }
+
+        if (PreparationStateManager.Instance != null &&
+            (PreparationStateManager.Instance.IsTaskCompleted("clean_towel") || PreparationStateManager.Instance.IsTaskCompleted("towel_prepared")))
+        {
+            string n = held != null ? held.name.ToLowerInvariant() : "";
+            if (n.Contains("towel") || n.Contains("recznik") || n.Contains("ręcznik") || n.Contains("cloth"))
+                return true;
+        }
+
         return false;
     }
 
@@ -1372,10 +1426,26 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         PlayDoorBellSound();
         PlayKnockSound();
 
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.TryPlay("door_close");
+        }
+
         if (frontDoor != null)
         {
-            frontDoor.transform.DOShakeRotation(0.35f, new Vector3(0f, 16f, 0f), 10, 90f)
-                .SetLink(frontDoor.gameObject, LinkBehaviour.KillOnDestroy);
+            Transform pivot = frontDoor.DoorPivot;
+            pivot.DOKill();
+            Vector3 restEuler = pivot.localEulerAngles;
+
+            Sequence seq = DOTween.Sequence();
+            seq.Append(pivot.DOLocalRotate(restEuler + new Vector3(0f, 0f, 22f), 0.12f).SetEase(Ease.OutQuad));
+            seq.Append(pivot.DOLocalRotate(restEuler, 0.08f).SetEase(Ease.InQuad));
+            seq.Append(pivot.DOShakeRotation(0.2f, new Vector3(0f, 0f, 8f), 8, 90f));
+            seq.OnComplete(() =>
+            {
+                if (pivot != null) pivot.localEulerAngles = restEuler;
+            });
+            seq.SetLink(pivot.gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
 
@@ -1416,9 +1486,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
 
         DevLog.Log("[CustomerJurek] Gracz odszedł po wodę! Dźwięk odsunięcia fotela i Jurek już siedzi!");
 
-        if (AudioManager.Instance != null)
+        Vector3 soundPos = sittingTransformPoint != null ? sittingTransformPoint.position : transform.position;
+        if (chairMoveClip != null)
         {
-            AudioManager.Instance.Play("chair_move");
+            AudioSource.PlayClipAtPoint(chairMoveClip, soundPos, 0.85f);
+        }
+        else if (AudioManager.Instance != null && !AudioManager.Instance.TryPlay("chair_move"))
+        {
+            // fallback
         }
 
         SnapToChairSittingPosition();
@@ -1568,7 +1643,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     [SerializeField] private Vector3 exactSittingScale = new Vector3(1.3f, 1.3f, 1.6f);
 
     /// <summary>
-    /// Teleportuje Jurka na pozycję fotela na dokładnych koordynatach i włącza animację siedzenia.
+    /// Teleportuje Jurka na pozycję fotela i włącza animację siedzenia.
+    /// Jeśli skonfigurowany jest sittingTransformPoint, dopasowuje pozycję i rotację do fotela z uwzględnieniem offsetów.
+    /// W przeciwnym razie używa dokładnych koordynatów exactSittingPosition.
     /// </summary>
     [ContextMenu("Snap To Chair Sitting Position")]
     public void SnapToChairSittingPosition()
@@ -1576,9 +1653,21 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         transform.DOKill();
         SetWalkingAnimation(false);
 
-        transform.position = new Vector3(-1.556814f, 0.397f, 4.958035f);
-        transform.rotation = Quaternion.Euler(0f, -90f, 0f);
-        transform.localScale = new Vector3(1.3f, 1.3f, 1.6f);
+        if (sittingTransformPoint != null)
+        {
+            transform.position = sittingTransformPoint.position + sittingPositionOffset;
+            transform.rotation = sittingTransformPoint.rotation * Quaternion.Euler(sittingRotationOffset);
+        }
+        else
+        {
+            transform.position = exactSittingPosition;
+            transform.rotation = Quaternion.Euler(exactSittingRotation);
+        }
+
+        if (exactSittingScale != Vector3.zero)
+        {
+            transform.localScale = exactSittingScale;
+        }
 
         _isSeated = true;
         SetSittingAnimation(true);
@@ -1591,29 +1680,17 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
 
         if (animator == null) return;
 
-        // 1. Ustaw główny skonfigurowany parametr Bool (domyślnie 'IsSitting')
-        if (!string.IsNullOrEmpty(sittingAnimBool))
+        if (_sitBoolHash == -1)
         {
-            foreach (var param in animator.parameters)
-            {
-                if (param.name == sittingAnimBool)
-                {
-                    animator.SetBool(sittingAnimBool, sitting);
-                    return;
-                }
-            }
+            CacheAnimatorParameters();
         }
 
-        // 2. Sprawdź alternatywne warianty nazewnictwa
-        foreach (var param in animator.parameters)
+        if (_sitBoolHash != -1)
         {
-            if (param.name.Equals("IsSitting", StringComparison.OrdinalIgnoreCase) ||
-                param.name.Equals("IsSeated", StringComparison.OrdinalIgnoreCase) ||
-                param.name.Equals("Sitting", StringComparison.OrdinalIgnoreCase))
-            {
-                animator.SetBool(param.name, sitting);
-                return;
-            }
+            if (_sitParamIsBool)
+                animator.SetBool(_sitBoolHash, sitting);
+            else
+                animator.SetFloat(_sitBoolHash, sitting ? 1.0f : 0.0f);
         }
     }
 
