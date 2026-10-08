@@ -49,13 +49,13 @@ public class GitCommitAssistant : EditorWindow
 
     static GitCommitAssistant()
     {
-        LoadPreferences();
         EditorApplication.update -= BackgroundUpdate;
         EditorApplication.update += BackgroundUpdate;
 
         // Pierwsze ciche sprawdzenie gałęzi po załadowaniu edytora
         EditorApplication.delayCall += () =>
         {
+            LoadPreferences();
             _cachedBranch = QueryCurrentBranch();
             Debug.Log($"<color=#70C0FF><b>[Git Commit Helper]</b></color> Uruchomiony pomyślnie. Branch: <b>{_cachedBranch}</b>, interwał: {IntervalMinutes} min, AutoCommit: {(AutoCommitEnabled ? "WŁ" : "WYŁ")}.");
         };

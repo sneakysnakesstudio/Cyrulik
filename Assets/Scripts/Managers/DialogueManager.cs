@@ -145,6 +145,15 @@ public class DialogueManager : MonoBehaviour
         new ClientDialogueUI.DialogueLine("Jurek", "...")
     };
 
+    [Tooltip("Kwestie dialogowe gdy Jurek zniecierpliwiony tłucze drzwiami i gracz do niego podchodzi.")]
+    [SerializeField] private List<ClientDialogueUI.DialogueLine> jurekImpatientArrivalDialogue = new List<ClientDialogueUI.DialogueLine>()
+    {
+        new ClientDialogueUI.DialogueLine("Jurek", "Can't you hear the bell?! I've been banging on that door!"),
+        new ClientDialogueUI.DialogueLine("Barber", "Apologies, sir! I was just preparing the tools in the back."),
+        new ClientDialogueUI.DialogueLine("Jurek", "My throat is completely parched from waiting... Go pour me a glass of water before we start!"),
+        new ClientDialogueUI.DialogueLine("Barber", "Right away, sir! Just a moment.")
+    };
+
     [Tooltip("Kwestie dialogowe gdy Jurek dotrze do fotela i poprosi o szklankę wody.")]
     [SerializeField] private List<ClientDialogueUI.DialogueLine> jurekWaterDialogue = new List<ClientDialogueUI.DialogueLine>()
     {
@@ -184,6 +193,14 @@ public class DialogueManager : MonoBehaviour
     public void StartJurekArrivalDialogue(Action onComplete = null)
     {
         StartClientConversation(jurekArrivalDialogue, onComplete);
+    }
+
+    /// <summary>
+    /// Rozpoczyna dialog zniecierpliwionego Jurka (tłuczenie drzwiami i żądanie wody).
+    /// </summary>
+    public void StartJurekImpatientArrivalDialogue(Action onComplete = null)
+    {
+        StartClientConversation(jurekImpatientArrivalDialogue, onComplete);
     }
 
     /// <summary>

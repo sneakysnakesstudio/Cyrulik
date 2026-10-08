@@ -178,6 +178,15 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     private float _patienceRemaining = 0f;
     private float _footstepTimer = 0f;
     private Tween _movementTween;
+    private Coroutine _doorBangingCoroutine;
+    private Coroutine _chairSnapCoroutine;
+
+    [Header("Zniecierpliwienie przy wejściu (Door Banging Impatience)")]
+    [Tooltip("Czas w sekundach od wejścia Jurka, po którym zaczyna tłuc drzwiami jeśli gracz nie podchodzi (domyślnie 6s).")]
+    [SerializeField] private float entranceImpatienceDelay = 6.0f;
+
+    [Tooltip("Odstęp czasu między uderzeniami w drzwi podczas zniecierpliwienia (w sekundach).")]
+    [SerializeField] private float doorBangInterval = 3.8f;
 
     // --- OPTYMALIZACJA: Cache parametrów animatora (unikamy animator.parameters GC Alloc każdą klatkę) ---
     private int  _walkBoolHash    = -1;
@@ -211,8 +220,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
             if (!_hasInteractedWithPlayer)
                 return true;
 
-            // 1. Gdy siedzi na fotelu i czeka na przyniesienie wody
-            if (_isSeated && !_hasReceivedWater)
+            // 1. Gdy czeka na przyniesienie wody
+            if (!_hasReceivedWater)
                 return true;
 
             // 2. Gdy wypił wodę i czeka na czysty ręcznik
@@ -231,7 +240,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     {
         get
         {
-            if (_isSeated && !_hasReceivedWater)
+            if (!_hasReceivedWater)
             {
                 return IsPlayerHoldingWaterGlass() ? "Give water to Jurek" : "Talk to Jurek";
             }
@@ -751,6 +760,9 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         }
 
         DevLog.Log($"[CustomerJurek] Jurek oczekuje na gracza przez {patienceDuration:0} sekund. Podejdź i naciśnij [E]!");
+
+        // Rozpocznij monitorowanie zniecierpliwienia pod drzwiami (tłuczenie drzwiami i dzwonkiem po 5-7s)
+        StartEntranceImpatienceMonitoring();
     }
 
     /// <summary>
@@ -953,6 +965,8 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     {
         if (!CanInteract) return;
 
+        StopEntranceImpatienceMonitoring();
+
         _isWaitingForPlayer = false;
         _hasInteractedWithPlayer = true;
 
@@ -974,7 +988,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         DevLog.Log("[CustomerJurek] Gracz podszedł i wszedł w interakcję z Jurkiem!");
         onPlayerInteracted?.Invoke();
 
-        if (!_hasReachedChair)
+        if (!_askedForWater)
         {
             // 1. Sprawdź czy salon został odpowiednio przygotowany (lampki + radio)
             bool atmospherePassed = !requireAtmosphere || (PreparationStateManager.Instance != null && PreparationStateManager.Instance.IsTaskCompleted(atmosphereTaskId));
@@ -986,26 +1000,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
                 return;
             }
 
-            // 2. Jeśli atmosfera jest gotowa, normalny dialog powitalny
+            // 2. Jeśli atmosfera jest gotowa, zniecierpliwiony dialog wejściowy pod drzwiami
             if (DialogueManager.Instance != null)
             {
-                DialogueManager.Instance.StartJurekArrivalDialogue(OnDialogueCompleted);
+                DialogueManager.Instance.StartJurekImpatientArrivalDialogue(OnImpatientArrivalDialogueCompleted);
             }
             else
             {
-                OnDialogueCompleted();
-            }
-        }
-        else if (!_askedForWater && !_isSeated)
-        {
-            _askedForWater = true;
-            if (DialogueManager.Instance != null)
-            {
-                DialogueManager.Instance.StartJurekWaterDialogue(OnWaterDialogueCompleted);
-            }
-            else
-            {
-                OnWaterDialogueCompleted();
+                OnImpatientArrivalDialogueCompleted();
             }
         }
         else if (_isSeated && !_hasReceivedWater)
@@ -1117,9 +1119,23 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
             playerHands.DestroyHeldItem();
         }
 
-        DevLog.Log("[CustomerJurek] Rozpoczęcie golenia! Czarny ekran, dźwięk żyletki i ekran końcowy.");
+        DevLog.Log("[CustomerJurek] Rozpoczęcie podcinania gardła! Uruchamiam ThroatCutMinigame.");
 
-        StartCoroutine(ShavingEndingRoutine());
+        var tc = ThroatCutMinigame.Instance != null ? ThroatCutMinigame.Instance : FindAnyObjectByType<ThroatCutMinigame>();
+        if (tc == null)
+        {
+            GameObject tcObj = new GameObject("ThroatCutMinigame_AutoInstance", typeof(ThroatCutMinigame));
+            tc = tcObj.GetComponent<ThroatCutMinigame>();
+        }
+
+        if (tc != null)
+        {
+            tc.StartMinigame();
+        }
+        else
+        {
+            StartCoroutine(ShavingEndingRoutine());
+        }
     }
 
     private IEnumerator ShavingEndingRoutine()
@@ -1222,6 +1238,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
             playerHands.DestroyHeldItem();
         }
 
+        if (!_isSeated)
+        {
+            PlayChairMoveSoundAndSnap();
+        }
+
         _hasReceivedWater = true;
         DevLog.Log("[CustomerJurek] Jurek otrzymał szklankę wody!");
 
@@ -1274,15 +1295,14 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     }
 
     /// <summary>
-    /// Called when the player interacts with the sink to pour water.
+    /// Wywoływane gdy gracz nalewa wodę przy zlewie (SinkInteractable).
     /// </summary>
     public void OnPlayerPouringWater()
     {
-        DevLog.Log("[CustomerJurek] Gracz nalewa wodę. Jurek wyłącza patrzenie na gracza i natychmiast siada na fotelu!");
+        DevLog.Log("[CustomerJurek] Gracz nalewa wodę. Jurek siada natychmiast na fotelu!");
         lookAtPlayerWhileWaiting = false;
         _isWaitingForPlayer = false;
         _hasInteractedWithPlayer = true;
-        _isSeated = true;
         _isWalking = false;
 
         _movementTween?.Kill();
@@ -1293,14 +1313,167 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
             PatienceMeterUI.Instance.Hide(true);
         }
 
-        // Przesunięcie i prawidłowy obrót na fotelu
-        SnapToChairSittingPosition();
-        
-        // Opcjonalnie dźwięk szurania krzesłem
+        PlayChairMoveSoundAndSnap();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // ZNIECIERPLIWIENIE PRZY WEJŚCIU & TRZASKANIE DRZWIAMI
+    // ──────────────────────────────────────────────────────────
+
+    private void StartEntranceImpatienceMonitoring()
+    {
+        StopEntranceImpatienceMonitoring();
+        _doorBangingCoroutine = StartCoroutine(EntranceImpatienceRoutine());
+    }
+
+    private void StopEntranceImpatienceMonitoring()
+    {
+        if (_doorBangingCoroutine != null)
+        {
+            StopCoroutine(_doorBangingCoroutine);
+            _doorBangingCoroutine = null;
+        }
+    }
+
+    private IEnumerator EntranceImpatienceRoutine()
+    {
+        float timer = 0f;
+        while (timer < entranceImpatienceDelay)
+        {
+            if (_hasInteractedWithPlayer || _isSeated || _hasLeft)
+                yield break;
+
+            if (playerTransform != null && Vector3.Distance(transform.position, playerTransform.position) < 3.0f)
+                yield break;
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        DevLog.Log("<color=#FF8040>[CustomerJurek] Gracz nie podchodzi (>6s)! Jurek zaczyna tłuc drzwiami i dzwonkiem ze zniecierpliwienia.</color>");
+
+        while (!_hasInteractedWithPlayer && !_isSeated && !_hasLeft)
+        {
+            if (playerTransform != null && Vector3.Distance(transform.position, playerTransform.position) < 3.0f)
+            {
+                yield break;
+            }
+
+            PerformDoorBang();
+
+            yield return new WaitForSeconds(doorBangInterval);
+        }
+    }
+
+    private void PerformDoorBang()
+    {
+        DevLog.Log("[CustomerJurek] BANG! Jurek trzaska drzwiami wejściowymi ze zniecierpliwienia!");
+
+        PlayDoorBellSound();
+        PlayKnockSound();
+
+        if (frontDoor != null)
+        {
+            frontDoor.transform.DOShakeRotation(0.35f, new Vector3(0f, 16f, 0f), 10, 90f)
+                .SetLink(frontDoor.gameObject, LinkBehaviour.KillOnDestroy);
+        }
+    }
+
+    private void OnImpatientArrivalDialogueCompleted()
+    {
+        DevLog.Log("[CustomerJurek] Zakończono dialog zniecierpliwionego Jurka. Jurek zażądał wody. Gdy gracz odejdzie nalać, Jurek natychmiast siądzie na fotelu!");
+        _askedForWater = true;
+        _isWaitingForPlayer = true;
+        _hasInteractedWithPlayer = false;
+        _patienceRemaining = patienceDuration;
+
+        if (usePatienceTimer && PatienceMeterUI.Instance != null)
+        {
+            PatienceMeterUI.Instance.Show(patienceDuration, "Jurek (Thirsty)");
+        }
+
+        if (_chairSnapCoroutine != null) StopCoroutine(_chairSnapCoroutine);
+        _chairSnapCoroutine = StartCoroutine(WaitForPlayerToLeaveAndSnapSeated());
+    }
+
+    private IEnumerator WaitForPlayerToLeaveAndSnapSeated()
+    {
+        while (!_isSeated && !_hasLeft)
+        {
+            // Gdy gracz odejdzie od Jurka idąc w stronę zlewu
+            if (playerTransform != null && Vector3.Distance(transform.position, playerTransform.position) > 2.2f)
+            {
+                PlayChairMoveSoundAndSnap();
+                yield break;
+            }
+            yield return null;
+        }
+    }
+
+    public void PlayChairMoveSoundAndSnap()
+    {
+        if (_isSeated) return;
+
+        DevLog.Log("[CustomerJurek] Gracz odszedł po wodę! Dźwięk odsunięcia fotela i Jurek już siedzi!");
+
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.Play("chair_move");
         }
+
+        SnapToChairSittingPosition();
+        _hasReachedChair = true;
+    }
+
+    /// <summary>
+    /// Wywoływane przez ThroatCutMinigame przy udanym cięciu (>= 90%):
+    /// Osunięcie się bezwładnie w fotelu fryzjerskim, głowa opada w bok.
+    /// </summary>
+    public void OnThroatSlitSuccess()
+    {
+        DevLog.Log("<color=#FF2020>[CustomerJurek] Sukces cięcia! Jurek osuwa się bezwładnie w fotelu.</color>");
+
+        _movementTween?.Kill();
+        transform.DOKill();
+
+        if (animator != null)
+        {
+            animator.enabled = false;
+        }
+
+        transform.DORotate(new Vector3(12f, -95f, 15f), 0.85f)
+            .SetEase(Ease.OutBounce)
+            .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+
+        transform.DOMove(transform.position + new Vector3(0.04f, -0.06f, 0.02f), 0.85f)
+            .SetEase(Ease.OutQuad)
+            .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+    }
+
+    /// <summary>
+    /// Wywoływane przez ThroatCutMinigame przy zepsutym cięciu (< 90%):
+    /// Jurek krzyczy, wyskakuje z fotela i ucieka z krwawiącą raną na zewnątrz.
+    /// </summary>
+    public void OnThroatSlitBotched()
+    {
+        DevLog.Log("<color=#FF6060>[CustomerJurek] Zepsułeś cięcie! Jurek krzyczy, łapie się za gardło i ucieka z salonu!</color>");
+
+        _isSeated = false;
+        _hasLeft = true;
+        _movementTween?.Kill();
+        transform.DOKill();
+
+        if (animator != null)
+        {
+            animator.enabled = true;
+            SetSittingAnimation(false);
+            SetWalkingAnimation(true);
+        }
+
+        WalkOut(() =>
+        {
+            DevLog.Log("[CustomerJurek] Jurek wybiegł z salonu na ulicę.");
+        });
     }
 
     [Header("Pułapka na Myszy (Mouse Trap Check)")]
@@ -1687,6 +1860,7 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         _askedForWater = true;
         _isSeated = true;
         _hasReceivedWater = true;
+        _hasReceivedTowel = true;
 
         EnsureVisualsActive();
 
@@ -1727,7 +1901,25 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
         // 3. Sygnał gotowości do golenia
         onReadyForShaving?.Invoke();
 
-        DevLog.Log("<color=#70FF70>[F5 DEBUG] Załadowano stan F5: Jurek siedzi, woda wypita, questy zaliczone (bez zadania z myszą)!</color>");
+        DevLog.Log("<color=#70FF70>[F5 DEBUG] Załadowano stan F5: Jurek siedzi, woda wypita, ręcznik podany, questy zaliczone!</color>");
+    }
+
+    /// <summary>
+    /// Debug: Natychmiastowe uruchomienie minigry podcięcia gardła (ThroatCutMinigame).
+    /// </summary>
+    [ContextMenu("Debug: Launch Throat Cut Minigame Directly")]
+    public void DebugLaunchThroatCutMinigame()
+    {
+        SetupF5DebugState();
+        if (ThroatCutMinigame.Instance != null)
+        {
+            ThroatCutMinigame.Instance.StartMinigame();
+        }
+        else
+        {
+            var tc = FindAnyObjectByType<ThroatCutMinigame>();
+            if (tc != null) tc.StartMinigame();
+        }
     }
 
     /// <summary>
@@ -1864,5 +2056,11 @@ public class CustomerJurek : MonoBehaviour, IConditionalInteractable, ICrosshair
     private void OnDestroy()
     {
         _movementTween?.Kill();
+        StopEntranceImpatienceMonitoring();
+        if (_chairSnapCoroutine != null)
+        {
+            StopCoroutine(_chairSnapCoroutine);
+            _chairSnapCoroutine = null;
+        }
     }
 }

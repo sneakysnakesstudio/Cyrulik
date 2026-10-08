@@ -186,6 +186,10 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     {
         get
         {
+            // 0. Gracz trzyma ręcznik, a na piecu stoi garnek z wodą (wrzący lub podgrzewany)
+            if (_potOnStove && _potHasWater && IsHoldingAnyTowel())
+                return true;
+
             // 1. Gracz trzyma garnek (z wodą lub bez) i jeszcze go nie postawił -> może postawić
             if (!_potOnStove && IsHoldingAnyPot()) return true;
 
@@ -220,6 +224,12 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     {
         get
         {
+            // Zanurzenie ręcznika w garnku
+            if (_potOnStove && _potHasWater && IsHoldingAnyTowel())
+            {
+                return _isBoiling ? "Dip towel in boiling pot (Get warm towel)" : "Dip towel in hot pot (Get warm towel)";
+            }
+
             // Postawienie garnka
             if (!_potOnStove && IsHoldingAnyPot())
             {
@@ -363,6 +373,13 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
     {
         if (playerHands == null)
             playerHands = FindAnyObjectByType<PlayerHands>();
+
+        // 0. Zanurzenie ręcznika w gorącym/gotującym się garnku na piecu
+        if (_potOnStove && _potHasWater && IsHoldingAnyTowel())
+        {
+            DipTowelInStovePot();
+            return;
+        }
 
         // 1. Postawienie garnka (z wodą lub bez)
         if (!_potOnStove && IsHoldingAnyPot())
@@ -795,5 +812,53 @@ public class StoveController : MonoBehaviour, IConditionalInteractable
         }
 
         return false;
+    }
+
+    private bool IsHoldingAnyTowel()
+    {
+        if (playerHands == null) playerHands = FindAnyObjectByType<PlayerHands>();
+        if (playerHands == null || !playerHands.HasItem) return false;
+
+        GameObject held = playerHands.HeldItem;
+        if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
+        {
+            string id = pickup.ItemId != null ? pickup.ItemId.Trim().ToLowerInvariant() : "";
+            if (id == "towel" || id == "clean_towel" || id == "dirty_towel" || id == "hot_towel" || id == "towel_prepared")
+                return true;
+        }
+
+        string n = held != null ? held.name.ToLowerInvariant() : "";
+        return n.Contains("towel") || n.Contains("recznik") || n.Contains("ręcznik") || n.Contains("cloth");
+    }
+
+    private void DipTowelInStovePot()
+    {
+        if (playerHands == null) playerHands = FindAnyObjectByType<PlayerHands>();
+        if (playerHands == null || !playerHands.HasItem) return;
+
+        GameObject held = playerHands.HeldItem;
+        if (held != null && held.TryGetComponent<PickupItem>(out var pickup))
+        {
+            pickup.ItemId = "clean_towel";
+            pickup.InteractionName = "Warm Clean Towel";
+        }
+
+        if (PreparationStateManager.Instance != null)
+        {
+            PreparationStateManager.Instance.SetTaskState("clean_towel", true);
+            PreparationStateManager.Instance.SetTaskState("towel_prepared", true);
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.Play(!string.IsNullOrEmpty(soundCloth) ? soundCloth : "cloth_pickup");
+        }
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.ShowThought("The towel is nice and warm now. Ready for Jurek's shave!");
+        }
+
+        DevLog.Log("[Stove] Ręcznik zanurzony w garnku na piecu! Przygotowano ciepły ręcznik (clean_towel).");
     }
 }

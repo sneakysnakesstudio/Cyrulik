@@ -163,6 +163,14 @@ public class EndSummaryUI : MonoBehaviour
     /// </summary>
     public void ShowEndScreen(string reasonText, bool isVictory = false)
     {
+        ShowEndScreen(null, reasonText, isVictory);
+    }
+
+    /// <summary>
+    /// Wyświetla czysty, pełnoekranowy ekran końcowy z własnym tytułem, opisem i trybem sukcesu/porażki.
+    /// </summary>
+    public void ShowEndScreen(string customTitle, string reasonText, bool isVictory)
+    {
         if (_isVisible) return;
         _isVisible = true;
         _canAcceptInput = false;
@@ -195,12 +203,17 @@ public class EndSummaryUI : MonoBehaviour
         // Formatowanie głównego napisu
         if (mainTitleText != null)
         {
-            mainTitleText.text = isVictory ? "THANK YOU FOR PLAYING" : "YOU FAILED";
+            mainTitleText.text = !string.IsNullOrEmpty(customTitle)
+                ? customTitle
+                : (isVictory ? "THANK YOU FOR PLAYING" : "YOU FAILED");
             mainTitleText.color = isVictory ? victoryTitleColor : failureTitleColor;
         }
 
-        // Tłumaczenie / upewnienie się że powód jest w 100% po angielsku
-        string englishReason = isVictory ? "Thank you for playing Cyrulik Demo!" : SanitizeToEnglish(reasonText, false);
+        // Tłumaczenie / upewnienie się że powód jest odpowiednio sformatowany
+        string englishReason = !string.IsNullOrWhiteSpace(reasonText)
+            ? SanitizeToEnglish(reasonText, isVictory)
+            : (isVictory ? "Thank you for playing Cyrulik Demo!" : "The salon was closed prematurely.");
+
         if (reasonDescriptionText != null)
         {
             reasonDescriptionText.text = englishReason;
