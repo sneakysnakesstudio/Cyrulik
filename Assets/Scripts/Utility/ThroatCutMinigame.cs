@@ -582,6 +582,9 @@ public class ThroatCutMinigame : MonoBehaviour
 
     private void Update()
     {
+        // 0. Klawisze skrótów: F1 (Start/Restart testu) oraz ESC (Wyjście z minigry)
+        HandleTestHotkeys();
+
         if (!_isActive || _isCompleted) return;
 
         // 1. Postęp płonącej iskry lontu (narzuca tempo)
@@ -595,6 +598,45 @@ public class ThroatCutMinigame : MonoBehaviour
 
         // 4. Sprawdzenie warunku zakończenia cięcia
         CheckCompletionConditions();
+    }
+
+    private void HandleTestHotkeys()
+    {
+        if (!enableTestHotkey) return;
+
+        bool f1Pressed = false;
+        if (Keyboard.current != null && testHotkey != Key.None)
+        {
+            f1Pressed = Keyboard.current[testHotkey].wasPressedThisFrame;
+        }
+        else
+        {
+            f1Pressed = Input.GetKeyDown(KeyCode.F1);
+        }
+
+        if (f1Pressed)
+        {
+            StartMinigameTestMode();
+            return;
+        }
+
+        if (_isActive)
+        {
+            bool escPressed = false;
+            if (Keyboard.current != null)
+            {
+                escPressed = Keyboard.current.escapeKey.wasPressedThisFrame;
+            }
+            else
+            {
+                escPressed = Input.GetKeyDown(KeyCode.Escape);
+            }
+
+            if (escPressed)
+            {
+                CancelMinigame();
+            }
+        }
     }
 
     private void UpdateSparkProgress()
@@ -806,6 +848,12 @@ public class ThroatCutMinigame : MonoBehaviour
 
         DevLog.Log($"[ThroatCutMinigame] Zakończono cięcie! Wynik końcowy: {finalScore:0.0}% (Czysta precyzja: {_currentLivePrecision:0.0}%, Pokrycie: {_playerProgress * 100f:0}%, Wymagane: {successThreshold}%). Sukces: {isSuccess}");
 
+        if (_isTestMode && testModeLoopable)
+        {
+            ExecuteTestModeFinish(finalScore, isSuccess);
+            return;
+        }
+
         HideUI();
 
         if (isSuccess)
@@ -816,6 +864,48 @@ public class ThroatCutMinigame : MonoBehaviour
         {
             ExecuteBotchedFailSequence(finalScore);
         }
+    }
+
+    private void ExecuteTestModeFinish(float finalScore, bool isSuccess)
+    {
+        if (isSuccess)
+        {
+            PlaySound(arterialBloodSpurtClip, "task_complete", "somethig_1");
+            TriggerBloodSplatterUI(true);
+        }
+        else
+        {
+            PlaySound(botchedCutClip, "error_sound", "sharpen_miss");
+            TriggerBloodSplatterUI(false);
+        }
+
+        if (instructionText != null)
+        {
+            string statusStr = isSuccess ? "<color=#20FF40>SUKCES (ZALICZONE)</color>" : "<color=#FF3030>PORAŻKA (ZA MAŁA PRECYZJA)</color>";
+            instructionText.text = $"WYNIK: {finalScore:0.0}% (Precyzja: {_currentLivePrecision:0.0}%) - {statusStr}\n[F1] Ponów próbę | [ESC] Wyjdź do gry";
+        }
+
+        // Przywróć sterowanie graczem po krótkiej chwili
+        DOVirtual.DelayedCall(1.2f, () =>
+        {
+            if (!_isActive)
+            {
+                if (InputModeManager.Instance != null)
+                {
+                    InputModeManager.Instance.SwitchToPlayer();
+                }
+                else
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
+
+                if (PlayerMovement.Instance != null)
+                {
+                    PlayerMovement.Instance.enabled = true;
+                }
+            }
+        }).SetUpdate(true);
     }
 
     /// <summary>
