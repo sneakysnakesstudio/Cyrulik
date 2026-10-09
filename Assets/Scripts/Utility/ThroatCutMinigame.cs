@@ -1037,6 +1037,14 @@ public class ThroatCutMinigame : MonoBehaviour
         }
     }
 
+    private void OnValidate()
+    {
+        if (Application.isPlaying && _isActive)
+        {
+            GenerateSinusoidWave();
+        }
+    }
+
     // ──────────────────────────────────────────────────────────
     // ZARZĄDZANIE POKAZYWANIEM / UKRYWANIEM UI
     // ──────────────────────────────────────────────────────────
@@ -1047,9 +1055,12 @@ public class ThroatCutMinigame : MonoBehaviour
 
         _uiFadeTween?.Kill();
         minigameCanvasGroup.alpha = 0f;
-        minigameCanvasGroup.gameObject.SetActive(true);
         minigameCanvasGroup.blocksRaycasts = true;
         minigameCanvasGroup.interactable = true;
+        if (minigameCanvasGroup.gameObject != this.gameObject)
+        {
+            minigameCanvasGroup.gameObject.SetActive(true);
+        }
 
         _uiFadeTween = minigameCanvasGroup.DOFade(1f, 0.35f)
             .SetEase(Ease.OutQuad)
@@ -1069,7 +1080,10 @@ public class ThroatCutMinigame : MonoBehaviour
             .SetUpdate(true)
             .OnComplete(() =>
             {
-                minigameCanvasGroup.gameObject.SetActive(false);
+                if (minigameCanvasGroup.gameObject != this.gameObject)
+                {
+                    minigameCanvasGroup.gameObject.SetActive(false);
+                }
             });
     }
 
@@ -1077,10 +1091,14 @@ public class ThroatCutMinigame : MonoBehaviour
     {
         if (minigameCanvasGroup != null)
         {
+            _uiFadeTween?.Kill();
             minigameCanvasGroup.alpha = 0f;
             minigameCanvasGroup.blocksRaycasts = false;
             minigameCanvasGroup.interactable = false;
-            minigameCanvasGroup.gameObject.SetActive(false);
+            if (minigameCanvasGroup.gameObject != this.gameObject)
+            {
+                minigameCanvasGroup.gameObject.SetActive(false);
+            }
         }
 
         if (screenBloodSplatter != null) screenBloodSplatter.gameObject.SetActive(false);
