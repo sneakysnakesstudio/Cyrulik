@@ -121,6 +121,21 @@ public class ThroatCutMinigame : MonoBehaviour
     [Tooltip("Czas trwania najazdu kamery na szyję (w sekundach).")]
     [SerializeField] private float cameraTransitionDuration = 0.65f;
 
+    [Header("Tryb Testowy / Sandbox (F1 Hotkey)")]
+    [Tooltip("Czy wciśnięcie klawisza F1 ma natychmiast odpalać minigrę w trybie testowym bez NPC.")]
+    [SerializeField] private bool enableTestHotkey = true;
+
+    [Tooltip("Klawisz uruchamiający tryb testowy w locie (domyślnie F1).")]
+    [SerializeField] private Key testHotkey = Key.F1;
+
+    [Tooltip("W trybie testowym nie zmieniaj pozycji kamery gracza (test w miejscu, w którym stoi gracz).")]
+    [SerializeField] private bool testModePreserveCamera = true;
+
+    [Tooltip("Czy w trybie testowym minigra ma być powtarzalna bez ekranu końca gry (Game Over)?")]
+    [SerializeField] private bool testModeLoopable = true;
+
+    private bool _isTestMode = false;
+
     // ──────────────────────────────────────────────────────────
     // STANY WEWNĘTRZNE I OPTYMALIZACJA (0 GC)
     // ──────────────────────────────────────────────────────────
@@ -226,7 +241,7 @@ public class ThroatCutMinigame : MonoBehaviour
     /// </summary>
     public void CancelMinigame()
     {
-        if (!_isActive) return;
+        if (!_isActive && !_isCompleted) return;
         _isActive = false;
         _isCompleted = true;
 
@@ -242,6 +257,11 @@ public class ThroatCutMinigame : MonoBehaviour
         {
             InputModeManager.Instance.SwitchToPlayer();
         }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 
     // ──────────────────────────────────────────────────────────
@@ -249,7 +269,27 @@ public class ThroatCutMinigame : MonoBehaviour
     // ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Rozpoczyna sekwencję podcięcia gardła:
+    /// Uruchamia minigrę w trybie testowym sandbox pod klawiszem F1 (bez NPC, bez ekranu końca gry).
+    /// </summary>
+    [ContextMenu("Debug: Start Minigame Test Mode (F1)")]
+    public void StartMinigameTestMode()
+    {
+        if (_isActive)
+        {
+            // Natychmiastowy reset do ponownej próby
+            _uiFadeTween?.Kill();
+            _camMoveTween?.Kill();
+            _camRotTween?.Kill();
+            _camFovTween?.Kill();
+            _sparkPulseTween?.Kill();
+            _isActive = false;
+        }
+
+        StartMinigameInternal(isTest: true);
+    }
+
+    /// <summary>
+    /// Rozpoczyna sekwencję podcięcia gardła (pełna rozgrywka fabularna z NPC):
     /// - Zatrzymuje ruch gracza.
     /// - Ustawia zbliżenie kamery na gardło Jurka.
     /// - Generuje falistą sinusoidę i włącza UI.
@@ -258,9 +298,12 @@ public class ThroatCutMinigame : MonoBehaviour
     public void StartMinigame()
     {
         if (_isActive) return;
+        StartMinigameInternal(isTest: false);
+    }
 
-        DevLog.Log("<color=#FF3030>[ThroatCutMinigame] Rozpoczęto minigrę podcięcia gardła!</color>");
-
+    private void StartMinigameInternal(bool isTest)
+    {
+        _isTestMode = isTest;
         _isActive = true;
         _isCompleted = false;
         _sparkProgress = 0f;
@@ -268,6 +311,8 @@ public class ThroatCutMinigame : MonoBehaviour
         _totalAccuracyAccumulator = 0f;
         _accuracySampleCount = 0;
         _currentLivePrecision = 100f;
+
+        DevLog.Log($"<color=#FF3030>[ThroatCutMinigame] Rozpoczęto minigrę! (Tryb testowy: {isTest})</color>");
 
         // 1. Zablokuj ruch gracza i przełącz kursor
         if (PlayerMovement.Instance != null)
@@ -279,9 +324,17 @@ public class ThroatCutMinigame : MonoBehaviour
         {
             InputModeManager.Instance.SwitchToMinigame(unlockCursor: true);
         }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
 
-        // 2. Najazd kamery na gardło Jurka
-        SetupCinematicCamera();
+        // 2. Najazd kamery na gardło Jurka (w teście możemy zachować pozycję gracza)
+        if (!isTest || !testModePreserveCamera)
+        {
+            SetupCinematicCamera();
+        }
 
         // 3. Wygeneruj falistą sinusoidę i wyczyść ścieżkę krwi
         GenerateSinusoidWave();
@@ -292,6 +345,11 @@ public class ThroatCutMinigame : MonoBehaviour
 
         // 5. Animacja pulsującej iskry
         AnimateSparkIndicator();
+
+        if (isTest && instructionText != null)
+        {
+            instructionText.text = "TRYB TESTOWY: Trzymaj [LPM] i prowadź brzytwę po linii | [F1] Restart | [ESC] Wyjdź";
+        }
     }
 
     private void SetupCinematicCamera()

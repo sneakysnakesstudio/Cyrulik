@@ -23,7 +23,7 @@ public class DebugOverlay : MonoBehaviour
     [Header("Toggle Hotkeys")]
     [Tooltip("Klawisz otwierający/zamykający panel deweloperski (domyślnie Tylda ~).")]
     [SerializeField] private Key primaryToggleKey = Key.Backquote; // tylda ~
-    [SerializeField] private Key secondaryToggleKey = Key.F1;
+    [SerializeField] private Key secondaryToggleKey = Key.None; // domyślnie None (F1 zwolniony dla minigry golenia)
 
     [Tooltip("Klawisz przesuwający czas gry na przyjście Jurka (17:01:30).")]
     [SerializeField] private Key jurekSpawnTimeKey = Key.F3;
@@ -173,13 +173,15 @@ public class DebugOverlay : MonoBehaviour
 
     private void OnValidate()
     {
+        if (secondaryToggleKey == Key.F1) secondaryToggleKey = Key.None;
         if (jurekSpawnTimeKey == Key.F2) jurekSpawnTimeKey = Key.F3;
         if (pinQuestKey == Key.F2 || pinQuestKey == Key.F3) pinQuestKey = Key.F4;
     }
 
     private void Awake()
     {
-        // Automatyczna migracja ze starych danych w scenie (uwolnienie klawisza F2)
+        // Automatyczna migracja ze starych danych w scenie (uwolnienie klawisza F1 i F2)
+        if (secondaryToggleKey == Key.F1) secondaryToggleKey = Key.None;
         if (jurekSpawnTimeKey == Key.F2) jurekSpawnTimeKey = Key.F3;
         if (pinQuestKey == Key.F2 || pinQuestKey == Key.F3) pinQuestKey = Key.F4;
 
@@ -219,8 +221,13 @@ public class DebugOverlay : MonoBehaviour
         // Sprawdź wciśnięcie klawiszy
         if (Keyboard.current != null)
         {
-            if (Keyboard.current[primaryToggleKey].wasPressedThisFrame ||
-                Keyboard.current[secondaryToggleKey].wasPressedThisFrame)
+            bool togglePressed = Keyboard.current[primaryToggleKey].wasPressedThisFrame;
+            if (secondaryToggleKey != Key.None && secondaryToggleKey != Key.F1)
+            {
+                togglePressed |= Keyboard.current[secondaryToggleKey].wasPressedThisFrame;
+            }
+
+            if (togglePressed)
             {
                 ToggleOverlay();
             }
