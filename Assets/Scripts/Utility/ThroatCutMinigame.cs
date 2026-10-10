@@ -134,7 +134,14 @@ public class ThroatCutMinigame : MonoBehaviour
     [Tooltip("Czy w trybie testowym minigra ma być powtarzalna bez ekranu końca gry (Game Over)?")]
     [SerializeField] private bool testModeLoopable = true;
 
+    [Header("Dev Tweak Panel (On-Screen GUI)")]
+    [Tooltip("Czy pokazywać okno konfiguracji parametrów i testowania audio na ekranie.")]
+    [SerializeField] private bool showTweakGui = true;
+
     private bool _isTestMode = false;
+    private bool _isCutStarted = false; // Iskra czeka na start gracza – nie ucieka od razu!
+    private bool _isGuiMinimized = false;
+    private float _previewSfxVolume = 1.0f;
 
     // ──────────────────────────────────────────────────────────
     // STANY WEWNĘTRZNE I OPTYMALIZACJA (0 GC)
@@ -244,6 +251,7 @@ public class ThroatCutMinigame : MonoBehaviour
         if (!_isActive && !_isCompleted) return;
         _isActive = false;
         _isCompleted = true;
+        _isCutStarted = false;
 
         HideInstant();
         RestoreCamera();
@@ -306,6 +314,7 @@ public class ThroatCutMinigame : MonoBehaviour
         _isTestMode = isTest;
         _isActive = true;
         _isCompleted = false;
+        _isCutStarted = false; // Iskra NIE rusza od razu! Czeka, aż gracz kliknie na początku linii!
         _sparkProgress = 0f;
         _playerProgress = 0f;
         _totalAccuracyAccumulator = 0f;
@@ -346,9 +355,13 @@ public class ThroatCutMinigame : MonoBehaviour
         // 5. Animacja pulsującej iskry
         AnimateSparkIndicator();
 
-        if (isTest && instructionText != null)
+        if (instructionText != null)
         {
-            instructionText.text = "TRYB TESTOWY: Trzymaj [LPM] i prowadź brzytwę po linii | [F1] Restart | [ESC] Wyjdź";
+            instructionText.text = "<color=#FFFF55>1. NAJEDŹ NA ISKRĘ PO LEWEJ\n2. PRZYTRZYMAJ [LPM] I PROWADŹ WZDŁUŻ LINII W PRAWO</color>";
+        }
+        if (statusFeedbackText != null)
+        {
+            statusFeedbackText.text = "<color=#70FF70>OCZEKIWANIE NA START: KLIKNIJ ISKRĘ</color>";
         }
     }
 
@@ -620,6 +633,12 @@ public class ThroatCutMinigame : MonoBehaviour
             return;
         }
 
+        bool f2Pressed = (Keyboard.current != null && Keyboard.current[Key.F2].wasPressedThisFrame) || Input.GetKeyDown(KeyCode.F2);
+        if (f2Pressed)
+        {
+            showTweakGui = !showTweakGui;
+        }
+
         if (_isActive)
         {
             bool escPressed = false;
@@ -641,6 +660,20 @@ public class ThroatCutMinigame : MonoBehaviour
 
     private void UpdateSparkProgress()
     {
+        // Iskra NIE rusza sama! Czeka, aż gracz kliknie LPM na początku linii!
+        if (!_isCutStarted)
+        {
+            _sparkProgress = 0f;
+            if (sparkIndicator != null)
+            {
+                float halfW = waveWidth * 0.5f;
+                float sparkX = -halfW;
+                float sparkY = EvaluateWaveY(0f);
+                sparkIndicator.anchoredPosition = new Vector2(sparkX, sparkY);
+            }
+            return;
+        }
+
         float speed = (cutDuration > 0.05f) ? (1.0f / cutDuration) : 0.2f;
         _sparkProgress += Time.deltaTime * speed;
         _sparkProgress = Mathf.Clamp01(_sparkProgress);
@@ -709,8 +742,8 @@ public class ThroatCutMinigame : MonoBehaviour
         }
         else
         {
-            // Brak trzymania LPM w strefie cięcia – kara za przerwanie nacięcia
-            if (_playerProgress > 0.05f && _playerProgress < 0.92f)
+            // Brak trzymania LPM w strefie cięcia – kara TYLKO gdy cięcie już wystartowało!
+            if (_isCutStarted && _playerProgress > 0.05f && _playerProgress < 0.92f)
             {
                 RecordAccuracySample(0f);
             }
@@ -719,11 +752,20 @@ public class ThroatCutMinigame : MonoBehaviour
 
     private void HandleActiveCutMotion(Vector2 razorPos, float t)
     {
-        // 1. Zabezpieczenie przed teleportem/eksploitem: cięcie musi rozpocząć się przy początku fali (t <= 0.18)
-        if (_playerProgress <= 0.01f && t > 0.18f)
+        // 1. Zabezpieczenie / Start cięcia: gracz musi kliknąć przy początku (t <= 0.28)
+        if (!_isCutStarted)
         {
-            // Gracz kliknął za daleko od lewego brzegu szyi – kursor musi najpierw dotknąć początku nacięcia
-            return;
+            if (t <= 0.28f)
+            {
+                _isCutStarted = true;
+                _playerProgress = Mathf.Max(0.01f, t);
+                DevLog.Log("<color=#FF8800>[ThroatCutMinigame] Start cięcia! Gracz chwycił brzytwę i ruszył za iskrą.</color>");
+            }
+            else
+            {
+                // Gracz kliknął za daleko od lewego brzegu szyi – kursor musi najpierw dotknąć początku nacięcia
+                return;
+            }
         }
 
         // 2. Jeśli gracz posuwa się w przód
@@ -780,6 +822,18 @@ public class ThroatCutMinigame : MonoBehaviour
 
     private void UpdateHUDIndicators()
     {
+        if (instructionText != null)
+        {
+            if (!_isCutStarted)
+            {
+                instructionText.text = "<color=#FFFF40>1. NAJEDŹ NA ISKRĘ PO LEWEJ\n2. PRZYTRZYMAJ [LPM] I PROWADŹ W PRAWO PO LINII</color>";
+            }
+            else
+            {
+                instructionText.text = "PROWADŹ BRZYTWĘ WZDŁUŻ LINII ZA ISKRĄ | TRZYMAJ [LPM]!";
+            }
+        }
+
         if (precisionText != null)
         {
             Color displayColor = _currentLivePrecision >= 90f ? ColorPerfectGreen : (_currentLivePrecision >= 75f ? ColorWarningYellow : ColorDangerRed);
@@ -795,18 +849,24 @@ public class ThroatCutMinigame : MonoBehaviour
 
         if (statusFeedbackText != null)
         {
+            if (!_isCutStarted)
+            {
+                statusFeedbackText.text = "<color=#70FF70>OCZEKIWANIE: KLIKNIJ NA ISKRZE, ABY ZACZĄĆ</color>";
+                return;
+            }
+
             float tempoLead = _playerProgress - _sparkProgress;
             if (tempoLead < -0.20f)
             {
-                statusFeedbackText.text = "<color=#FF8020>TOO SLOW (LAGGING BEHIND FUSE)</color>";
+                statusFeedbackText.text = "<color=#FF8020>ZA WOLNO (DOGANIAJ ISKRĘ!)</color>";
             }
             else if (tempoLead > 0.22f)
             {
-                statusFeedbackText.text = "<color=#FFD020>TOO FAST (RUSHING AHEAD)</color>";
+                statusFeedbackText.text = "<color=#FFD020>ZA SZYBKO (ZWOLNIJ DO ISKRY!)</color>";
             }
             else if (_currentLivePrecision >= 90f)
             {
-                statusFeedbackText.text = "<color=#20FF80>SURGICAL TEMPO</color>";
+                statusFeedbackText.text = "<color=#20FF80>IDEALNE TEMPO CIĘCIA</color>";
             }
             else if (_currentLivePrecision >= 75f)
             {
@@ -814,13 +874,16 @@ public class ThroatCutMinigame : MonoBehaviour
             }
             else
             {
-                statusFeedbackText.text = "<color=#FF3030>ERRATIC INCISION</color>";
+                statusFeedbackText.text = "<color=#FF3030>SZARPANIE RANY</color>";
             }
         }
     }
 
     private void CheckCompletionConditions()
     {
+        // Jeśli cięcie jeszcze nie wystartowało, nie kończymy!
+        if (!_isCutStarted) return;
+
         // Cięcie kończy się gdy:
         // 1. Gracz doprowadził cięcie do końca prawej krawędzi (postęp >= 92%) I iskra lontu również dobiegła końca (>= 85%).
         // 2. LUB iskra lontu dopaliła się do końca (czas minął).
@@ -1232,6 +1295,159 @@ public class ThroatCutMinigame : MonoBehaviour
             instructionText.fontSize = 24;
             instructionText.alignment = TextAlignmentOptions.Center;
             instructionText.text = "HOLD [LMB] & TRACE THE INCISION LINE (FOLLOW THE SPARK)";
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // DEV TWEAK PANEL (ON-SCREEN GUI & SFX TUNING)
+    // ──────────────────────────────────────────────────────────
+
+    private void OnGUI()
+    {
+        if (!showTweakGui) return;
+        if (!_isActive && !_isTestMode) return;
+
+        // Schludne, ciemne tło panelu w lewym górnym rogu ekranu
+        Rect panelRect = _isGuiMinimized 
+            ? new Rect(20, 20, 240, 42) 
+            : new Rect(20, 20, 360, 560);
+
+        Color originalColor = GUI.color;
+        Color originalBg = GUI.backgroundColor;
+
+        GUI.color = new Color(0.12f, 0.12f, 0.14f, 0.94f);
+        GUI.Box(panelRect, GUIContent.none);
+        GUI.color = Color.white;
+
+        GUILayout.BeginArea(new Rect(panelRect.x + 10, panelRect.y + 8, panelRect.width - 20, panelRect.height - 16));
+
+        // Pasek tytułowy ze zwijaniem
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("<color=#FFCC00><b>CYRULIK // GOLENIE & SFX</b></color>", GUILayout.ExpandWidth(true));
+        if (GUILayout.Button(_isGuiMinimized ? "[+] ROZWIŃ" : "[-] ZWIŃ", GUILayout.Width(75), GUILayout.Height(22)))
+        {
+            _isGuiMinimized = !_isGuiMinimized;
+        }
+        GUILayout.EndHorizontal();
+
+        if (_isGuiMinimized)
+        {
+            GUILayout.EndArea();
+            GUI.backgroundColor = originalBg;
+            GUI.color = originalColor;
+            return;
+        }
+
+        GUILayout.Space(4);
+
+        // 1. Status gry
+        string statusInfo = !_isCutStarted 
+            ? "<color=#55FF55>STATUS: Czeka na kliknięcie na iskrze</color>" 
+            : $"<color=#FFFF55>STATUS: Cięcie w toku ({_currentLivePrecision:0}% precyzji)</color>";
+        GUILayout.Label(statusInfo);
+
+        GUILayout.Space(4);
+
+        // 2. Parametry dynamiki cięcia
+        GUILayout.Label("<b>1. DYNAMIKA CIĘCIA (FEELING):</b>");
+
+        // Tempo / Cut duration
+        GUILayout.Label($"Czas lontu (Tempo): <b>{cutDuration:F1}s</b> (mniej = szybciej)");
+        cutDuration = GUILayout.HorizontalSlider(cutDuration, 2.0f, 10.0f);
+
+        // Amplituda
+        float prevAmp = mainAmplitude;
+        GUILayout.Label($"Wysokość fali (Zygzak): <b>{mainAmplitude:F0}px</b> (0 = prosta linia)");
+        mainAmplitude = GUILayout.HorizontalSlider(mainAmplitude, 0f, 80f);
+        if (Mathf.Abs(prevAmp - mainAmplitude) > 0.5f)
+        {
+            GenerateSinusoidWave();
+        }
+
+        // Szerokość
+        float prevWidth = waveWidth;
+        GUILayout.Label($"Szerokość toru: <b>{waveWidth:F0}px</b>");
+        waveWidth = GUILayout.HorizontalSlider(waveWidth, 400f, 1000f);
+        if (Mathf.Abs(prevWidth - waveWidth) > 5f)
+        {
+            GenerateSinusoidWave();
+        }
+
+        GUILayout.Space(6);
+
+        // 3. Tolerancja błędu
+        GUILayout.Label("<b>2. TOLERANCJA I TRUDNOŚĆ:</b>");
+        GUILayout.Label($"Margines idealnego cięcia: <b>±{idealTolerancePixels:F0}px</b>");
+        idealTolerancePixels = GUILayout.HorizontalSlider(idealTolerancePixels, 10f, 60f);
+
+        GUILayout.Label($"Wymagany próg sukcesu: <b>{successThreshold:F0}%</b>");
+        successThreshold = GUILayout.HorizontalSlider(successThreshold, 50f, 95f);
+
+        GUILayout.Space(6);
+
+        // 4. Dopieszczanie dźwięków
+        GUILayout.Label("<b>3. DOPIESZCZANIE DŹWIĘKÓW (SFX PREVIEW):</b>");
+        GUILayout.Label($"Głośność odsłuchu: <b>{Mathf.RoundToInt(_previewSfxVolume * 100)}%</b>");
+        _previewSfxVolume = GUILayout.HorizontalSlider(_previewSfxVolume, 0f, 1f);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("▶ Cięcie skóry", GUILayout.Height(26)))
+        {
+            PlayPreviewSound(razorSliceLoopClip, "ostrzenie szybkie");
+        }
+        if (GUILayout.Button("▶ Tryskająca krew", GUILayout.Height(26)))
+        {
+            PlayPreviewSound(arterialBloodSpurtClip, "task_complete");
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("▶ Zepsute cięcie", GUILayout.Height(26)))
+        {
+            PlayPreviewSound(botchedCutClip, "error_sound");
+        }
+        if (GUILayout.Button("▶ Krzyk Jurka", GUILayout.Height(26)))
+        {
+            PlayPreviewSound(jurekScreamClip, "error_sound");
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8);
+
+        // 5. Przyciski akcji
+        GUILayout.BeginHorizontal();
+        GUI.backgroundColor = new Color(0.2f, 0.85f, 0.35f);
+        if (GUILayout.Button("🔄 RESTART (F1)", GUILayout.Height(28)))
+        {
+            StartMinigameTestMode();
+        }
+        GUI.backgroundColor = new Color(0.9f, 0.3f, 0.3f);
+        if (GUILayout.Button("❌ ZAMKNIJ (ESC)", GUILayout.Height(28)))
+        {
+            CancelMinigame();
+        }
+        GUI.backgroundColor = originalBg;
+        GUILayout.EndHorizontal();
+
+        GUILayout.Label("<size=10><color=#888888>[F2] schowaj panel | [ESC] wyjdź</color></size>");
+
+        GUILayout.EndArea();
+
+        GUI.backgroundColor = originalBg;
+        GUI.color = originalColor;
+    }
+
+    private void PlayPreviewSound(AudioClip clip, string audioManagerFallback)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip, _previewSfxVolume);
+            return;
+        }
+
+        if (AudioManager.Instance != null && !string.IsNullOrEmpty(audioManagerFallback))
+        {
+            AudioManager.Instance.TryPlay(audioManagerFallback);
         }
     }
 }
